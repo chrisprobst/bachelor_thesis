@@ -17,7 +17,7 @@ public abstract class AbstractRemoteActorCloud implements RemoteActorCloud {
 
     private static final AtomicLong ID_GENERATOR = new AtomicLong();
 
-    private final ConcurrentMap<Long, RemoteActor> actors = new ConcurrentHashMap<>();
+    protected final ConcurrentMap<Long, RemoteActor> actors = new ConcurrentHashMap<>();
 
     protected long getNextId() {
         return ID_GENERATOR.getAndIncrement();

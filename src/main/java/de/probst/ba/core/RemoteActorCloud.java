@@ -14,6 +14,15 @@ import java.util.stream.Collectors;
 public interface RemoteActorCloud {
 
     /**
+     * Registers a local actor.
+     *
+     * @param downloadRate
+     * @param uploadRate
+     * @return
+     */
+    LocalActor registerLocalActor(long downloadRate, long uploadRate);
+
+    /**
      * Get all associated remote actors.
      *
      * @return
@@ -40,20 +49,23 @@ public interface RemoteActorCloud {
      *
      * @return
      */
-    default CompletableFuture<Map<RemoteActor, Collection<Data>>> getAllData() {
+    default CompletableFuture<Map<RemoteActor, Map<String, Data>>> getAllDataAsync() {
 
         // Create list of futures
-        List<AbstractMap.SimpleEntry<RemoteActor, CompletableFuture<Collection<Data>>>> allDataFutures =
+        List<AbstractMap.SimpleEntry<RemoteActor, CompletableFuture<Map<String, Data>>>> allDataFutures =
                 getRemoteActors()
                         .stream()
                         .map(a -> new AbstractMap.SimpleEntry<>(a, a.getAllDataAsync()))
                         .collect(Collectors.toList());
 
-        CompletableFuture<?>[] array = allDataFutures.toArray(
-                new CompletableFuture<?>[allDataFutures.size()]);
+        // Create an array of the futures
+        CompletableFuture<?>[] array = allDataFutures
+                .stream()
+                .map(AbstractMap.SimpleEntry::getValue)
+                .toArray(CompletableFuture<?>[]::new);
 
         // The result future
-        CompletableFuture<Map<RemoteActor, Collection<Data>>> result = new CompletableFuture<>();
+        CompletableFuture<Map<RemoteActor, Map<String, Data>>> result = new CompletableFuture<>();
 
         // Wait for completion and complete the future
         CompletableFuture.allOf(array)

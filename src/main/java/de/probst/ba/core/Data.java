@@ -100,4 +100,14 @@ public class Data implements Serializable {
         chunks.set(chunkIndex, value);
         return this;
     }
+
+    @Override
+    public String toString() {
+        return "Data{" +
+                "hash='" + hash + '\'' +
+                ", size=" + size +
+                ", chunkCount=" + chunkCount +
+                ", chunks=" + chunks +
+                '}';
+    }
 }

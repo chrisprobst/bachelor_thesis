@@ -8,6 +8,20 @@ import java.util.concurrent.ScheduledExecutorService;
 public interface Actor {
 
     /**
+     * The maximum bytes per second rate.
+     *
+     * @return
+     */
+    long getUploadRate();
+
+    /**
+     * The maximum bytes per second rate.
+     *
+     * @return
+     */
+    long getDownloadRate();
+
+    /**
      * Get the associated remote actor cloud.
      *
      * @return
