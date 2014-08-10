@@ -1,4 +1,4 @@
-package de.probst.ba.core;
+package de.probst.ba.core.legacy;
 
 import java.util.concurrent.ScheduledExecutorService;
 

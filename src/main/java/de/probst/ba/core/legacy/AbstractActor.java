@@ -1,4 +1,4 @@
-package de.probst.ba.core;
+package de.probst.ba.core.legacy;
 
 import java.util.Objects;
 
@@ -16,7 +16,7 @@ public abstract class AbstractActor implements Actor {
                             long id,
                             long downloadRate,
                             long uploadRate) {
-        
+
         Objects.requireNonNull(remoteActorCloud);
         this.remoteActorCloud = remoteActorCloud;
         this.id = id;

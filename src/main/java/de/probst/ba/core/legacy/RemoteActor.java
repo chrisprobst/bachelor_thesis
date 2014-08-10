@@ -1,7 +1,7 @@
-package de.probst.ba.core;
+package de.probst.ba.core.legacy;
 
-import java.io.OutputStream;
-import java.util.Collection;
+import de.probst.ba.core.logic.DataInfo;
+
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
@@ -16,7 +16,7 @@ public interface RemoteActor extends Actor {
      *
      * @return
      */
-    CompletableFuture<Map<String, Data>> getAllDataAsync();
+    CompletableFuture<Map<String, DataInfo>> getAllDataAsync();
 
     /**
      * Downloads the given chunk of the data with the given hash asynchronously.

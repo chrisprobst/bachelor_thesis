@@ -1,4 +1,4 @@
-package de.probst.ba.core;
+package de.probst.ba.core.legacy;
 
 /**
  * Created by chrisprobst on 08.08.14.

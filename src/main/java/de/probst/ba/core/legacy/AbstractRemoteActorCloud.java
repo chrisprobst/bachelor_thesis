@@ -1,5 +1,6 @@
-package de.probst.ba.core;
+package de.probst.ba.core.legacy;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -30,7 +31,7 @@ public abstract class AbstractRemoteActorCloud implements RemoteActorCloud {
 
     @Override
     public Collection<RemoteActor> getRemoteActors() {
-        return actors.values();
+        return new ArrayList<>(actors.values());
     }
 
     @Override

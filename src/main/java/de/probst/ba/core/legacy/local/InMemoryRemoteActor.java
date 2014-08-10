@@ -1,9 +1,9 @@
-package de.probst.ba.core.local;
+package de.probst.ba.core.legacy.local;
 
-import de.probst.ba.core.AbstractRemoteActor;
-import de.probst.ba.core.Data;
-import de.probst.ba.core.LocalActor;
-import de.probst.ba.core.RemoteActorCloud;
+import de.probst.ba.core.legacy.AbstractRemoteActor;
+import de.probst.ba.core.logic.DataInfo;
+import de.probst.ba.core.legacy.LocalActor;
+import de.probst.ba.core.legacy.RemoteActorCloud;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -38,7 +38,7 @@ public class InMemoryRemoteActor extends AbstractRemoteActor implements Runnable
         }
 
         public long reduzeSize(long amount) {
-            if (size < amount) {
+            if (size <= amount) {
                 amount = size;
                 size = 0;
                 future.complete(null);
@@ -93,7 +93,7 @@ public class InMemoryRemoteActor extends AbstractRemoteActor implements Runnable
         us to do.
          */
         long total = 0;
-        long mtu = 1400;
+        long mtu = 1000;
         while (total < getUploadRate()) {
             UploadTask task = uploads.poll();
 
@@ -122,12 +122,16 @@ public class InMemoryRemoteActor extends AbstractRemoteActor implements Runnable
             }
         }
 
+        if (total > 0) {
+            System.out.println("Client " + getId() + " transferred " + total + " bytes in one second");
+        }
+
         // Rerun this uploader in one second
         getScheduler().schedule(this, 1, TimeUnit.SECONDS);
     }
 
     @Override
-    public CompletableFuture<Map<String, Data>> getAllDataAsync() {
+    public CompletableFuture<Map<String, DataInfo>> getAllDataAsync() {
         System.out.println("Uploading data infos from: " + getId());
         return CompletableFuture.completedFuture(new HashMap<>(peer.getAllData()));
     }
@@ -137,17 +141,17 @@ public class InMemoryRemoteActor extends AbstractRemoteActor implements Runnable
                                                             int chunkIndex,
                                                             Consumer<byte[]> consumer) {
         // Lookup the peer data
-        Data peerData = peer.getAllData().get(hash);
+        DataInfo peerDataInfo = peer.getAllData().get(hash);
 
         // No file found
-        if (peerData == null) {
+        if (peerDataInfo == null) {
             CompletableFuture<Void> failed = new CompletableFuture<>();
             failed.completeExceptionally(new NoSuchElementException(hash));
             return failed;
         }
 
         // Index out of bounds
-        if (peerData.getChunkCount() <= chunkIndex) {
+        if (peerDataInfo.getChunkCount() <= chunkIndex) {
             CompletableFuture<Void> failed = new CompletableFuture<>();
             failed.completeExceptionally(new IndexOutOfBoundsException("Chunk index: " + chunkIndex));
             return failed;
@@ -157,7 +161,7 @@ public class InMemoryRemoteActor extends AbstractRemoteActor implements Runnable
         UploadTask task = new UploadTask(
                 new CompletableFuture<>(),
                 consumer,
-                peerData.getChunkSize(chunkIndex));
+                peerDataInfo.getChunkSize(chunkIndex));
 
         // Add to uploads
         uploads.offer(task);
@@ -170,10 +174,10 @@ public class InMemoryRemoteActor extends AbstractRemoteActor implements Runnable
     public CompletableFuture<Void> getDataContentAsync(String hash,
                                                        Consumer<byte[]> consumer) {
         // Lookup the peer data
-        Data peerData = peer.getAllData().get(hash);
+        DataInfo peerDataInfo = peer.getAllData().get(hash);
 
         // No file found
-        if (peerData == null) {
+        if (peerDataInfo == null) {
             CompletableFuture<Void> failed = new CompletableFuture<>();
             failed.completeExceptionally(new NoSuchElementException(hash));
             return failed;
@@ -183,7 +187,7 @@ public class InMemoryRemoteActor extends AbstractRemoteActor implements Runnable
         UploadTask task = new UploadTask(
                 new CompletableFuture<>(),
                 consumer,
-                peerData.getSize());
+                peerDataInfo.getSize());
 
         // Add to uploads
         uploads.offer(task);

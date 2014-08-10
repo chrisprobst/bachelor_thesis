@@ -1,4 +1,6 @@
-package de.probst.ba.core;
+package de.probst.ba.core.legacy;
+
+import de.probst.ba.core.logic.DataInfo;
 
 import java.util.AbstractMap;
 import java.util.Collection;
@@ -18,9 +20,10 @@ public interface RemoteActorCloud {
      *
      * @param downloadRate
      * @param uploadRate
+     * @param fulfillPolicy
      * @return
      */
-    LocalActor registerLocalActor(long downloadRate, long uploadRate);
+    LocalActor registerLocalActor(long downloadRate, long uploadRate, FulfillPolicy fulfillPolicy);
 
     /**
      * Get all associated remote actors.
@@ -49,12 +52,13 @@ public interface RemoteActorCloud {
      *
      * @return
      */
-    default CompletableFuture<Map<RemoteActor, Map<String, Data>>> getAllDataAsync() {
+    default CompletableFuture<Map<RemoteActor, Map<String, DataInfo>>> getAllDataFromAllRemoteActorsAsync(LocalActor initiator) {
 
         // Create list of futures
-        List<AbstractMap.SimpleEntry<RemoteActor, CompletableFuture<Map<String, Data>>>> allDataFutures =
+        List<AbstractMap.SimpleEntry<RemoteActor, CompletableFuture<Map<String, DataInfo>>>> allDataFutures =
                 getRemoteActors()
                         .stream()
+                        .filter(a -> initiator == null || a.getId() != initiator.getId())
                         .map(a -> new AbstractMap.SimpleEntry<>(a, a.getAllDataAsync()))
                         .collect(Collectors.toList());
 
@@ -65,7 +69,7 @@ public interface RemoteActorCloud {
                 .toArray(CompletableFuture<?>[]::new);
 
         // The result future
-        CompletableFuture<Map<RemoteActor, Map<String, Data>>> result = new CompletableFuture<>();
+        CompletableFuture<Map<RemoteActor, Map<String, DataInfo>>> result = new CompletableFuture<>();
 
         // Wait for completion and complete the future
         CompletableFuture.allOf(array)

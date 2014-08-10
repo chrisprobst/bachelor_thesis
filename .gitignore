@@ -23,3 +23,5 @@ target/
 # Gradle
 .gradle/
 
+# Build idea
+build/
