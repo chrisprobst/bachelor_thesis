@@ -13,19 +13,26 @@ import java.util.stream.Collectors;
  */
 public final class NetworkState implements Serializable {
 
+    private final long peerId;
     private final Map<Long, Transfer> uploads;
     private final Map<Long, Transfer> downloads;
     private final Map<String, DataInfo> dataInfo;
     private final Map<Long, Map<String, DataInfo>> remoteDataInfo;
 
-    public NetworkState(Map<Long, Transfer> uploads,
+    public NetworkState(long peerId,
+                        Map<Long, Transfer> uploads,
                         Map<Long, Transfer> downloads,
                         Map<String, DataInfo> dataInfo,
                         Map<Long, Map<String, DataInfo>> remoteDataInfo) {
+        this.peerId = peerId;
         this.uploads = uploads;
         this.downloads = downloads;
         this.dataInfo = dataInfo;
         this.remoteDataInfo = remoteDataInfo;
+    }
+
+    public long getPeerId() {
+        return peerId;
     }
 
     /**

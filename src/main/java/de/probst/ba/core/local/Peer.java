@@ -1,17 +1,24 @@
 package de.probst.ba.core.local;
 
 import de.probst.ba.core.logic.DataInfo;
+import de.probst.ba.core.logic.Network;
+import de.probst.ba.core.logic.NetworkState;
+import de.probst.ba.core.logic.Transfer;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Queue;
+import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 /**
  * Created by chrisprobst on 08.08.14.
  */
-class Peer implements Runnable {
+public class Peer implements Runnable, Network {
+
+    private static final AtomicLong ID_GEN = new AtomicLong();
+
+    private static final ConcurrentMap<Long, Peer> PEERS =
+            new ConcurrentHashMap<>();
 
     private static final ScheduledExecutorService SCHEDULER =
             Executors.newScheduledThreadPool(8);
@@ -51,6 +58,10 @@ class Peer implements Runnable {
             return amount;
         }
 
+        public DataInfo getDataInfo() {
+            return dataInfo;
+        }
+
         public boolean isFinished() {
             return size <= 0;
         }
@@ -67,23 +78,71 @@ class Peer implements Runnable {
     private final ConcurrentMap<String, DataInfo> dataInfoMap =
             new ConcurrentHashMap<>();
 
+    private volatile Map<Long, Map<String, DataInfo>> remoteDataInfoMap
+            = new HashMap<>();
+
+    private final Runnable remoteSyncTask = new Runnable() {
+        @Override
+        public void run() {
+
+            remoteDataInfoMap = PEERS.entrySet().stream()
+                    .collect(Collectors.toMap(
+                            p -> p.getValue().getPeerId(),
+                            p -> p.getValue().getDataInfo()
+                    ));
+
+            // Rerun later
+            SCHEDULER.schedule(this, 500, TimeUnit.MILLISECONDS);
+        }
+    };
+
+    private Map<Long, Map<String, DataInfo>> getRemoteDataInfoMap() {
+        return new HashMap<>(remoteDataInfoMap);
+    }
+
+    private Map<Long, Transfer> getUpload() {
+        return new HashSet<>(uploads).stream()
+                .collect(Collectors.toMap(
+                        p -> p.getDestPeerId(),
+                        p -> new Transfer(p.getDestPeerId(), p.getDataInfo())
+                ));
+    }
+
+    @Override
+    public NetworkState getNetworkState() {
+        return new NetworkState(peerId,
+                getUpload(),
+                null,
+                getDataInfo(),
+                getRemoteDataInfoMap()
+        );
+    }
+
     // All uploads are stored here
     private final Queue<UploadTask> uploads = new ConcurrentLinkedQueue<>();
 
-    Peer(long peerId,
-         long downloadRate,
-         long uploadRate) {
+    public Peer(long downloadRate,
+                long uploadRate) {
 
         if (downloadRate < uploadRate) {
             throw new IllegalArgumentException(
                     "downloadRate must be >= uploadRate");
         }
 
-        this.peerId = peerId;
+        peerId = ID_GEN.getAndIncrement();
         this.downloadRate = downloadRate;
         this.uploadRate = uploadRate;
 
         SCHEDULER.execute(this);
+        SCHEDULER.execute(remoteSyncTask);
+    }
+
+    public void register() {
+        PEERS.put(peerId, this);
+    }
+
+    public void unregister() {
+        PEERS.remove(peerId);
     }
 
     public long getPeerId() {
@@ -112,7 +171,7 @@ class Peer implements Runnable {
         long total = 0;
         long mtu = 1000;
         while (total < getUploadRate()) {
-            UploadTask task = uploads.poll();
+            UploadTask task = uploads.peek();
 
             // Wait a second if no task is there
             if (task == null) {
@@ -121,6 +180,7 @@ class Peer implements Runnable {
 
             // A finished task .. just skip!
             if (task.isFinished()) {
+                uploads.poll();
                 continue;
             }
 
@@ -133,6 +193,7 @@ class Peer implements Runnable {
             // Reschedule
             if (!task.isFinished()) {
                 uploads.offer(task);
+                uploads.poll();
             }
         }
 
@@ -148,6 +209,11 @@ class Peer implements Runnable {
         return new HashMap<>(dataInfoMap);
     }
 
+    @Override
+    public void download(long peerId, DataInfo dataInfo) {
+        System.out.println("Requested download: " + dataInfo + " from peer " + peerId);
+    }
+
     public CompletableFuture<Void> upload(long destId, DataInfo dataInfo) {
         // Lookup the peer data
         DataInfo peerDataInfo = dataInfoMap.get(dataInfo.getHash());
@@ -155,7 +221,7 @@ class Peer implements Runnable {
         // No file found
         if (peerDataInfo == null) {
             CompletableFuture<Void> failed = new CompletableFuture<>();
-            failed.completeExceptionally(new NoSuchElementException(peerDataInfo.getHash()));
+            failed.completeExceptionally(new NoSuchElementException(dataInfo.getHash()));
             return failed;
         }
 
