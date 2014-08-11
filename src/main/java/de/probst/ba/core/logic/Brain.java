@@ -3,9 +3,13 @@ package de.probst.ba.core.logic;
 import java.util.Map;
 
 /**
+ * The main brain interface. If you want to
+ * implement a custom download logic this is
+ * the only interface you have to implement.
+ * <p>
  * Created by chrisprobst on 10.08.14.
  */
-public interface Logic {
+public interface Brain {
 
     /**
      * This method is called by the framework internally at
@@ -15,9 +19,9 @@ public interface Logic {
      * The purpose of this method is to implement synchronization strategies.
      * In other words: To request downloads in the most effective way.
      *
-     * @param network
+     * @param peer
      */
-    void process(Network network);
+    void process(Peer peer);
 
     /**
      * This method is called by the framework internally at
@@ -31,11 +35,11 @@ public interface Logic {
      * <p>
      * The default implementation does not do any transformations.
      *
-     * @param networkState
+     * @param peerState
      * @return
      */
-    default Map<String, DataInfo> transformUploadDataInfo(NetworkState networkState) {
-        return networkState.getDataInfo();
+    default Map<String, DataInfo> transformUploadDataInfo(PeerState peerState) {
+        return peerState.getDataInfo();
     }
 
     /**
@@ -48,13 +52,12 @@ public interface Logic {
      * The default implementation always returns true so every distinct peer
      * will be served.
      *
-     * @param peerId
-     * @param dataInfo
+     * @param peerState
+     * @param transfer
      * @return
      */
-    default boolean isUploadAllowed(NetworkState networkState,
-                                    long peerId,
-                                    DataInfo dataInfo) {
+    default boolean isUploadAllowed(PeerState peerState,
+                                    Transfer transfer) {
         return true;
     }
 }

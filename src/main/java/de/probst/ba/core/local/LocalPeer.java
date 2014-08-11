@@ -1,8 +1,8 @@
 package de.probst.ba.core.local;
 
 import de.probst.ba.core.logic.DataInfo;
-import de.probst.ba.core.logic.Network;
-import de.probst.ba.core.logic.NetworkState;
+import de.probst.ba.core.logic.Peer;
+import de.probst.ba.core.logic.PeerState;
 import de.probst.ba.core.logic.Transfer;
 
 import java.util.*;
@@ -13,11 +13,11 @@ import java.util.stream.Collectors;
 /**
  * Created by chrisprobst on 08.08.14.
  */
-public class Peer implements Runnable, Network {
+public class LocalPeer implements Runnable, Peer {
 
     private static final AtomicLong ID_GEN = new AtomicLong();
 
-    private static final ConcurrentMap<Long, Peer> PEERS =
+    private static final ConcurrentMap<Long, LocalPeer> PEERS =
             new ConcurrentHashMap<>();
 
     private static final ScheduledExecutorService SCHEDULER =
@@ -109,8 +109,8 @@ public class Peer implements Runnable, Network {
     }
 
     @Override
-    public NetworkState getNetworkState() {
-        return new NetworkState(peerId,
+    public PeerState getPeerState() {
+        return new PeerState(peerId,
                 getUpload(),
                 null,
                 getDataInfo(),
@@ -121,8 +121,8 @@ public class Peer implements Runnable, Network {
     // All uploads are stored here
     private final Queue<UploadTask> uploads = new ConcurrentLinkedQueue<>();
 
-    public Peer(long downloadRate,
-                long uploadRate) {
+    public LocalPeer(long downloadRate,
+                     long uploadRate) {
 
         if (downloadRate < uploadRate) {
             throw new IllegalArgumentException(

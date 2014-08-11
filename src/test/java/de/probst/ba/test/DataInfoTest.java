@@ -19,6 +19,7 @@ public class DataInfoTest {
 
     @Test public void flip()
     {
+        dataInfo = dataInfo.randomize();
         DataInfo flip = dataInfo.flip();
 
         assertEquals(dataInfo.getSize(), flip.getSize());
@@ -32,6 +33,7 @@ public class DataInfoTest {
 
     @Test public void duplicate()
     {
+        dataInfo = dataInfo.randomize();
         DataInfo duplicate = dataInfo.duplicate();
 
         assertEquals(dataInfo.getSize(), duplicate.getSize());
@@ -77,6 +79,7 @@ public class DataInfoTest {
 
     @Test public void full()
     {
+        dataInfo = dataInfo.randomize();
         DataInfo full = dataInfo.full();
 
         assertEquals(dataInfo.getSize(), full.getSize());
@@ -90,6 +93,7 @@ public class DataInfoTest {
 
     @Test public void empty()
     {
+        dataInfo = dataInfo.randomize();
         DataInfo empty = dataInfo.empty();
 
         assertEquals(dataInfo.getSize(), empty.getSize());
@@ -111,6 +115,7 @@ public class DataInfoTest {
 
     @Test public void chunk()
     {
+
         dataInfo = dataInfo.setChunk(3, true);
         dataInfo = dataInfo.setChunk(7, true);
 

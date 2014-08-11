@@ -10,11 +10,25 @@ import java.util.stream.IntStream;
  */
 public final class DataInfo implements Serializable {
 
+    // The unique hash
     private final String hash;
+
+    // The total size
     private final long size;
+
+    // The number of chunks
     private final int chunkCount;
+
+    // The usual chunk size
+    // (Calculated with size and chunkCount)
     private final long chunkSize;
+
+    // The size of the last chunk
+    // (Premature optimization, i know)
     private final long lastChunkSize;
+
+    // Here we store whether or not
+    // a chunk is completed
     private final BitSet chunks;
 
     public DataInfo(String hash, long size, int chunkCount) {
@@ -24,8 +38,8 @@ public final class DataInfo implements Serializable {
             throw new IllegalArgumentException("size must be positive");
         }
 
-        if (chunkCount < 0) {
-            throw new IllegalArgumentException("chunkCount must be positive");
+        if (chunkCount < 1) {
+            throw new IllegalArgumentException("chunkCount must be greater than 0");
         }
 
         if (chunkCount > size) {
@@ -35,32 +49,57 @@ public final class DataInfo implements Serializable {
         this.hash = hash;
         this.size = size;
         this.chunkCount = chunkCount;
-
-        chunkSize = size / chunkCount;
-        long remaining = size % chunkCount;
-
-        lastChunkSize = remaining > 0 ? remaining : chunkSize;
         chunks = new BitSet(chunkCount);
+
+        // Calculate the usual chunk size
+        chunkSize = size / chunkCount;
+
+        // Calculate the last chunk size
+        long remaining = size % chunkCount;
+        lastChunkSize = remaining > 0 ? remaining : chunkSize;
     }
 
+    /**
+     * Creates a copy and flips the
+     * completion status of all chunks.
+     *
+     * @return
+     */
     public DataInfo flip() {
-        DataInfo dataInfo = empty();
+        DataInfo dataInfo = duplicate();
         dataInfo.chunks.flip(0, dataInfo.getChunkCount());
         return dataInfo;
     }
 
+    /**
+     * Creates a copy of this data info.
+     *
+     * @return
+     */
     public DataInfo duplicate() {
         DataInfo dataInfo = empty();
         dataInfo.chunks.or(chunks);
         return dataInfo;
     }
 
+    /**
+     * Creates a copy and sets
+     * all chunks to completed.
+     *
+     * @return
+     */
     public DataInfo full() {
         DataInfo dataInfo = empty();
         dataInfo.chunks.set(0, dataInfo.getChunkCount(), true);
         return dataInfo;
     }
 
+    /**
+     * Creates an empty copy where
+     * no chunk is completed.
+     *
+     * @return
+     */
     public DataInfo empty() {
         return new DataInfo(
                 getHash(),
@@ -68,6 +107,13 @@ public final class DataInfo implements Serializable {
                 getChunkCount());
     }
 
+    /**
+     * Checks whether or the other data info is
+     * compatible with this compatible.
+     *
+     * @param other
+     * @return
+     */
     public boolean isCompatibleWith(DataInfo other) {
         Objects.requireNonNull(other);
         return other.getHash().equals(getHash()) &&
@@ -75,12 +121,26 @@ public final class DataInfo implements Serializable {
                 other.getChunkCount() == getChunkCount();
     }
 
+    /**
+     * Checks whether or not the other data info is
+     * compatible and throws a runtime exception if
+     * not.
+     *
+     * @param other
+     */
     public void ensureCompatibility(DataInfo other) {
-        if(!isCompatibleWith(other)) {
+        if (!isCompatibleWith(other)) {
             throw new IllegalArgumentException("dataInfo not compatible");
         }
     }
 
+    /**
+     * Creates a new data info which has all completed
+     * chunks of this and the other data info.
+     *
+     * @param other
+     * @return
+     */
     public DataInfo union(DataInfo other) {
         ensureCompatibility(other);
 
@@ -89,18 +149,34 @@ public final class DataInfo implements Serializable {
         return dataInfo;
     }
 
+    /**
+     * @return The hash.
+     */
     public String getHash() {
         return hash;
     }
 
+    /**
+     * @return The chunk count.
+     */
     public int getChunkCount() {
         return chunkCount;
     }
 
+    /**
+     * @return The size.
+     */
     public long getSize() {
         return size;
     }
 
+    /**
+     * Calculates the chunk size using
+     * the given chunk index.
+     *
+     * @param chunkIndex
+     * @return
+     */
     public long getChunkSize(int chunkIndex) {
         if (chunkIndex < 0 || chunkIndex >= getChunkCount()) {
             throw new IndexOutOfBoundsException("chunkIndex");
@@ -108,12 +184,39 @@ public final class DataInfo implements Serializable {
         return chunkIndex < getChunkCount() - 1 ? chunkSize : lastChunkSize;
     }
 
+    /**
+     * @return A stream of indices which point to completed chunks.
+     */
+    public IntStream getCompletedChunks() {
+        return chunks.stream();
+    }
+
+    /**
+     * @return The missing size.
+     */
     public long getMissingSize() {
+        return getSize() - getCompletedSize();
+    }
+
+    /**
+     * @return The completed size.
+     */
+    public long getCompletedSize() {
         return getCompletedChunks()
                 .mapToLong(this::getChunkSize)
                 .sum();
     }
 
+    /**
+     * Checks whether or not this data info
+     * contains the other data info.
+     * <p>
+     * Two empty data info does not contain
+     * each other.
+     *
+     * @param other
+     * @return
+     */
     public boolean contains(DataInfo other) {
         ensureCompatibility(other);
 
@@ -125,26 +228,42 @@ public final class DataInfo implements Serializable {
         return !clone.isEmpty() && clone.equals(other.chunks);
     }
 
-    public IntStream getCompletedChunks() {
-        return chunks.stream();
-    }
-
+    /**
+     * @return The number of completed chunks.
+     */
     public int getCompletedChunkCount() {
         return chunks.cardinality();
     }
 
+    /**
+     * @return The number of missing chunks.
+     */
     public int getMissingChunkCount() {
         return getChunkCount() - getCompletedChunkCount();
     }
 
+    /**
+     * @return True if this data info has no completed chunks,
+     * otherwise false.
+     */
     public boolean isEmpty() {
         return chunks.isEmpty();
     }
 
+    /**
+     * @return True if this data info has no missing chunks,
+     * otherwise false.
+     */
     public boolean isCompleted() {
-        return getCompletedChunkCount() == getChunkCount();
+        return getMissingChunkCount() == 0;
     }
 
+    /**
+     * Checks whether or not the given chunk is completed.
+     *
+     * @param chunkIndex
+     * @return
+     */
     public boolean isChunkCompleted(int chunkIndex) {
         if (chunkIndex < 0 || chunkIndex >= getChunkCount()) {
             throw new IndexOutOfBoundsException("chunkIndex");
@@ -153,6 +272,14 @@ public final class DataInfo implements Serializable {
         return chunks.get(chunkIndex);
     }
 
+    /**
+     * Creates a copy and sets the given chunk
+     * to the given value.
+     *
+     * @param chunkIndex
+     * @param value
+     * @return
+     */
     public DataInfo setChunk(int chunkIndex, boolean value) {
         if (chunkIndex < 0 || chunkIndex >= getChunkCount()) {
             throw new IndexOutOfBoundsException("chunkIndex");
@@ -160,6 +287,17 @@ public final class DataInfo implements Serializable {
         DataInfo copy = duplicate();
         copy.chunks.set(chunkIndex, value);
         return copy;
+    }
+
+    /**
+     * @return A randomized copy.
+     */
+    public DataInfo randomize() {
+        DataInfo dataInfo = empty();
+        for (int i = 0; i < dataInfo.getChunkCount(); i++) {
+            dataInfo = dataInfo.setChunk(i, Math.random() >= 0.5);
+        }
+        return dataInfo;
     }
 
     @Override
@@ -170,5 +308,29 @@ public final class DataInfo implements Serializable {
                 ", chunkCount=" + chunkCount +
                 ", chunks=" + chunks +
                 '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        DataInfo dataInfo = (DataInfo) o;
+
+        if (chunkCount != dataInfo.chunkCount) return false;
+        if (size != dataInfo.size) return false;
+        if (!chunks.equals(dataInfo.chunks)) return false;
+        if (!hash.equals(dataInfo.hash)) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = hash.hashCode();
+        result = 31 * result + (int) (size ^ (size >>> 32));
+        result = 31 * result + chunkCount;
+        result = 31 * result + chunks.hashCode();
+        return result;
     }
 }

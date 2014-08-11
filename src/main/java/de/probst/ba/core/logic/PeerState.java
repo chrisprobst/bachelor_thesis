@@ -4,26 +4,41 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
- * Immutable view of the network state.
+ * Immutable view of the peer state.
  * <p>
  * Created by chrisprobst on 10.08.14.
  */
-public final class NetworkState implements Serializable {
+public final class PeerState implements Serializable {
 
+    // The id of this peer
     private final long peerId;
+
+    // All pending uploads
     private final Map<Long, Transfer> uploads;
+
+    // All pending downloads
     private final Map<Long, Transfer> downloads;
+
+    // All already available local data info
     private final Map<String, DataInfo> dataInfo;
+
+    // All known remote data info
     private final Map<Long, Map<String, DataInfo>> remoteDataInfo;
 
-    public NetworkState(long peerId,
-                        Map<Long, Transfer> uploads,
-                        Map<Long, Transfer> downloads,
-                        Map<String, DataInfo> dataInfo,
-                        Map<Long, Map<String, DataInfo>> remoteDataInfo) {
+    public PeerState(long peerId,
+                     Map<Long, Transfer> uploads,
+                     Map<Long, Transfer> downloads,
+                     Map<String, DataInfo> dataInfo,
+                     Map<Long, Map<String, DataInfo>> remoteDataInfo) {
+        Objects.requireNonNull(uploads);
+        Objects.requireNonNull(downloads);
+        Objects.requireNonNull(dataInfo);
+        Objects.requireNonNull(remoteDataInfo);
+
         this.peerId = peerId;
         this.uploads = uploads;
         this.downloads = downloads;
@@ -31,6 +46,9 @@ public final class NetworkState implements Serializable {
         this.remoteDataInfo = remoteDataInfo;
     }
 
+    /**
+     * @return The peer id.
+     */
     public long getPeerId() {
         return peerId;
     }
@@ -76,7 +94,7 @@ public final class NetworkState implements Serializable {
     }
 
     /**
-     * @return All local data info already saved.
+     * @return All already available local data info.
      */
     public Map<String, DataInfo> getDataInfo() {
         return dataInfo;

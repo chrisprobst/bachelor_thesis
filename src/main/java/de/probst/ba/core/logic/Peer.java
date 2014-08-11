@@ -1,16 +1,20 @@
 package de.probst.ba.core.logic;
 
 /**
+ * The main peer interface. If you want
+ * to implement a custom transport this
+ * is the only interface you have to implement.
+ * <p>
  * Created by chrisprobst on 10.08.14.
  */
-public interface Network extends Runnable {
+public interface Peer {
 
     /**
-     * The network state is internally updated periodically.
+     * The per state is internally updated periodically.
      *
-     * @return The last network state.
+     * @return The last peer state.
      */
-    NetworkState getNetworkState();
+    PeerState getPeerState();
 
     /**
      * Request to download data from the peer with
