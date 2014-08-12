@@ -11,10 +11,18 @@ import io.netty.util.concurrent.EventExecutor;
  * Created by chrisprobst on 12.08.14.
  */
 @ChannelHandler.Sharable
-public class ChannelGroupHandler extends ChannelHandlerAdapter {
+public final class ChannelGroupHandler extends ChannelHandlerAdapter {
 
     // All channels
     private final ChannelGroup channelGroup;
+
+    private void addChannel(ChannelHandlerContext ctx) {
+        channelGroup.add(ctx.channel());
+    }
+
+    private void removeChannel(ChannelHandlerContext ctx) {
+        channelGroup.remove(ctx.channel());
+    }
 
     public ChannelGroupHandler(EventExecutor eventExecutor) {
         channelGroup = new DefaultChannelGroup(eventExecutor);
@@ -31,7 +39,7 @@ public class ChannelGroupHandler extends ChannelHandlerAdapter {
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
         if (ctx.channel().isActive() && ctx.channel().isRegistered()) {
-            channelGroup.add(ctx.channel());
+            addChannel(ctx);
         }
         super.handlerAdded(ctx);
     }
@@ -39,26 +47,26 @@ public class ChannelGroupHandler extends ChannelHandlerAdapter {
     @Override
     public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
         if (ctx.channel().isActive()) {
-            channelGroup.add(ctx.channel());
+            addChannel(ctx);
         }
         super.channelRegistered(ctx);
     }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        channelGroup.add(ctx.channel());
+        addChannel(ctx);
         super.channelActive(ctx);
     }
 
     @Override
     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        channelGroup.remove(ctx.channel());
+        removeChannel(ctx);
         super.handlerRemoved(ctx);
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        channelGroup.remove(ctx.channel());
+        removeChannel(ctx);
         super.channelInactive(ctx);
     }
 }

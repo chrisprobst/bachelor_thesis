@@ -1,6 +1,8 @@
 package de.probst.ba.core.logic;
 
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * The main brain interface. If you want to
@@ -19,29 +21,30 @@ public interface Brain {
      * The purpose of this method is to implement synchronization strategies.
      * In other words: To request downloads in the most effective way.
      *
-     * @param peer
+     * @param networkState
+     * @return An optional list of download transfers.
      */
-    void process(Peer peer);
+    Optional<List<Transfer>> process(NetworkState networkState);
 
     /**
      * This method is called by the framework internally at
      * undefined intervals and can be triggered by network metrics,
      * timers and events randomly.
      * <p>
-     * The purpose of this method is to transform the data info we are willing
+     * The purpose of this method is to transform the local data info we are willing
      * to upload. This way for instance we could stop announcing data info if
      * we are already uploading the given data. This could help implement the
      * logarithmic strategy where every peer only uploads data to one other peer.
      * <p>
      * The default implementation does not do any transformations.
      *
-     * @param peerState
+     * @param networkState
      * @param remotePeerId The remote peer id.
-     * @return
+     * @return An optional data info.
      */
-    default Map<String, DataInfo> transformUploadDataInfo(PeerState peerState,
-                                                          Object remotePeerId) {
-        return peerState.getDataInfo();
+    default Optional<Map<String, DataInfo>> transformUploadDataInfo(NetworkState networkState,
+                                                                    Object remotePeerId) {
+        return Optional.of(networkState.getDataInfo());
     }
 
     /**
@@ -54,11 +57,11 @@ public interface Brain {
      * The default implementation always returns true so every distinct peer
      * will be served.
      *
-     * @param peerState
+     * @param networkState
      * @param transfer
      * @return
      */
-    default boolean isUploadAllowed(PeerState peerState,
+    default boolean isUploadAllowed(NetworkState networkState,
                                     Transfer transfer) {
         return true;
     }

@@ -10,11 +10,21 @@ public final class Config {
     private Config() {
     }
 
+    private static final TimeUnit DEFAULT_TIME_UNIT = TimeUnit.MILLISECONDS;
+
     public static long getRemoteDataInfoExpirationDelay() {
-        return 5;
+        return getDataInfoAnnounceDelay() * 2;
     }
 
     public static TimeUnit getRemoteDataInfoExpirationDelayTimeUnit() {
-        return TimeUnit.SECONDS;
+        return DEFAULT_TIME_UNIT;
+    }
+
+    public static long getDataInfoAnnounceDelay() {
+        return 2000;
+    }
+
+    public static TimeUnit getDataInfoAnnounceTimeUnit() {
+        return DEFAULT_TIME_UNIT;
     }
 }

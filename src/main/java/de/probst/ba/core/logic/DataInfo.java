@@ -336,4 +336,14 @@ public final class DataInfo implements Serializable {
         result = 31 * result + chunks.hashCode();
         return result;
     }
+
+    /**
+     * Create a new transfer from this data info.
+     *
+     * @param remotePeerId
+     * @return
+     */
+    public Transfer createTransfer(Object remotePeerId) {
+        return new Transfer(remotePeerId, this);
+    }
 }

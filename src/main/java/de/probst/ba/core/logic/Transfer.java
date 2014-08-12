@@ -2,6 +2,7 @@ package de.probst.ba.core.logic;
 
 import java.io.Serializable;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Represents a transfer.
@@ -9,6 +10,8 @@ import java.util.Objects;
  * Created by chrisprobst on 10.08.14.
  */
 public final class Transfer implements Serializable {
+
+    private static final AtomicLong TRANSFER_ID_GEN = new AtomicLong();
 
     // The transfer id
     private final long transferId;
@@ -37,8 +40,12 @@ public final class Transfer implements Serializable {
         this.completedSize = completedSize;
     }
 
-    public Transfer(long transferId,
-                    Object remotePeerId,
+    public Transfer(Object remotePeerId,
+                    DataInfo dataInfo) {
+        this(remotePeerId, dataInfo, 0);
+    }
+
+    public Transfer(Object remotePeerId,
                     DataInfo dataInfo,
                     long completedSize) {
 
@@ -59,7 +66,7 @@ public final class Transfer implements Serializable {
             throw new IllegalArgumentException("completedSize < 0");
         }
 
-        this.transferId = transferId;
+        transferId = TRANSFER_ID_GEN.getAndIncrement();
         this.remotePeerId = remotePeerId;
         this.dataInfo = dataInfo;
         this.completedSize = completedSize;

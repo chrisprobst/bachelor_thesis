@@ -8,11 +8,11 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
- * Immutable view of the peer state.
+ * Immutable view of the network.
  * <p>
  * Created by chrisprobst on 10.08.14.
  */
-public final class PeerState implements Serializable {
+public final class NetworkState implements Serializable {
 
     // All pending uploads
     private final Map<Object, Transfer> uploads;
@@ -32,12 +32,12 @@ public final class PeerState implements Serializable {
     // The upload rate
     private final long uploadRate;
 
-    public PeerState(Map<Object, Transfer> uploads,
-                     Map<Object, Transfer> downloads,
-                     Map<String, DataInfo> dataInfo,
-                     Map<Object, Map<String, DataInfo>> remoteDataInfo,
-                     long downloadRate,
-                     long uploadRate) {
+    public NetworkState(Map<Object, Transfer> uploads,
+                        Map<Object, Transfer> downloads,
+                        Map<String, DataInfo> dataInfo,
+                        Map<Object, Map<String, DataInfo>> remoteDataInfo,
+                        long downloadRate,
+                        long uploadRate) {
 
         Objects.requireNonNull(uploads);
         Objects.requireNonNull(downloads);
