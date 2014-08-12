@@ -36,9 +36,11 @@ public interface Brain {
      * The default implementation does not do any transformations.
      *
      * @param peerState
+     * @param remotePeerId The remote peer id.
      * @return
      */
-    default Map<String, DataInfo> transformUploadDataInfo(PeerState peerState) {
+    default Map<String, DataInfo> transformUploadDataInfo(PeerState peerState,
+                                                          Object remotePeerId) {
         return peerState.getDataInfo();
     }
 

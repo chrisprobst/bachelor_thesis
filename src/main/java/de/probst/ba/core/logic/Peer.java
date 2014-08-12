@@ -10,7 +10,12 @@ package de.probst.ba.core.logic;
 public interface Peer {
 
     /**
-     * The per state is internally updated periodically.
+     * @return The peer id.
+     */
+    Object getPeerId();
+
+    /**
+     * The peer state is internally updated periodically.
      *
      * @return The last peer state.
      */
@@ -20,10 +25,11 @@ public interface Peer {
      * Request to download data from the peer with
      * the given id using the given data info. If there
      * is already a pending download using the same id,
+     * or the given arguments are invalid for some reason,
      * the new download request is ignored.
      *
-     * @param peerId
+     * @param remotePeerId
      * @param dataInfo
      */
-    void download(long peerId, DataInfo dataInfo);
+    void download(Object remotePeerId, DataInfo dataInfo);
 }

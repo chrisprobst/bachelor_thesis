@@ -14,43 +14,42 @@ import java.util.stream.Collectors;
  */
 public final class PeerState implements Serializable {
 
-    // The id of this peer
-    private final long peerId;
-
     // All pending uploads
-    private final Map<Long, Transfer> uploads;
+    private final Map<Object, Transfer> uploads;
 
     // All pending downloads
-    private final Map<Long, Transfer> downloads;
+    private final Map<Object, Transfer> downloads;
 
     // All already available local data info
     private final Map<String, DataInfo> dataInfo;
 
     // All known remote data info
-    private final Map<Long, Map<String, DataInfo>> remoteDataInfo;
+    private final Map<Object, Map<String, DataInfo>> remoteDataInfo;
 
-    public PeerState(long peerId,
-                     Map<Long, Transfer> uploads,
-                     Map<Long, Transfer> downloads,
+    // The download rate
+    private final long downloadRate;
+
+    // The upload rate
+    private final long uploadRate;
+
+    public PeerState(Map<Object, Transfer> uploads,
+                     Map<Object, Transfer> downloads,
                      Map<String, DataInfo> dataInfo,
-                     Map<Long, Map<String, DataInfo>> remoteDataInfo) {
+                     Map<Object, Map<String, DataInfo>> remoteDataInfo,
+                     long downloadRate,
+                     long uploadRate) {
+
         Objects.requireNonNull(uploads);
         Objects.requireNonNull(downloads);
         Objects.requireNonNull(dataInfo);
         Objects.requireNonNull(remoteDataInfo);
 
-        this.peerId = peerId;
         this.uploads = uploads;
         this.downloads = downloads;
         this.dataInfo = dataInfo;
         this.remoteDataInfo = remoteDataInfo;
-    }
-
-    /**
-     * @return The peer id.
-     */
-    public long getPeerId() {
-        return peerId;
+        this.downloadRate = downloadRate;
+        this.uploadRate = uploadRate;
     }
 
     /**
@@ -70,7 +69,7 @@ public final class PeerState implements Serializable {
         // of all data info which will be available in the future
         Map<String, DataInfo> flatEstimatedDataInfo = estimatedDataInfo.entrySet().stream()
                 .collect(Collectors.toMap(
-                        p -> p.getKey(),
+                        Map.Entry::getKey,
                         p -> p.getValue().stream().reduce(DataInfo::union).get()));
 
         // Merge with already available data info
@@ -80,16 +79,30 @@ public final class PeerState implements Serializable {
     }
 
     /**
+     * @return The download rate.
+     */
+    public long getDownloadRate() {
+        return downloadRate;
+    }
+
+    /**
+     * @return The upload rate.
+     */
+    public long getUploadRate() {
+        return uploadRate;
+    }
+
+    /**
      * @return All pending uploads.
      */
-    public Map<Long, Transfer> getUploads() {
+    public Map<Object, Transfer> getUploads() {
         return uploads;
     }
 
     /**
      * @return All pending downloads.
      */
-    public Map<Long, Transfer> getDownloads() {
+    public Map<Object, Transfer> getDownloads() {
         return downloads;
     }
 
@@ -103,7 +116,7 @@ public final class PeerState implements Serializable {
     /**
      * @return All known remote data info.
      */
-    public Map<Long, Map<String, DataInfo>> getRemoteDataInfo() {
+    public Map<Object, Map<String, DataInfo>> getRemoteDataInfo() {
         return remoteDataInfo;
     }
 }

@@ -35,15 +35,15 @@ public final class DataInfo implements Serializable {
         Objects.requireNonNull(hash);
 
         if (size < 0) {
-            throw new IllegalArgumentException("size must be positive");
+            throw new IllegalArgumentException("size < 0");
         }
 
         if (chunkCount < 1) {
-            throw new IllegalArgumentException("chunkCount must be greater than 0");
+            throw new IllegalArgumentException("chunkCount < 1");
         }
 
         if (chunkCount > size) {
-            throw new IllegalArgumentException("chunkCount cannot be greater than size");
+            throw new IllegalArgumentException("chunkCount > size");
         }
 
         this.hash = hash;
@@ -179,7 +179,8 @@ public final class DataInfo implements Serializable {
      */
     public long getChunkSize(int chunkIndex) {
         if (chunkIndex < 0 || chunkIndex >= getChunkCount()) {
-            throw new IndexOutOfBoundsException("chunkIndex");
+            throw new IndexOutOfBoundsException(
+                    "chunkIndex < 0 || chunkIndex >= getChunkCount()");
         }
         return chunkIndex < getChunkCount() - 1 ? chunkSize : lastChunkSize;
     }
@@ -266,7 +267,8 @@ public final class DataInfo implements Serializable {
      */
     public boolean isChunkCompleted(int chunkIndex) {
         if (chunkIndex < 0 || chunkIndex >= getChunkCount()) {
-            throw new IndexOutOfBoundsException("chunkIndex");
+            throw new IndexOutOfBoundsException(
+                    "chunkIndex < 0 || chunkIndex >= getChunkCount()");
         }
 
         return chunks.get(chunkIndex);
@@ -282,7 +284,8 @@ public final class DataInfo implements Serializable {
      */
     public DataInfo setChunk(int chunkIndex, boolean value) {
         if (chunkIndex < 0 || chunkIndex >= getChunkCount()) {
-            throw new IndexOutOfBoundsException("chunkIndex");
+            throw new IndexOutOfBoundsException(
+                    "chunkIndex < 0 || chunkIndex >= getChunkCount()");
         }
         DataInfo copy = duplicate();
         copy.chunks.set(chunkIndex, value);
