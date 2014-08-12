@@ -29,3 +29,6 @@ build/
 # Do not upload the workspace layout
 # It changes quite often
 .idea/workspace.xml
+
+# The gradle wrapper can be downloaded with ./gradlew wrapper
+gradle/
