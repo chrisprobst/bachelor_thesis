@@ -61,22 +61,31 @@ public abstract class AbstractPeer {
     /**
      * Periodically announces our data info to all clients.
      */
-    private Runnable announcer = () -> getServerChannelGroup()
-            .writeAndFlush(new DataInfoMessage(new HashMap<>(dataInfo)))
-            .addListener(f -> {
-                if (f.isSuccess()) {
-                    // The announce process was successful,
-                    // reschedule this task later again
-                    scheduleAnnouncer();
-                } else {
-                    /*
-                    TODO: Something went wrong
-                    Maybe there is a better way of handling
-                    those situations.
-                     */
-                    scheduleAnnouncer();
-                }
-            });
+    private Runnable announcer = () -> {
+        // A copy of the local data info
+        Map<String, DataInfo> dataInfoCopy = new HashMap<>(dataInfo);
+        if (dataInfoCopy.isEmpty()) {
+            // We have nothing to announce so just wait
+            scheduleAnnouncer();
+        } else {
+            getServerChannelGroup()
+                    .writeAndFlush(new DataInfoMessage(dataInfoCopy))
+                    .addListener(f -> {
+                        if (f.isSuccess()) {
+                            // The announce process was successful,
+                            // reschedule this task later again
+                            scheduleAnnouncer();
+                        } else {
+                            /*
+                            TODO: Something went wrong
+                            Maybe there is a better way of handling
+                            those situations.
+                             */
+                            scheduleAnnouncer();
+                        }
+                    });
+        }
+    };
 
     private void scheduleAnnouncer() {
         getEventLoopGroup().schedule(announcer,

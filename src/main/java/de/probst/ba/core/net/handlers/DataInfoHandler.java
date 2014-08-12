@@ -32,17 +32,23 @@ public final class DataInfoHandler extends SimpleChannelInboundHandler<DataInfoM
                     Config.getRemoteDataInfoExpirationDelayTimeUnit())
             .build();
 
-    public Map<Object, Map<String, DataInfo>> getRemoteDataInfo() {
-        return new HashMap<>(remoteDataInfo.asMap());
+    private boolean isDataInfoMessageValid(DataInfoMessage dataInfoMessage) {
+        return dataInfoMessage != null &&
+                dataInfoMessage.getDataInfo() != null &&
+                !dataInfoMessage.getDataInfo().isEmpty();
     }
 
     @Override
     protected void messageReceived(ChannelHandlerContext ctx, DataInfoMessage msg) throws Exception {
 
         // Check for null
-        if (msg != null && msg.getDataInfo() != null) {
+        if (isDataInfoMessageValid(msg)) {
             // Just put the data info into the map
             remoteDataInfo.put(ctx.channel().id(), msg.getDataInfo());
         }
+    }
+
+    public Map<Object, Map<String, DataInfo>> getRemoteDataInfo() {
+        return new HashMap<>(remoteDataInfo.asMap());
     }
 }

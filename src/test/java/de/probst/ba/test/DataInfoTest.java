@@ -1,9 +1,12 @@
 package de.probst.ba.test;
-import static org.junit.Assert.*;
 
 import de.probst.ba.core.logic.DataInfo;
 import org.junit.Before;
 import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Created by chrisprobst on 03.08.14.
@@ -17,8 +20,29 @@ public class DataInfoTest {
         dataInfo = new DataInfo("123Hash123", 100, 11);
     }
 
-    @Test public void flip()
-    {
+    @Test
+    public void whereWithWithout() {
+        DataInfo a = dataInfo
+                .withChunk(2)
+                .withChunk(4)
+                .whereChunk(5, true)
+                .whereChunk(6, false)
+                .withoutChunk(4);
+
+        DataInfo b = dataInfo
+                .withChunk(6)
+                .whereChunk(2, true)
+                .withChunk(4)
+                .whereChunk(4, false)
+                .withChunk(5)
+                .withoutChunk(6)
+                .withoutChunk(4);
+
+        assertEquals(a, b);
+    }
+
+    @Test
+    public void flip() {
         dataInfo = dataInfo.randomize();
         DataInfo flip = dataInfo.flip();
 
@@ -31,8 +55,8 @@ public class DataInfoTest {
         }
     }
 
-    @Test public void duplicate()
-    {
+    @Test
+    public void duplicate() {
         dataInfo = dataInfo.randomize();
         DataInfo duplicate = dataInfo.duplicate();
 
@@ -45,40 +69,40 @@ public class DataInfoTest {
         }
     }
 
-    @Test public void contain()
-    {
+    @Test
+    public void contain() {
         // empty set does not contain empty set
         DataInfo duplicate = dataInfo.duplicate();
         assertFalse(dataInfo.contains(duplicate));
 
         // Same number of chunks
-        dataInfo = dataInfo.setChunk(4, true);
+        dataInfo = dataInfo.whereChunk(4, true);
         duplicate = dataInfo.duplicate();
         assertTrue(dataInfo.contains(duplicate));
 
         // Less chunks
-        dataInfo = dataInfo.setChunk(2, true);
-        dataInfo = dataInfo.setChunk(3, true);
+        dataInfo = dataInfo.whereChunk(2, true);
+        dataInfo = dataInfo.whereChunk(3, true);
 
         duplicate = dataInfo.duplicate();
-        duplicate = duplicate.setChunk(3, false);
-        duplicate = duplicate.setChunk(4, false);
+        duplicate = duplicate.whereChunk(3, false);
+        duplicate = duplicate.whereChunk(4, false);
 
         assertTrue(dataInfo.contains(duplicate));
 
         // More chunks
-        duplicate = duplicate.setChunk(5, true);
-        duplicate = duplicate.setChunk(6, true);
+        duplicate = duplicate.whereChunk(5, true);
+        duplicate = duplicate.whereChunk(6, true);
 
         assertFalse(dataInfo.contains(duplicate));
 
-        duplicate = duplicate.setChunk(3, true);
-        duplicate = duplicate.setChunk(4, true);
+        duplicate = duplicate.whereChunk(3, true);
+        duplicate = duplicate.whereChunk(4, true);
         assertTrue(duplicate.contains(dataInfo));
     }
 
-    @Test public void full()
-    {
+    @Test
+    public void full() {
         dataInfo = dataInfo.randomize();
         DataInfo full = dataInfo.full();
 
@@ -91,8 +115,8 @@ public class DataInfoTest {
         }
     }
 
-    @Test public void empty()
-    {
+    @Test
+    public void empty() {
         dataInfo = dataInfo.randomize();
         DataInfo empty = dataInfo.empty();
 
@@ -105,19 +129,19 @@ public class DataInfoTest {
         }
     }
 
-    @Test public void chunkIndex()
-    {
+    @Test
+    public void chunkIndex() {
         assertEquals(9, dataInfo.getChunkSize(0));
         assertEquals(9, dataInfo.getChunkSize(4));
         assertEquals(9, dataInfo.getChunkSize(9));
         assertEquals(1, dataInfo.getChunkSize(10));
     }
 
-    @Test public void chunk()
-    {
+    @Test
+    public void chunk() {
 
-        dataInfo = dataInfo.setChunk(3, true);
-        dataInfo = dataInfo.setChunk(7, true);
+        dataInfo = dataInfo.whereChunk(3, true);
+        dataInfo = dataInfo.whereChunk(7, true);
 
         assertTrue(dataInfo.isChunkCompleted(3));
         assertTrue(dataInfo.isChunkCompleted(7));

@@ -24,7 +24,10 @@ public class Server {
         localPeerB.connect(new LocalAddress("peer-1")).sync();
 
         // Demo data
-        DataInfo dataInfo = new DataInfo("Hello world", 1000, 10);
+        DataInfo dataInfo = new DataInfo("Hello world", 1000, 10)
+                .withChunk(3)
+                .withChunk(6)
+                .withChunk(7);
 
         // Put in map
         localPeerA.getDataInfo().put(dataInfo.getHash(), dataInfo);
@@ -35,7 +38,11 @@ public class Server {
 
             // Receive announced data info
             localPeerB.getRemoteDataInfo().entrySet().stream()
-                    .forEach(p -> System.out.println(((ChannelId) p.getKey()).asLongText() + " -> " + p.getValue()));
+                    .forEach(p -> System.out.println("PEER B -> " + ((ChannelId) p.getKey()).asLongText() + " -> " + p.getValue()));
+
+            // Receive announced data info
+            localPeerA.getRemoteDataInfo().entrySet().stream()
+                    .forEach(p -> System.out.println("PEER A -> " + ((ChannelId) p.getKey()).asLongText() + " -> " + p.getValue()));
         }
     }
 }

@@ -108,6 +108,57 @@ public final class DataInfo implements Serializable {
     }
 
     /**
+     * Creates a copy and sets the given chunk
+     * to the given value.
+     *
+     * @param chunkIndex
+     * @param value
+     * @return
+     */
+    public DataInfo whereChunk(int chunkIndex, boolean value) {
+        if (chunkIndex < 0 || chunkIndex >= getChunkCount()) {
+            throw new IndexOutOfBoundsException(
+                    "chunkIndex < 0 || chunkIndex >= getChunkCount()");
+        }
+        DataInfo copy = duplicate();
+        copy.chunks.set(chunkIndex, value);
+        return copy;
+    }
+
+    /**
+     * Creates a copy and sets the given chunk
+     * to true.
+     *
+     * @param chunkIndex
+     * @return
+     */
+    public DataInfo withChunk(int chunkIndex) {
+        return whereChunk(chunkIndex, true);
+    }
+
+    /**
+     * Creates a copy and sets the given chunk
+     * to false.
+     *
+     * @param chunkIndex
+     * @return
+     */
+    public DataInfo withoutChunk(int chunkIndex) {
+        return whereChunk(chunkIndex, false);
+    }
+
+    /**
+     * @return A randomized copy.
+     */
+    public DataInfo randomize() {
+        DataInfo dataInfo = empty();
+        for (int i = 0; i < dataInfo.getChunkCount(); i++) {
+            dataInfo.chunks.set(i, Math.random() >= 0.5);
+        }
+        return dataInfo;
+    }
+
+    /**
      * Checks whether or the other data info is
      * compatible with this compatible.
      *
@@ -272,35 +323,6 @@ public final class DataInfo implements Serializable {
         }
 
         return chunks.get(chunkIndex);
-    }
-
-    /**
-     * Creates a copy and sets the given chunk
-     * to the given value.
-     *
-     * @param chunkIndex
-     * @param value
-     * @return
-     */
-    public DataInfo setChunk(int chunkIndex, boolean value) {
-        if (chunkIndex < 0 || chunkIndex >= getChunkCount()) {
-            throw new IndexOutOfBoundsException(
-                    "chunkIndex < 0 || chunkIndex >= getChunkCount()");
-        }
-        DataInfo copy = duplicate();
-        copy.chunks.set(chunkIndex, value);
-        return copy;
-    }
-
-    /**
-     * @return A randomized copy.
-     */
-    public DataInfo randomize() {
-        DataInfo dataInfo = empty();
-        for (int i = 0; i < dataInfo.getChunkCount(); i++) {
-            dataInfo = dataInfo.setChunk(i, Math.random() >= 0.5);
-        }
-        return dataInfo;
     }
 
     @Override

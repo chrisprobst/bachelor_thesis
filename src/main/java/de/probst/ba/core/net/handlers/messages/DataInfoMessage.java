@@ -15,6 +15,10 @@ public class DataInfoMessage {
     public DataInfoMessage(Map<String, DataInfo> dataInfo) {
         Objects.requireNonNull(dataInfo);
 
+        if (dataInfo.isEmpty()) {
+            throw new IllegalArgumentException("dataInfo is empty");
+        }
+
         this.dataInfo = dataInfo;
     }
 
