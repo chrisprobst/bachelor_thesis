@@ -5,13 +5,10 @@ import de.probst.ba.core.logic.DataInfo;
 import de.probst.ba.core.net.handlers.ChannelGroupHandler;
 import de.probst.ba.core.net.handlers.DataInfoHandler;
 import de.probst.ba.core.net.handlers.messages.DataInfoMessage;
-import io.netty.bootstrap.Bootstrap;
-import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.ServerChannel;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
@@ -47,13 +44,39 @@ public abstract class AbstractPeer {
     private final ChannelGroupHandler serverChannelGroupHandler =
             new ChannelGroupHandler(eventLoopGroup.next());
 
-    private final ServerBootstrap localServerBootstrap =
-            new ServerBootstrap();
+    protected final ChannelInitializer<Channel> serverChannelInitializer = new ChannelInitializer<Channel>() {
+        @Override
+        public void initChannel(Channel ch) {
+            ch.pipeline().addLast(
+                    logHandler,
 
-    private final ChannelFuture bindFuture;
+                    // Manages all incoming client channels
+                    // for uploading data and announcing
+                    // data info
+                    serverChannelGroupHandler
+            );
+        }
+    };
 
-    private final Bootstrap localBootstrap =
-            new Bootstrap();
+    protected final ChannelInitializer<Channel> channelInitializer = new ChannelInitializer<Channel>() {
+        @Override
+        public void initChannel(Channel ch) {
+            ch.pipeline().addLast(
+                    logHandler,
+
+                    // Manages all outgoing client channels
+                    // for downloading data and receiving
+                    // data info announcements
+                    channelGroupHandler,
+
+                    // Only the clients receive announcements
+                    // from other peers
+                    dataInfoHandler
+            );
+        }
+    };
+
+    private final ChannelFuture initFuture;
 
     private LoggingHandler logHandler =
             new LoggingHandler(logLevel);
@@ -93,55 +116,25 @@ public abstract class AbstractPeer {
                 Config.getDataInfoAnnounceTimeUnit());
     }
 
-
-    private void initServerBootstrap() {
-        localServerBootstrap
-                .group(eventLoopGroup)
-                .channel(getServerChannelClass())
-                .handler(logHandler)
-                .childHandler(new ChannelInitializer<Channel>() {
-                    @Override
-                    public void initChannel(Channel ch) {
-                        ch.pipeline().addLast(
-                                logHandler,
-
-                                // Manages all incoming client channels
-                                // for uploading data and announcing
-                                // data info
-                                serverChannelGroupHandler
-                        );
-                    }
-
-                });
+    protected ChannelInitializer<Channel> getServerChannelInitializer() {
+        return serverChannelInitializer;
     }
 
-    private void initBootstrap() {
-        localBootstrap
-                .group(eventLoopGroup)
-                .channel(getChannelClass())
-                .handler(new ChannelInitializer<Channel>() {
-                    @Override
-                    public void initChannel(Channel ch) throws Exception {
-                        ch.pipeline().addLast(
-                                logHandler,
-
-                                // Manages all outgoing client channels
-                                // for downloading data and receiving
-                                // data info announcements
-                                channelGroupHandler,
-
-                                // Only the clients receive announcements
-                                // from other peers
-                                dataInfoHandler);
-                    }
-                });
+    protected ChannelInitializer<Channel> getChannelInitializer() {
+        return channelInitializer;
     }
+
+    protected LoggingHandler getLogHandler() {
+        return logHandler;
+    }
+
+    protected abstract void initServerBootstrap();
+
+    protected abstract void initBootstrap();
 
     protected abstract EventLoopGroup createEventGroup();
 
-    protected abstract Class<? extends ServerChannel> getServerChannelClass();
-
-    protected abstract Class<? extends Channel> getChannelClass();
+    protected abstract ChannelFuture createInitFuture();
 
     public AbstractPeer(SocketAddress address) {
         Objects.requireNonNull(address);
@@ -154,10 +147,10 @@ public abstract class AbstractPeer {
         initServerBootstrap();
 
         // Bind to address
-        bindFuture = getServerBootstrap().bind(getAddress());
+        initFuture = createInitFuture();
 
         // Register announce scheduler
-        bindFuture.addListener(f -> {
+        initFuture.addListener(f -> {
             if (f.isSuccess()) {
                 scheduleAnnouncer();
             } else {
@@ -187,14 +180,6 @@ public abstract class AbstractPeer {
         return serverChannelGroupHandler.getChannelGroup();
     }
 
-    public ServerBootstrap getServerBootstrap() {
-        return localServerBootstrap;
-    }
-
-    public Bootstrap getBootstrap() {
-        return localBootstrap;
-    }
-
     public SocketAddress getAddress() {
         return address;
     }
@@ -203,11 +188,7 @@ public abstract class AbstractPeer {
         return eventLoopGroup;
     }
 
-    public ChannelFuture getBindFuture() {
-        return bindFuture;
-    }
-
-    public ChannelFuture connect(SocketAddress remotePeer) {
-        return getBootstrap().connect(remotePeer);
+    public ChannelFuture getInitFuture() {
+        return initFuture;
     }
 }

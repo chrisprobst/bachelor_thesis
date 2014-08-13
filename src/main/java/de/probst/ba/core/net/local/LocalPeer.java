@@ -1,11 +1,11 @@
 package de.probst.ba.core.net.local;
 
 import de.probst.ba.core.net.AbstractPeer;
-import io.netty.channel.Channel;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.ServerChannel;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
@@ -15,19 +15,33 @@ import io.netty.channel.local.LocalServerChannel;
  */
 public class LocalPeer extends AbstractPeer {
 
+    private ServerBootstrap serverBootstrap;
+
+    private Bootstrap bootstrap;
+
+    protected void initServerBootstrap() {
+        (serverBootstrap = new ServerBootstrap())
+                .group(getEventLoopGroup())
+                .channel(LocalServerChannel.class)
+                .handler(getLogHandler())
+                .childHandler(getServerChannelInitializer());
+    }
+
+    protected void initBootstrap() {
+        (bootstrap = new Bootstrap())
+                .group(getEventLoopGroup())
+                .channel(LocalChannel.class)
+                .handler(getChannelInitializer());
+    }
+
+    @Override
+    protected ChannelFuture createInitFuture() {
+        return serverBootstrap.bind(getAddress());
+    }
+
     @Override
     protected EventLoopGroup createEventGroup() {
         return new DefaultEventLoopGroup();
-    }
-
-    @Override
-    protected Class<? extends ServerChannel> getServerChannelClass() {
-        return LocalServerChannel.class;
-    }
-
-    @Override
-    protected Class<? extends Channel> getChannelClass() {
-        return LocalChannel.class;
     }
 
     public LocalPeer(String localAddress) {
@@ -35,6 +49,6 @@ public class LocalPeer extends AbstractPeer {
     }
 
     public ChannelFuture connect(String localAddress) {
-        return connect(new LocalAddress(localAddress));
+        return bootstrap.connect(new LocalAddress(localAddress));
     }
 }
