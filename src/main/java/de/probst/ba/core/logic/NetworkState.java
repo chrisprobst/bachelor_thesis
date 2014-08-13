@@ -1,6 +1,7 @@
 package de.probst.ba.core.logic;
 
 import java.io.Serializable;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -8,7 +9,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
- * Immutable view of the network.
+ * Immutable view of the networkstate.
  * <p>
  * Created by chrisprobst on 10.08.14.
  */
@@ -32,6 +33,16 @@ public final class NetworkState implements Serializable {
     // The upload rate
     private final long uploadRate;
 
+    /**
+     * Creates a network state.
+     *
+     * @param uploads
+     * @param downloads
+     * @param dataInfo
+     * @param remoteDataInfo
+     * @param downloadRate
+     * @param uploadRate
+     */
     public NetworkState(Map<Object, Transfer> uploads,
                         Map<Object, Transfer> downloads,
                         Map<String, DataInfo> dataInfo,
@@ -44,10 +55,13 @@ public final class NetworkState implements Serializable {
         Objects.requireNonNull(dataInfo);
         Objects.requireNonNull(remoteDataInfo);
 
-        this.uploads = uploads;
-        this.downloads = downloads;
-        this.dataInfo = dataInfo;
-        this.remoteDataInfo = remoteDataInfo;
+        this.uploads = Collections.unmodifiableMap(new HashMap<>(uploads));
+        this.downloads = Collections.unmodifiableMap(new HashMap<>(downloads));
+        this.dataInfo = Collections.unmodifiableMap(new HashMap<>(dataInfo));
+        this.remoteDataInfo = Collections.unmodifiableMap(remoteDataInfo.entrySet().stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        p -> Collections.unmodifiableMap(new HashMap<>(p.getValue())))));
         this.downloadRate = downloadRate;
         this.uploadRate = uploadRate;
     }

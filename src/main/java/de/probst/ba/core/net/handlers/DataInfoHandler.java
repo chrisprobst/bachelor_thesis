@@ -9,7 +9,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.Map;
 
 /**
@@ -32,6 +32,9 @@ public final class DataInfoHandler extends SimpleChannelInboundHandler<DataInfoM
                     Config.getRemoteDataInfoExpirationDelayTimeUnit())
             .build();
 
+    private final Map<Object, Map<String, DataInfo>> unmodifiableRemoteDataInfo =
+            Collections.unmodifiableMap(remoteDataInfo.asMap());
+
     private boolean isDataInfoMessageValid(DataInfoMessage dataInfoMessage) {
         return dataInfoMessage != null &&
                 dataInfoMessage.getDataInfo() != null &&
@@ -44,11 +47,11 @@ public final class DataInfoHandler extends SimpleChannelInboundHandler<DataInfoM
         // Check for null
         if (isDataInfoMessageValid(msg)) {
             // Just put the data info into the map
-            remoteDataInfo.put(ctx.channel().id(), msg.getDataInfo());
+            remoteDataInfo.put(ctx.channel().id(), Collections.unmodifiableMap(msg.getDataInfo()));
         }
     }
 
     public Map<Object, Map<String, DataInfo>> getRemoteDataInfo() {
-        return new HashMap<>(remoteDataInfo.asMap());
+        return unmodifiableRemoteDataInfo;
     }
 }

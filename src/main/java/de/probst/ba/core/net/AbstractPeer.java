@@ -14,7 +14,6 @@ import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 
 import java.net.SocketAddress;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -86,13 +85,13 @@ public abstract class AbstractPeer {
      */
     private Runnable announcer = () -> {
         // A copy of the local data info
-        Map<String, DataInfo> dataInfoCopy = new HashMap<>(dataInfo);
-        if (dataInfoCopy.isEmpty()) {
+        DataInfoMessage dataInfoMessage = new DataInfoMessage(dataInfo);
+        if (dataInfoMessage.getDataInfo().isEmpty()) {
             // We have nothing to announce so just wait
             scheduleAnnouncer();
         } else {
             getServerChannelGroup()
-                    .writeAndFlush(new DataInfoMessage(dataInfoCopy))
+                    .writeAndFlush(dataInfoMessage)
                     .addListener(f -> {
                         if (f.isSuccess()) {
                             // The announce process was successful,
