@@ -139,9 +139,9 @@ public abstract class AbstractPeer {
 
     protected abstract EventLoopGroup createEventGroup();
 
-    protected abstract <T extends ServerChannel> Class<T> getServerChannelClass();
+    protected abstract Class<? extends ServerChannel> getServerChannelClass();
 
-    protected abstract <T extends Channel> Class<T> getChannelClass();
+    protected abstract Class<? extends Channel> getChannelClass();
 
     public AbstractPeer(SocketAddress address) {
         Objects.requireNonNull(address);

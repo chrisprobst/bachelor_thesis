@@ -17,7 +17,9 @@ public class DataInfoTest {
 
     @Before
     public void setUp() {
-        dataInfo = new DataInfo("123Hash123", 100, 11);
+
+        // 11 parts are needed for this tests
+        dataInfo = new DataInfo(100, "123Hash123", 11, String::valueOf);
     }
 
     @Test
@@ -47,7 +49,7 @@ public class DataInfoTest {
         DataInfo flip = dataInfo.flip();
 
         assertEquals(dataInfo.getSize(), flip.getSize());
-        assertEquals(dataInfo.getChunkCount(), flip.getChunkCount());
+        assertEquals(dataInfo.getChunkHashes(), flip.getChunkHashes());
         assertEquals(dataInfo.getHash(), flip.getHash());
 
         for (int i = 0; i < dataInfo.getChunkCount(); i++) {
@@ -61,12 +63,14 @@ public class DataInfoTest {
         DataInfo duplicate = dataInfo.duplicate();
 
         assertEquals(dataInfo.getSize(), duplicate.getSize());
-        assertEquals(dataInfo.getChunkCount(), duplicate.getChunkCount());
+        assertEquals(dataInfo.getChunkHashes(), duplicate.getChunkHashes());
         assertEquals(dataInfo.getHash(), duplicate.getHash());
 
         for (int i = 0; i < dataInfo.getChunkCount(); i++) {
             assertEquals(dataInfo.isChunkCompleted(i), duplicate.isChunkCompleted(i));
         }
+
+        assertEquals(duplicate, dataInfo);
     }
 
     @Test
@@ -107,7 +111,7 @@ public class DataInfoTest {
         DataInfo full = dataInfo.full();
 
         assertEquals(dataInfo.getSize(), full.getSize());
-        assertEquals(dataInfo.getChunkCount(), full.getChunkCount());
+        assertEquals(dataInfo.getChunkHashes(), full.getChunkHashes());
         assertEquals(dataInfo.getHash(), full.getHash());
 
         for (int i = 0; i < dataInfo.getChunkCount(); i++) {
@@ -121,7 +125,7 @@ public class DataInfoTest {
         DataInfo empty = dataInfo.empty();
 
         assertEquals(dataInfo.getSize(), empty.getSize());
-        assertEquals(dataInfo.getChunkCount(), empty.getChunkCount());
+        assertEquals(dataInfo.getChunkHashes(), empty.getChunkHashes());
         assertEquals(dataInfo.getHash(), empty.getHash());
 
         for (int i = 0; i < dataInfo.getChunkCount(); i++) {

@@ -24,7 +24,7 @@ public class Server {
         localPeerB.connect(new LocalAddress("peer-1")).sync();
 
         // Demo data
-        DataInfo dataInfo = new DataInfo("Hello world", 1000, 10)
+        DataInfo dataInfo = new DataInfo(1000, "Hello world", 11, String::valueOf)
                 .withChunk(3)
                 .withChunk(6)
                 .withChunk(7);

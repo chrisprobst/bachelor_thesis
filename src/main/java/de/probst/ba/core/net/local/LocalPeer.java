@@ -21,13 +21,13 @@ public class LocalPeer extends AbstractPeer {
     }
 
     @Override
-    protected <T extends ServerChannel> Class<T> getServerChannelClass() {
-        return (Class<T>) LocalServerChannel.class;
+    protected Class<? extends ServerChannel> getServerChannelClass() {
+        return LocalServerChannel.class;
     }
 
     @Override
-    protected <T extends Channel> Class<T> getChannelClass() {
-        return (Class<T>) LocalChannel.class;
+    protected Class<? extends Channel> getChannelClass() {
+        return LocalChannel.class;
     }
 
     public LocalPeer(String localAddress) {

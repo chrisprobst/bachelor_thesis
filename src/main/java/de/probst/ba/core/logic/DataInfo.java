@@ -1,8 +1,13 @@
 package de.probst.ba.core.logic;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
+import java.util.function.IntFunction;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
@@ -10,14 +15,14 @@ import java.util.stream.IntStream;
  */
 public final class DataInfo implements Serializable {
 
-    // The unique hash
-    private final String hash;
-
     // The total size
     private final long size;
 
-    // The number of chunks
-    private final int chunkCount;
+    // The unique hash
+    private final String hash;
+
+    // The unique chunk hashes
+    private final List<String> chunkHashes;
 
     // The usual chunk size
     // (Calculated with size and chunkCount)
@@ -31,31 +36,52 @@ public final class DataInfo implements Serializable {
     // a chunk is completed
     private final BitSet chunks;
 
-    public DataInfo(String hash, long size, int chunkCount) {
+    /**
+     * Initialize a data info with a chunk creator.
+     *
+     * @param size
+     * @param hash
+     * @param chunkCount
+     * @param chunkCreator
+     */
+    public DataInfo(long size,
+                    String hash,
+                    int chunkCount,
+                    IntFunction<String> chunkCreator) {
+        this(size, hash, IntStream
+                .range(0, chunkCount)
+                .mapToObj(chunkCreator)
+                .collect(Collectors.toList()));
+    }
+
+    public DataInfo(long size, String hash, List<String> chunkHashes) {
         Objects.requireNonNull(hash);
+        Objects.requireNonNull(chunkHashes);
+        chunkHashes.stream().forEach(Objects::requireNonNull);
 
         if (size < 0) {
             throw new IllegalArgumentException("size < 0");
         }
 
-        if (chunkCount < 1) {
-            throw new IllegalArgumentException("chunkCount < 1");
+        if (chunkHashes.size() == 0) {
+            throw new IllegalArgumentException("chunkHashes.size() == 0");
         }
 
-        if (chunkCount > size) {
-            throw new IllegalArgumentException("chunkCount > size");
+        if (chunkHashes.size() > size) {
+            throw new IllegalArgumentException("chunkHashes.size() > size");
         }
 
-        this.hash = hash;
         this.size = size;
-        this.chunkCount = chunkCount;
-        chunks = new BitSet(chunkCount);
+        this.hash = hash;
+        this.chunkHashes = Collections.unmodifiableList(
+                new ArrayList<>(chunkHashes));
+        chunks = new BitSet(chunkHashes.size());
 
         // Calculate the usual chunk size
-        chunkSize = size / chunkCount;
+        chunkSize = size / chunkHashes.size();
 
         // Calculate the last chunk size
-        long remaining = size % chunkCount;
+        long remaining = size % chunkHashes.size();
         lastChunkSize = remaining > 0 ? remaining : chunkSize;
     }
 
@@ -102,9 +128,10 @@ public final class DataInfo implements Serializable {
      */
     public DataInfo empty() {
         return new DataInfo(
-                getHash(),
                 getSize(),
-                getChunkCount());
+                getHash(),
+                getChunkHashes()
+        );
     }
 
     /**
@@ -167,9 +194,9 @@ public final class DataInfo implements Serializable {
      */
     public boolean isCompatibleWith(DataInfo other) {
         Objects.requireNonNull(other);
-        return other.getHash().equals(getHash()) &&
-                other.getSize() == getSize() &&
-                other.getChunkCount() == getChunkCount();
+        return other.getSize() == getSize() &&
+                other.getHash().equals(getHash()) &&
+                other.getChunkHashes().equals(getChunkHashes());
     }
 
     /**
@@ -208,10 +235,17 @@ public final class DataInfo implements Serializable {
     }
 
     /**
+     * @return The chunk hashes.
+     */
+    public List<String> getChunkHashes() {
+        return chunkHashes;
+    }
+
+    /**
      * @return The chunk count.
      */
     public int getChunkCount() {
-        return chunkCount;
+        return chunkHashes.size();
     }
 
     /**
@@ -328,9 +362,9 @@ public final class DataInfo implements Serializable {
     @Override
     public String toString() {
         return "DataInfo{" +
-                "hash='" + hash + '\'' +
-                ", size=" + size +
-                ", chunkCount=" + chunkCount +
+                "size=" + size +
+                ", hash='" + hash + '\'' +
+                ", chunkHashes=" + chunkHashes +
                 ", chunks=" + chunks +
                 '}';
     }
@@ -342,8 +376,8 @@ public final class DataInfo implements Serializable {
 
         DataInfo dataInfo = (DataInfo) o;
 
-        if (chunkCount != dataInfo.chunkCount) return false;
         if (size != dataInfo.size) return false;
+        if (!chunkHashes.equals(dataInfo.chunkHashes)) return false;
         if (!chunks.equals(dataInfo.chunks)) return false;
         if (!hash.equals(dataInfo.hash)) return false;
 
@@ -352,9 +386,9 @@ public final class DataInfo implements Serializable {
 
     @Override
     public int hashCode() {
-        int result = hash.hashCode();
-        result = 31 * result + (int) (size ^ (size >>> 32));
-        result = 31 * result + chunkCount;
+        int result = (int) (size ^ (size >>> 32));
+        result = 31 * result + hash.hashCode();
+        result = 31 * result + chunkHashes.hashCode();
         result = 31 * result + chunks.hashCode();
         return result;
     }
