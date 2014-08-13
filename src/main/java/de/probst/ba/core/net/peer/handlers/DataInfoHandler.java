@@ -1,10 +1,10 @@
-package de.probst.ba.core.net.handlers;
+package de.probst.ba.core.net.peer.handlers;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
-import de.probst.ba.core.logic.Config;
-import de.probst.ba.core.logic.DataInfo;
-import de.probst.ba.core.net.handlers.messages.DataInfoMessage;
+import de.probst.ba.core.Config;
+import de.probst.ba.core.media.DataInfo;
+import de.probst.ba.core.net.peer.handlers.messages.DataInfoMessage;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -43,11 +43,10 @@ public final class DataInfoHandler extends SimpleChannelInboundHandler<DataInfoM
 
     @Override
     protected void messageReceived(ChannelHandlerContext ctx, DataInfoMessage msg) throws Exception {
-
-        // Check for null
         if (isDataInfoMessageValid(msg)) {
-            // Just put the data info into the map
-            remoteDataInfo.put(ctx.channel().id(), Collections.unmodifiableMap(msg.getDataInfo()));
+            remoteDataInfo.put(
+                    ctx.channel().id(),
+                    Collections.unmodifiableMap(msg.getDataInfo()));
         }
     }
 

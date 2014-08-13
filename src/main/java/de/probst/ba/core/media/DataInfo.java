@@ -1,4 +1,4 @@
-package de.probst.ba.core.logic;
+package de.probst.ba.core.media;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -6,6 +6,7 @@ import java.util.BitSet;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.IntFunction;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -17,6 +18,12 @@ public final class DataInfo implements Serializable {
 
     // The total size
     private final long size;
+
+    // Human readable name of this data
+    private final Optional<String> name;
+
+    // Human readable description of this data
+    private final Optional<String> description;
 
     // The unique hash
     private final String hash;
@@ -40,21 +47,32 @@ public final class DataInfo implements Serializable {
      * Initialize a data info with a chunk creator.
      *
      * @param size
+     * @param name
+     * @param description
      * @param hash
      * @param chunkCount
      * @param chunkCreator
      */
     public DataInfo(long size,
+                    Optional<String> name,
+                    Optional<String> description,
                     String hash,
                     int chunkCount,
                     IntFunction<String> chunkCreator) {
-        this(size, hash, IntStream
+        this(size, name, description, hash, IntStream
                 .range(0, chunkCount)
                 .mapToObj(chunkCreator)
                 .collect(Collectors.toList()));
     }
 
-    public DataInfo(long size, String hash, List<String> chunkHashes) {
+    public DataInfo(long size,
+                    Optional<String> name,
+                    Optional<String> description,
+                    String hash,
+                    List<String> chunkHashes) {
+        Objects.requireNonNull(hash);
+        Objects.requireNonNull(name);
+        Objects.requireNonNull(description);
         Objects.requireNonNull(hash);
         Objects.requireNonNull(chunkHashes);
         chunkHashes.stream().forEach(Objects::requireNonNull);
@@ -72,6 +90,8 @@ public final class DataInfo implements Serializable {
         }
 
         this.size = size;
+        this.name = name;
+        this.description = description;
         this.hash = hash;
         this.chunkHashes = Collections.unmodifiableList(
                 new ArrayList<>(chunkHashes));
@@ -129,6 +149,8 @@ public final class DataInfo implements Serializable {
     public DataInfo empty() {
         return new DataInfo(
                 getSize(),
+                getName(),
+                getDescription(),
                 getHash(),
                 getChunkHashes()
         );
@@ -228,6 +250,27 @@ public final class DataInfo implements Serializable {
     }
 
     /**
+     * @return The size.
+     */
+    public long getSize() {
+        return size;
+    }
+
+    /**
+     * @return The name.
+     */
+    public Optional<String> getName() {
+        return name;
+    }
+
+    /**
+     * @return The description.
+     */
+    public Optional<String> getDescription() {
+        return description;
+    }
+
+    /**
      * @return The hash.
      */
     public String getHash() {
@@ -246,13 +289,6 @@ public final class DataInfo implements Serializable {
      */
     public int getChunkCount() {
         return chunkHashes.size();
-    }
-
-    /**
-     * @return The size.
-     */
-    public long getSize() {
-        return size;
     }
 
     /**
@@ -363,6 +399,8 @@ public final class DataInfo implements Serializable {
     public String toString() {
         return "DataInfo{" +
                 "size=" + size +
+                ", name='" + name + '\'' +
+                ", description='" + description + '\'' +
                 ", hash='" + hash + '\'' +
                 ", chunkHashes=" + chunkHashes +
                 ", chunks=" + chunks +
@@ -379,7 +417,9 @@ public final class DataInfo implements Serializable {
         if (size != dataInfo.size) return false;
         if (!chunkHashes.equals(dataInfo.chunkHashes)) return false;
         if (!chunks.equals(dataInfo.chunks)) return false;
+        if (!description.equals(dataInfo.description)) return false;
         if (!hash.equals(dataInfo.hash)) return false;
+        if (!name.equals(dataInfo.name)) return false;
 
         return true;
     }
@@ -387,19 +427,11 @@ public final class DataInfo implements Serializable {
     @Override
     public int hashCode() {
         int result = (int) (size ^ (size >>> 32));
+        result = 31 * result + name.hashCode();
+        result = 31 * result + description.hashCode();
         result = 31 * result + hash.hashCode();
         result = 31 * result + chunkHashes.hashCode();
         result = 31 * result + chunks.hashCode();
         return result;
-    }
-
-    /**
-     * Create a new transfer from this data info.
-     *
-     * @param remotePeerId
-     * @return
-     */
-    public Transfer createTransfer(Object remotePeerId) {
-        return new Transfer(remotePeerId, this);
     }
 }

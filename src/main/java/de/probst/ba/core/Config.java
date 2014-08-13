@@ -1,4 +1,4 @@
-package de.probst.ba.core.logic;
+package de.probst.ba.core;
 
 import java.util.concurrent.TimeUnit;
 

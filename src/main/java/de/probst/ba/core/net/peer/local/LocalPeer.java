@@ -1,6 +1,6 @@
-package de.probst.ba.core.net.local;
+package de.probst.ba.core.net.peer.local;
 
-import de.probst.ba.core.net.AbstractPeer;
+import de.probst.ba.core.net.peer.AbstractPeer;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;

@@ -1,10 +1,11 @@
-package de.probst.ba.core.net;
+package de.probst.ba.core.net.peer;
 
-import de.probst.ba.core.logic.Config;
-import de.probst.ba.core.logic.DataInfo;
-import de.probst.ba.core.net.handlers.ChannelGroupHandler;
-import de.probst.ba.core.net.handlers.DataInfoHandler;
-import de.probst.ba.core.net.handlers.messages.DataInfoMessage;
+import de.probst.ba.core.media.DataBase;
+import de.probst.ba.core.media.DataInfo;
+import de.probst.ba.core.media.databases.DefaultDataBase;
+import de.probst.ba.core.net.peer.handlers.AnnounceHandler;
+import de.probst.ba.core.net.peer.handlers.ChannelGroupHandler;
+import de.probst.ba.core.net.peer.handlers.DataInfoHandler;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -16,7 +17,6 @@ import io.netty.handler.logging.LoggingHandler;
 import java.net.SocketAddress;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
@@ -26,13 +26,13 @@ public abstract class AbstractPeer {
 
     private final LogLevel logLevel = LogLevel.INFO;
 
-    private final ConcurrentMap<String, DataInfo> dataInfo =
-            new ConcurrentHashMap<>();
-
     private final SocketAddress address;
 
     private final EventLoopGroup eventLoopGroup =
             createEventGroup();
+
+    private final DataBase<?> dataBase =
+            new DefaultDataBase();
 
     private final DataInfoHandler dataInfoHandler =
             new DataInfoHandler();
@@ -40,19 +40,12 @@ public abstract class AbstractPeer {
     private final ChannelGroupHandler channelGroupHandler =
             new ChannelGroupHandler(eventLoopGroup.next());
 
-    private final ChannelGroupHandler serverChannelGroupHandler =
-            new ChannelGroupHandler(eventLoopGroup.next());
-
     protected final ChannelInitializer<Channel> serverChannelInitializer = new ChannelInitializer<Channel>() {
         @Override
         public void initChannel(Channel ch) {
             ch.pipeline().addLast(
                     logHandler,
-
-                    // Manages all incoming client channels
-                    // for uploading data and announcing
-                    // data info
-                    serverChannelGroupHandler
+                    new AnnounceHandler(dataBase)
             );
         }
     };
@@ -79,41 +72,6 @@ public abstract class AbstractPeer {
 
     private LoggingHandler logHandler =
             new LoggingHandler(logLevel);
-
-    /**
-     * Periodically announces our data info to all clients.
-     */
-    private Runnable announcer = () -> {
-        // A copy of the local data info
-        DataInfoMessage dataInfoMessage = new DataInfoMessage(dataInfo);
-        if (dataInfoMessage.getDataInfo().isEmpty()) {
-            // We have nothing to announce so just wait
-            scheduleAnnouncer();
-        } else {
-            getServerChannelGroup()
-                    .writeAndFlush(dataInfoMessage)
-                    .addListener(f -> {
-                        if (f.isSuccess()) {
-                            // The announce process was successful,
-                            // reschedule this task later again
-                            scheduleAnnouncer();
-                        } else {
-                            /*
-                            TODO: Something went wrong
-                            Maybe there is a better way of handling
-                            those situations.
-                             */
-                            scheduleAnnouncer();
-                        }
-                    });
-        }
-    };
-
-    private void scheduleAnnouncer() {
-        getEventLoopGroup().schedule(announcer,
-                Config.getDataInfoAnnounceDelay(),
-                Config.getDataInfoAnnounceTimeUnit());
-    }
 
     protected ChannelInitializer<Channel> getServerChannelInitializer() {
         return serverChannelInitializer;
@@ -147,24 +105,10 @@ public abstract class AbstractPeer {
 
         // Bind to address
         initFuture = createInitFuture();
-
-        // Register announce scheduler
-        initFuture.addListener(f -> {
-            if (f.isSuccess()) {
-                scheduleAnnouncer();
-            } else {
-                // TODO: Better error handling
-                f.cause().printStackTrace();
-
-                // Failed to create server, this is not
-                // going to work =(
-                getEventLoopGroup().shutdownGracefully();
-            }
-        });
     }
 
     public ConcurrentMap<String, DataInfo> getDataInfo() {
-        return dataInfo;
+        return dataBase.getDataInfo();
     }
 
     public Map<Object, Map<String, DataInfo>> getRemoteDataInfo() {
@@ -173,10 +117,6 @@ public abstract class AbstractPeer {
 
     public ChannelGroup getChannelGroup() {
         return channelGroupHandler.getChannelGroup();
-    }
-
-    public ChannelGroup getServerChannelGroup() {
-        return serverChannelGroupHandler.getChannelGroup();
     }
 
     public SocketAddress getAddress() {

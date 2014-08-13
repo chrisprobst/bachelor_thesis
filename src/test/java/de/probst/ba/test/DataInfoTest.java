@@ -1,8 +1,10 @@
 package de.probst.ba.test;
 
-import de.probst.ba.core.logic.DataInfo;
+import de.probst.ba.core.media.DataInfo;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.util.Optional;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -19,7 +21,13 @@ public class DataInfoTest {
     public void setUp() {
 
         // 11 parts are needed for this tests
-        dataInfo = new DataInfo(100, "123Hash123", 11, String::valueOf);
+        dataInfo = new DataInfo(
+                100,
+                Optional.empty(),
+                Optional.empty(),
+                "123Hash123",
+                11,
+                String::valueOf);
     }
 
     @Test

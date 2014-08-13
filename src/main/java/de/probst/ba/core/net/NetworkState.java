@@ -1,4 +1,6 @@
-package de.probst.ba.core.logic;
+package de.probst.ba.core.net;
+
+import de.probst.ba.core.media.DataInfo;
 
 import java.io.Serializable;
 import java.util.Collections;

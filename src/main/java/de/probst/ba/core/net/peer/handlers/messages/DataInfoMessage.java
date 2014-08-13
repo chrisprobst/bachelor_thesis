@@ -1,6 +1,6 @@
-package de.probst.ba.core.net.handlers.messages;
+package de.probst.ba.core.net.peer.handlers.messages;
 
-import de.probst.ba.core.logic.DataInfo;
+import de.probst.ba.core.media.DataInfo;
 
 import java.io.Serializable;
 import java.util.HashMap;

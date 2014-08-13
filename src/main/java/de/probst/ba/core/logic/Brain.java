@@ -1,5 +1,9 @@
 package de.probst.ba.core.logic;
 
+import de.probst.ba.core.media.DataInfo;
+import de.probst.ba.core.net.NetworkState;
+import de.probst.ba.core.net.Transfer;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
