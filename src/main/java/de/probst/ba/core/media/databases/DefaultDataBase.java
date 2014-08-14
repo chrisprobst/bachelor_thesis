@@ -60,18 +60,16 @@ public final class DefaultDataBase implements DataBase {
     @Override
     public synchronized void storeBufferAndComplete(String hash,
                                                     int chunkIndex,
-                                                    int offset,
-                                                    int length,
+                                                    long offset,
                                                     byte[] buffer) throws IOException {
-        storeBuffer(hash, chunkIndex, offset, length, buffer);
+        storeBuffer(hash, chunkIndex, offset, buffer);
         dataInfo.computeIfPresent(hash, (k, v) -> v.withChunk(chunkIndex));
     }
 
     @Override
     public synchronized void storeBuffer(String hash,
                                          int chunkIndex,
-                                         int offset,
-                                         int length,
+                                         long offset,
                                          byte[] buffer) throws IOException {
 
         DataInfo dataInfo = this.dataInfo.get(hash);
@@ -89,23 +87,19 @@ public final class DefaultDataBase implements DataBase {
             throw new IOException("offset < 0 || offset >= chunkSize - 1");
         }
 
-        if (length <= 0 || length > chunkSize) {
-            throw new IOException("length <= 0 || length > chunkSize");
+        if (buffer.length > chunkSize) {
+            throw new IOException("buffer.length > chunkSize");
         }
 
-        if (length > buffer.length) {
-            throw new IOException("length > buffer.length");
-        }
-
-        if (offset + length > chunkSize) {
-            throw new IOException("offset + length > chunkSize");
+        if (offset + buffer.length > chunkSize) {
+            throw new IOException("offset + buffer.length > chunkSize");
         }
     }
 
     @Override
     public synchronized byte[] loadBuffer(String hash,
                                           int chunkIndex,
-                                          int offset,
+                                          long offset,
                                           int length) throws IOException {
 
         DataInfo dataInfo = this.dataInfo.get(hash);

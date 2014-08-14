@@ -3,8 +3,11 @@ package de.probst.ba.core.net;
 import de.probst.ba.core.media.DataInfo;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.IntStream;
 
 /**
  * Represents a transfer.
@@ -96,6 +99,21 @@ public final class Transfer implements Serializable {
                 getDataInfo(),
                 getSize(),
                 getCompletedSize() + size);
+    }
+
+    /**
+     * @return A stream of completed chunk indices
+     * according to the completed size.
+     */
+    public IntStream getCompletedChunks() {
+        List<Integer> completedChunks = new ArrayList<>();
+        long cnt = getCompletedSize();
+        for (int chunk : getDataInfo().getCompletedChunks().toArray()) {
+            if ((cnt -= getDataInfo().getChunkSize(chunk)) >= 0) {
+                completedChunks.add(chunk);
+            }
+        }
+        return completedChunks.stream().mapToInt(Integer::intValue);
     }
 
     /**

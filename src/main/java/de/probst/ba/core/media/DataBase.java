@@ -45,14 +45,12 @@ public interface DataBase {
      * @param hash
      * @param chunkIndex
      * @param offset
-     * @param length
      * @param buffer
      * @throws IOException
      */
     void storeBufferAndComplete(String hash,
                                 int chunkIndex,
-                                int offset,
-                                int length,
+                                long offset,
                                 byte[] buffer) throws IOException;
 
     /**
@@ -62,14 +60,12 @@ public interface DataBase {
      * @param hash
      * @param chunkIndex
      * @param offset
-     * @param length
      * @param buffer
      * @throws IOException
      */
     void storeBuffer(String hash,
                      int chunkIndex,
-                     int offset,
-                     int length,
+                     long offset,
                      byte[] buffer) throws IOException;
 
     /**
@@ -85,6 +81,6 @@ public interface DataBase {
      */
     byte[] loadBuffer(String hash,
                       int chunkIndex,
-                      int offset,
+                      long offset,
                       int length) throws IOException;
 }
