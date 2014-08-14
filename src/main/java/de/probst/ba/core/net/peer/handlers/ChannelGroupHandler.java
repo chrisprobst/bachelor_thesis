@@ -8,6 +8,13 @@ import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.util.concurrent.EventExecutor;
 
 /**
+ * Sharable channel group handler.
+ * <p>
+ * Put this handle into one or more channel
+ * pipelines and all of those channels will be
+ * added to and removed from the internal channel
+ * group.
+ * <p>
  * Created by chrisprobst on 12.08.14.
  */
 @ChannelHandler.Sharable
@@ -20,6 +27,9 @@ public final class ChannelGroupHandler extends ChannelHandlerAdapter {
         channelGroup = new DefaultChannelGroup(eventExecutor);
     }
 
+    /**
+     * @return The channel group.
+     */
     public ChannelGroup getChannelGroup() {
         return channelGroup;
     }

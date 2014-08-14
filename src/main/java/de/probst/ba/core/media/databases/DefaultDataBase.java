@@ -2,63 +2,135 @@ package de.probst.ba.core.media.databases;
 
 import de.probst.ba.core.media.DataBase;
 import de.probst.ba.core.media.DataInfo;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.stream.ChunkedInput;
 
-import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
  * Created by chrisprobst on 13.08.14.
  */
-public final class DefaultDataBase implements DataBase<ChunkedInput<ByteBuf>> {
+public final class DefaultDataBase implements DataBase {
 
-    private final ConcurrentMap<String, DataInfo> dataInfo =
-            new ConcurrentHashMap<>();
+    private final Map<String, DataInfo> dataInfo =
+            new HashMap<>();
 
-    @Override
-    public ConcurrentMap<String, DataInfo> getDataInfo() {
-        return dataInfo;
+    public DefaultDataBase() {
+    }
+
+    public DefaultDataBase(DataInfo... dataInfo) {
+        this(Arrays.stream(dataInfo)
+                .collect(Collectors.toMap(
+                        DataInfo::getHash,
+                        Function.identity())));
+    }
+
+    public DefaultDataBase(Map<String, DataInfo> initialDataInfo) {
+        dataInfo.putAll(initialDataInfo);
     }
 
     @Override
-    public List<ChunkedInput<ByteBuf>> getChunks(DataInfo dataInfo) {
-        return dataInfo.getCompletedChunks()
-                .mapToObj(i -> new DefaultChunkedInput(dataInfo.getChunkSize(i)))
-                .collect(Collectors.toList());
+    public Map<String, DataInfo> getDataInfo() {
+        return new HashMap<>(dataInfo);
     }
 
-    private static class DefaultChunkedInput implements ChunkedInput<ByteBuf> {
-
-        private final long size;
-        private long finished = 0;
-
-        private DefaultChunkedInput(long size) {
-            this.size = size;
+    @Override
+    public synchronized boolean add(DataInfo dataInfo) {
+        if (!dataInfo.isEmpty()) {
+            throw new IllegalArgumentException("!dataInfo.isEmpty()");
         }
 
-        @Override
-        public boolean isEndOfInput() throws Exception {
-            return finished >= size;
+        if (this.dataInfo.containsKey(dataInfo.getHash())) {
+            return false;
         }
 
-        @Override
-        public void close() throws Exception {
+        this.dataInfo.put(dataInfo.getHash(), dataInfo);
+        return true;
+    }
+
+    @Override
+    public void delete(String hash) {
+        this.dataInfo.remove(hash);
+    }
+
+
+    @Override
+    public synchronized void storeBufferAndComplete(String hash,
+                                                    int chunkIndex,
+                                                    int offset,
+                                                    int length,
+                                                    byte[] buffer) throws IOException {
+        storeBuffer(hash, chunkIndex, offset, length, buffer);
+        dataInfo.computeIfPresent(hash, (k, v) -> v.withChunk(chunkIndex));
+    }
+
+    @Override
+    public synchronized void storeBuffer(String hash,
+                                         int chunkIndex,
+                                         int offset,
+                                         int length,
+                                         byte[] buffer) throws IOException {
+
+        DataInfo dataInfo = this.dataInfo.get(hash);
+        if (dataInfo == null) {
+            throw new IOException("Data info does not exist. Hash: " + hash);
         }
 
-        @Override
-        public ByteBuf readChunk(ChannelHandlerContext ctx) throws Exception {
-            long rem = size - finished;
-            int bufferSize = (int) Math.min(8192, rem);
-            finished += rem;
-            return Unpooled
-                    .buffer(bufferSize)
-                    .writerIndex(bufferSize - 4)
-                    .writeInt(42);
+        if (dataInfo.isChunkCompleted(chunkIndex)) {
+            throw new IOException("Chunk already available: " + chunkIndex);
         }
+
+        long chunkSize = dataInfo.getChunkSize(chunkIndex);
+
+        if (offset < 0 || offset >= chunkSize - 1) {
+            throw new IOException("offset < 0 || offset >= chunkSize - 1");
+        }
+
+        if (length <= 0 || length > chunkSize) {
+            throw new IOException("length <= 0 || length > chunkSize");
+        }
+
+        if (length > buffer.length) {
+            throw new IOException("length > buffer.length");
+        }
+
+        if (offset + length > chunkSize) {
+            throw new IOException("offset + length > chunkSize");
+        }
+    }
+
+    @Override
+    public synchronized byte[] loadBuffer(String hash,
+                                          int chunkIndex,
+                                          int offset,
+                                          int length) throws IOException {
+
+        DataInfo dataInfo = this.dataInfo.get(hash);
+        if (dataInfo == null) {
+            throw new IOException("Data info does not exist. Hash: " + hash);
+        }
+
+        if (!dataInfo.isChunkCompleted(chunkIndex)) {
+            throw new IOException("Chunk not available: " + chunkIndex);
+        }
+
+        long chunkSize = dataInfo.getChunkSize(chunkIndex);
+
+        if (offset < 0 || offset >= chunkSize - 1) {
+            throw new IOException("offset < 0 || offset >= chunkSize - 1");
+        }
+
+        if (length <= 0 || length > chunkSize) {
+            throw new IOException("length <= 0 || length > chunkSize");
+        }
+
+        if (offset + length > chunkSize) {
+            throw new IOException("offset + length > chunkSize");
+        }
+
+        return new byte[length];
     }
 }

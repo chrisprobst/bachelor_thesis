@@ -2,10 +2,12 @@ package de.probst.ba.core.net.peer;
 
 import de.probst.ba.core.media.DataBase;
 import de.probst.ba.core.media.DataInfo;
-import de.probst.ba.core.media.databases.DefaultDataBase;
-import de.probst.ba.core.net.peer.handlers.AnnounceHandler;
+import de.probst.ba.core.net.Transfer;
 import de.probst.ba.core.net.peer.handlers.ChannelGroupHandler;
-import de.probst.ba.core.net.peer.handlers.DataInfoHandler;
+import de.probst.ba.core.net.peer.handlers.datainfo.AnnounceHandler;
+import de.probst.ba.core.net.peer.handlers.datainfo.DataInfoHandler;
+import de.probst.ba.core.net.peer.handlers.transfer.DownloadHandler;
+import de.probst.ba.core.net.peer.handlers.transfer.UploadHandler;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -15,9 +17,10 @@ import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 
 import java.net.SocketAddress;
+import java.util.AbstractMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.ConcurrentMap;
+import java.util.stream.Collectors;
 
 /**
  * Created by chrisprobst on 12.08.14.
@@ -31,8 +34,9 @@ public abstract class AbstractPeer {
     private final EventLoopGroup eventLoopGroup =
             createEventGroup();
 
-    private final DataBase<?> dataBase =
-            new DefaultDataBase();
+    private final DataBase dataBase;
+
+    private final UploadHandler uploadHandler;
 
     private final DataInfoHandler dataInfoHandler =
             new DataInfoHandler();
@@ -45,6 +49,7 @@ public abstract class AbstractPeer {
         public void initChannel(Channel ch) {
             ch.pipeline().addLast(
                     logHandler,
+                    new UploadHandler(dataBase),
                     new AnnounceHandler(dataBase)
             );
         }
@@ -63,7 +68,10 @@ public abstract class AbstractPeer {
 
                     // Only the clients receive announcements
                     // from other peers
-                    dataInfoHandler
+                    dataInfoHandler,
+
+                    // Process upload requests
+                    uploadHandler
             );
         }
     };
@@ -93,11 +101,14 @@ public abstract class AbstractPeer {
 
     protected abstract ChannelFuture createInitFuture();
 
-    public AbstractPeer(SocketAddress address) {
+    public AbstractPeer(SocketAddress address, DataBase dataBase) {
         Objects.requireNonNull(address);
+        Objects.requireNonNull(dataBase);
 
         // Save args
         this.address = address;
+        this.dataBase = dataBase;
+        uploadHandler = new UploadHandler(dataBase);
 
         // Init bootstrap
         initBootstrap();
@@ -107,8 +118,24 @@ public abstract class AbstractPeer {
         initFuture = createInitFuture();
     }
 
-    public ConcurrentMap<String, DataInfo> getDataInfo() {
-        return dataBase.getDataInfo();
+    /**
+     * @return A snapshot of all running downloads.
+     */
+    public Map<Object, Transfer> getDownloads() {
+        return getChannelGroup().stream()
+                .map(c -> new AbstractMap.SimpleEntry<>(c, c.pipeline().get(DownloadHandler.class)))
+                .filter(h -> h.getValue() != null)
+                .collect(Collectors.toMap(
+                        p -> p.getKey().id(),
+                        p -> p.getValue().getTransfer()));
+    }
+
+    public UploadHandler getUploadHandler() {
+        return uploadHandler;
+    }
+
+    public DataBase getDataBase() {
+        return dataBase;
     }
 
     public Map<Object, Map<String, DataInfo>> getRemoteDataInfo() {

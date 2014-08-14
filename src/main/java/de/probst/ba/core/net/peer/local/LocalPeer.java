@@ -1,5 +1,6 @@
 package de.probst.ba.core.net.peer.local;
 
+import de.probst.ba.core.media.DataBase;
 import de.probst.ba.core.net.peer.AbstractPeer;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
@@ -44,8 +45,8 @@ public class LocalPeer extends AbstractPeer {
         return new DefaultEventLoopGroup();
     }
 
-    public LocalPeer(String localAddress) {
-        super(new LocalAddress(localAddress));
+    public LocalPeer(String localAddress, DataBase dataBase) {
+        super(new LocalAddress(localAddress), dataBase);
     }
 
     public ChannelFuture connect(String localAddress) {

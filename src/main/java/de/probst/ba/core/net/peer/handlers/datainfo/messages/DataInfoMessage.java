@@ -1,5 +1,6 @@
-package de.probst.ba.core.net.peer.handlers.messages;
+package de.probst.ba.core.net.peer.handlers.datainfo.messages;
 
+import de.probst.ba.core.media.DataBase;
 import de.probst.ba.core.media.DataInfo;
 
 import java.io.Serializable;
@@ -14,13 +15,12 @@ public final class DataInfoMessage implements Serializable {
 
     private final Map<String, DataInfo> dataInfo;
 
+    public DataInfoMessage(DataBase dataBase) {
+        this(dataBase.getDataInfo());
+    }
+
     public DataInfoMessage(Map<String, DataInfo> dataInfo) {
         Objects.requireNonNull(dataInfo);
-
-        if (dataInfo.isEmpty()) {
-            throw new IllegalArgumentException("dataInfo is empty");
-        }
-
         this.dataInfo = new HashMap<>(dataInfo);
     }
 

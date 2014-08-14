@@ -12,6 +12,9 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
+ * This class can be used to describe arbitrary data
+ * in terms of size, consistency and chunks.
+ * <p>
  * Created by chrisprobst on 03.08.14.
  */
 public final class DataInfo implements Serializable {

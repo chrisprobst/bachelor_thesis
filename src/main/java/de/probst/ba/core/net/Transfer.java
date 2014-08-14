@@ -153,4 +153,41 @@ public final class Transfer implements Serializable {
     public double getPercentage() {
         return completedSize / (double) size;
     }
+
+    @Override
+    public String toString() {
+        return "Transfer{" +
+                "transferId=" + transferId +
+                ", remotePeerId=" + remotePeerId +
+                ", dataInfo=" + dataInfo +
+                ", size=" + size +
+                ", completedSize=" + completedSize +
+                '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        Transfer transfer = (Transfer) o;
+
+        if (completedSize != transfer.completedSize) return false;
+        if (size != transfer.size) return false;
+        if (transferId != transfer.transferId) return false;
+        if (!dataInfo.equals(transfer.dataInfo)) return false;
+        if (!remotePeerId.equals(transfer.remotePeerId)) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = (int) (transferId ^ (transferId >>> 32));
+        result = 31 * result + remotePeerId.hashCode();
+        result = 31 * result + dataInfo.hashCode();
+        result = 31 * result + (int) (size ^ (size >>> 32));
+        result = 31 * result + (int) (completedSize ^ (completedSize >>> 32));
+        return result;
+    }
 }
