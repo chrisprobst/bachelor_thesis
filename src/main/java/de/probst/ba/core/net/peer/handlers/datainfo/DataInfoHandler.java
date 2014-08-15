@@ -1,16 +1,14 @@
 package de.probst.ba.core.net.peer.handlers.datainfo;
 
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
-import de.probst.ba.core.Config;
 import de.probst.ba.core.media.DataInfo;
 import de.probst.ba.core.net.peer.handlers.datainfo.messages.DataInfoMessage;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Represents a sharable data info handler which accumulates
@@ -23,58 +21,29 @@ import java.util.Map;
  * <p>
  * Created by chrisprobst on 11.08.14.
  */
-@ChannelHandler.Sharable
 public final class DataInfoHandler extends SimpleChannelInboundHandler<DataInfoMessage> {
 
     // All remote data info are stored here
-    private final Cache<Object, Map<String, DataInfo>> remoteDataInfo = CacheBuilder.newBuilder()
-            .expireAfterWrite(
-                    Config.getRemoteDataInfoExpirationDelay(),
-                    Config.getRemoteDataInfoExpirationDelayTimeUnit())
-            .build();
+    private volatile Optional<Map<String, DataInfo>> remoteDataInfo =
+            Optional.empty();
 
-    // The map view
-    private final Map<Object, Map<String, DataInfo>> unmodifiableRemoteDataInfo =
-            Collections.unmodifiableMap(remoteDataInfo.asMap());
-
-    /**
-     * Checks the message.
-     *
-     * @param dataInfoMessage
-     * @return
-     */
     private boolean isDataInfoMessageValid(DataInfoMessage dataInfoMessage) {
         return dataInfoMessage != null &&
-                dataInfoMessage.getDataInfo() != null;
+                dataInfoMessage.getDataInfo() != null &&
+                !dataInfoMessage.getDataInfo().isEmpty();
     }
 
     @Override
     protected void messageReceived(ChannelHandlerContext ctx, DataInfoMessage msg) throws Exception {
-        // Check message
-        if (isDataInfoMessageValid(msg)) {
-
-            if (msg.getDataInfo().isEmpty()) {
-                // If the map is empty, we remove the mapping
-                remoteDataInfo.invalidate(ctx.channel().id());
-            } else {
-                // Update the cache with the new map
-                remoteDataInfo.put(
-                        ctx.channel().id(),
-                        Collections.unmodifiableMap(msg.getDataInfo()));
-            }
+        if (!isDataInfoMessageValid(msg)) {
+            remoteDataInfo = Optional.empty();
+        } else {
+            remoteDataInfo = Optional.of(Collections.unmodifiableMap(
+                    new HashMap<>(msg.getDataInfo())));
         }
     }
 
-    @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        remoteDataInfo.invalidate(ctx.channel().id());
-        super.channelInactive(ctx);
-    }
-
-    /**
-     * @return An unmodifiable map with all remote data info.
-     */
-    public Map<Object, Map<String, DataInfo>> getRemoteDataInfo() {
-        return unmodifiableRemoteDataInfo;
+    public Optional<Map<String, DataInfo>> getRemoteDataInfo() {
+        return remoteDataInfo;
     }
 }

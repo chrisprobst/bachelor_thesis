@@ -24,11 +24,15 @@ public interface Brain {
      * <p>
      * The purpose of this method is to implement synchronization strategies.
      * In other words: To request downloads in the most effective way.
+     * <p>
+     * The default implementation does not download anything.
      *
      * @param networkState
      * @return An optional list of download transfers.
      */
-    Optional<List<Transfer>> process(NetworkState networkState);
+    default Optional<List<Transfer>> process(NetworkState networkState) {
+        return Optional.empty();
+    }
 
     /**
      * This method is called by the framework internally at

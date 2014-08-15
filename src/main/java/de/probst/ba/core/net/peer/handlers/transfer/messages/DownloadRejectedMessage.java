@@ -7,13 +7,13 @@ import java.io.Serializable;
  */
 public final class DownloadRejectedMessage implements Serializable {
 
-    private final Exception cause;
+    private final Throwable cause;
 
-    public DownloadRejectedMessage(Exception cause) {
+    public DownloadRejectedMessage(Throwable cause) {
         this.cause = cause;
     }
 
-    public Exception getCause() {
+    public Throwable getCause() {
         return cause;
     }
 }

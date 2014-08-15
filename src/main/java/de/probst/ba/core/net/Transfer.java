@@ -18,6 +18,10 @@ public final class Transfer implements Serializable {
 
     private static final AtomicLong TRANSFER_ID_GEN = new AtomicLong();
 
+    // Tells whether or not this transfer
+    // is a download or an upload
+    private final boolean download;
+
     // The transfer id
     private final long transferId;
 
@@ -33,11 +37,13 @@ public final class Transfer implements Serializable {
     // The completed size of this transfer
     private final long completedSize;
 
-    private Transfer(long transferId,
+    private Transfer(boolean download,
+                     long transferId,
                      Object remotePeerId,
                      DataInfo dataInfo,
                      long size,
                      long completedSize) {
+        this.download = download;
         this.transferId = transferId;
         this.remotePeerId = remotePeerId;
         this.dataInfo = dataInfo;
@@ -45,12 +51,14 @@ public final class Transfer implements Serializable {
         this.completedSize = completedSize;
     }
 
-    public Transfer(Object remotePeerId,
+    public Transfer(boolean download,
+                    Object remotePeerId,
                     DataInfo dataInfo) {
-        this(remotePeerId, dataInfo, 0);
+        this(download, remotePeerId, dataInfo, 0);
     }
 
-    public Transfer(Object remotePeerId,
+    public Transfer(boolean download,
+                    Object remotePeerId,
                     DataInfo dataInfo,
                     long completedSize) {
 
@@ -71,10 +79,27 @@ public final class Transfer implements Serializable {
             throw new IllegalArgumentException("completedSize < 0");
         }
 
+        this.download = download;
         transferId = TRANSFER_ID_GEN.getAndIncrement();
         this.remotePeerId = remotePeerId;
         this.dataInfo = dataInfo;
         this.completedSize = completedSize;
+    }
+
+    /**
+     * @return True if this transfer
+     * is an download, otherwise false.
+     */
+    public boolean isDownload() {
+        return download;
+    }
+
+    /**
+     * @return True if this transfer
+     * is an upload, otherwise false.
+     */
+    public boolean isUpload() {
+        return !isDownload();
     }
 
     /**
@@ -94,7 +119,7 @@ public final class Transfer implements Serializable {
         }
 
         return new Transfer(
-                getTransferId(),
+                download, getTransferId(),
                 getRemotePeerId(),
                 getDataInfo(),
                 getSize(),

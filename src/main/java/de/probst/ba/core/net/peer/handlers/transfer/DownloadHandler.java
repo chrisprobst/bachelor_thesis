@@ -1,7 +1,7 @@
 package de.probst.ba.core.net.peer.handlers.transfer;
 
-import de.probst.ba.core.media.DataBase;
 import de.probst.ba.core.net.Transfer;
+import de.probst.ba.core.net.peer.TransferManager;
 import de.probst.ba.core.net.peer.handlers.transfer.messages.DownloadRejectedMessage;
 import de.probst.ba.core.net.peer.handlers.transfer.messages.DownloadRequestMessage;
 import io.netty.buffer.ByteBuf;
@@ -10,9 +10,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.io.IOException;
 import java.util.Objects;
-import java.util.PrimitiveIterator;
 
 /**
  * Created by chrisprobst on 14.08.14.
@@ -22,96 +20,20 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(DownloadHandler.class);
 
-    // The data base
-    private final DataBase dataBase;
+    private final TransferManager transferManager;
 
-    // Iterates all missing chunks
-    private final PrimitiveIterator.OfInt missingChunks;
+    public DownloadHandler(TransferManager transferManager) {
+        Objects.requireNonNull(transferManager);
 
-    // The data base
-    // Must be volatile because we access
-    // this field from other threads
-    private volatile Transfer transfer;
-
-    // Status variables for every chunk
-    private int chunkIndex;
-    private long chunkSize;
-    private long offset;
-
-    /**
-     * Setup all internal variables for the next chunk.
-     *
-     * @return True if there are missing chunks,
-     * otherwise false.
-     */
-    private boolean setupNextChunkTransfer() {
-        if (!missingChunks.hasNext()) {
-            return false;
+        if (transferManager.getTransfer().isUpload()) {
+            throw new IllegalArgumentException("transferManager.getTransfer().isUpload()");
         }
 
-        chunkIndex = missingChunks.next();
-        chunkSize = getTransfer()
-                .getDataInfo()
-                .getChunkSize(chunkIndex);
-        offset = 0;
-
-        return true;
+        this.transferManager = transferManager;
     }
 
-    /**
-     * Advances the download transfer
-     * by the given bytes.
-     *
-     * @param byteBuf
-     * @return True if there is more to download,
-     * otherwise false.
-     * @throws IOException
-     */
-    private boolean advanceChunkTransfer(ByteBuf byteBuf) throws IOException {
-        // Read the remaining bytes into the buffer
-        int bufferLength = (int) Math.min(byteBuf.readableBytes(), chunkSize - offset);
-        byte[] buffer = new byte[bufferLength];
-        byteBuf.readBytes(buffer);
-
-        // Advance the transfer
-        transfer = transfer.advance(buffer.length);
-        logger.info("Advanced download transfer: " + transfer);
-
-        // Do we have finished the chunk
-        boolean chunkCompleted = offset + buffer.length == chunkSize;
-
-        if (chunkCompleted) {
-            // We can complete the chunk
-            dataBase.storeBufferAndComplete(
-                    getTransfer().getDataInfo().getHash(),
-                    chunkIndex,
-                    offset,
-                    buffer);
-
-        } else {
-            // Fill the chunk
-            dataBase.storeBuffer(
-                    getTransfer().getDataInfo().getHash(),
-                    chunkIndex,
-                    offset,
-                    buffer);
-        }
-
-        // Increase
-        offset += buffer.length;
-
-        return !chunkCompleted || setupNextChunkTransfer();
-    }
-
-    public DownloadHandler(DataBase dataBase, Transfer transfer) {
-        Objects.requireNonNull(dataBase);
-        Objects.requireNonNull(transfer);
-        this.dataBase = dataBase;
-        this.transfer = transfer;
-        missingChunks = transfer
-                .getDataInfo()
-                .getCompletedChunks()
-                .iterator();
+    public TransferManager getTransferManager() {
+        return transferManager;
     }
 
     @Override
@@ -122,6 +44,7 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
 
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        Transfer transfer = getTransferManager().getTransfer();
         logger.info("Request download transfer: " + transfer);
         ctx.writeAndFlush(new DownloadRequestMessage(transfer.getDataInfo()))
                 .addListener(fut -> {
@@ -132,10 +55,6 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
                         // Not able to process download request,
                         // we can stop here!
                         ctx.close();
-                    } else {
-                        // Setup the next chunk transfer
-                        // for the first time
-                        setupNextChunkTransfer();
                     }
                 });
     }
@@ -151,7 +70,9 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
             ByteBuf buffer = (ByteBuf) msg;
 
             while (buffer.readableBytes() > 0) {
-                if (!advanceChunkTransfer(buffer)) {
+
+                // Simply process the transfer manager
+                if (!getTransferManager().process(buffer)) {
                     // We are ready when there
                     // are no further chunks to
                     // download
@@ -161,9 +82,5 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
         } else {
             super.channelRead(ctx, msg);
         }
-    }
-
-    public Transfer getTransfer() {
-        return transfer;
     }
 }

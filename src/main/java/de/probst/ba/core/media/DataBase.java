@@ -1,5 +1,7 @@
 package de.probst.ba.core.media;
 
+import io.netty.buffer.ByteBuf;
+
 import java.io.IOException;
 import java.util.Map;
 
@@ -38,49 +40,17 @@ public interface DataBase {
      */
     void delete(String hash);
 
-    /**
-     * This method stores a specific part of the
-     * data and marks the chunk as completed.
-     *
-     * @param hash
-     * @param chunkIndex
-     * @param offset
-     * @param buffer
-     * @throws IOException
-     */
-    void storeBufferAndComplete(String hash,
-                                int chunkIndex,
-                                long offset,
-                                byte[] buffer) throws IOException;
+    void processBufferAndComplete(String hash,
+                                  int chunkIndex,
+                                  long offset,
+                                  ByteBuf byteBuf,
+                                  int length,
+                                  boolean download) throws IOException;
 
-    /**
-     * This method stores a specific part of the
-     * data.
-     *
-     * @param hash
-     * @param chunkIndex
-     * @param offset
-     * @param buffer
-     * @throws IOException
-     */
-    void storeBuffer(String hash,
-                     int chunkIndex,
-                     long offset,
-                     byte[] buffer) throws IOException;
-
-    /**
-     * This method loads a specific part of
-     * the data into memory and returns it.
-     *
-     * @param hash
-     * @param chunkIndex
-     * @param offset
-     * @param length
-     * @return
-     * @throws IOException
-     */
-    byte[] loadBuffer(String hash,
-                      int chunkIndex,
-                      long offset,
-                      int length) throws IOException;
+    void processBuffer(String hash,
+                       int chunkIndex,
+                       long offset,
+                       ByteBuf byteBuf,
+                       int length,
+                       boolean download) throws IOException;
 }
