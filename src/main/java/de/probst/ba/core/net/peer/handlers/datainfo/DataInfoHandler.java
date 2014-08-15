@@ -4,11 +4,14 @@ import de.probst.ba.core.media.DataInfo;
 import de.probst.ba.core.net.peer.handlers.datainfo.messages.DataInfoMessage;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.group.ChannelGroup;
 
+import java.util.AbstractMap;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * Represents a sharable data info handler which accumulates
@@ -22,6 +25,16 @@ import java.util.Optional;
  * Created by chrisprobst on 11.08.14.
  */
 public final class DataInfoHandler extends SimpleChannelInboundHandler<DataInfoMessage> {
+
+    public static Map<Object, Map<String, DataInfo>> getRemoteDataInfo(ChannelGroup channelGroup) {
+        return channelGroup.stream()
+                .map(c -> new AbstractMap.SimpleEntry<>(
+                        c, c.pipeline().get(DataInfoHandler.class).getRemoteDataInfo()))
+                .filter(h -> h.getValue().isPresent())
+                .collect(Collectors.toMap(
+                        p -> p.getKey().id(),
+                        p -> p.getValue().get()));
+    }
 
     // All remote data info are stored here
     private volatile Optional<Map<String, DataInfo>> remoteDataInfo =

@@ -6,7 +6,6 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.IntStream;
 
 /**
@@ -16,20 +15,15 @@ import java.util.stream.IntStream;
  */
 public final class Transfer implements Serializable {
 
-    private static final AtomicLong TRANSFER_ID_GEN = new AtomicLong();
-
-    // Tells whether or not this transfer
-    // is a download or an upload
-    private final boolean download;
-
-    // The transfer id
-    private final long transferId;
-
     // The remote peer id
     private final Object remotePeerId;
 
     // The data info which describes this transfer
     private final DataInfo dataInfo;
+
+    // Tells whether or not this transfer
+    // is a download or an upload
+    private final boolean download;
 
     // The size of this transfer
     private final long size;
@@ -37,29 +31,27 @@ public final class Transfer implements Serializable {
     // The completed size of this transfer
     private final long completedSize;
 
-    private Transfer(boolean download,
-                     long transferId,
-                     Object remotePeerId,
+    private Transfer(Object remotePeerId,
                      DataInfo dataInfo,
+                     boolean download,
                      long size,
                      long completedSize) {
-        this.download = download;
-        this.transferId = transferId;
         this.remotePeerId = remotePeerId;
         this.dataInfo = dataInfo;
+        this.download = download;
         this.size = size;
         this.completedSize = completedSize;
     }
 
-    public Transfer(boolean download,
-                    Object remotePeerId,
-                    DataInfo dataInfo) {
-        this(download, remotePeerId, dataInfo, 0);
+    public Transfer(Object remotePeerId,
+                    DataInfo dataInfo,
+                    boolean download) {
+        this(remotePeerId, dataInfo, download, 0);
     }
 
-    public Transfer(boolean download,
-                    Object remotePeerId,
+    public Transfer(Object remotePeerId,
                     DataInfo dataInfo,
+                    boolean download,
                     long completedSize) {
 
         Objects.requireNonNull(dataInfo);
@@ -80,7 +72,6 @@ public final class Transfer implements Serializable {
         }
 
         this.download = download;
-        transferId = TRANSFER_ID_GEN.getAndIncrement();
         this.remotePeerId = remotePeerId;
         this.dataInfo = dataInfo;
         this.completedSize = completedSize;
@@ -119,9 +110,9 @@ public final class Transfer implements Serializable {
         }
 
         return new Transfer(
-                download, getTransferId(),
                 getRemotePeerId(),
                 getDataInfo(),
+                isDownload(),
                 getSize(),
                 getCompletedSize() + size);
     }
@@ -139,13 +130,6 @@ public final class Transfer implements Serializable {
             }
         }
         return completedChunks.stream().mapToInt(Integer::intValue);
-    }
-
-    /**
-     * @return The id of this transfer.
-     */
-    public long getTransferId() {
-        return transferId;
     }
 
     /**
@@ -200,7 +184,7 @@ public final class Transfer implements Serializable {
     @Override
     public String toString() {
         return "Transfer{" +
-                "transferId=" + transferId +
+                "download=" + download +
                 ", remotePeerId=" + remotePeerId +
                 ", dataInfo=" + dataInfo +
                 ", size=" + size +
@@ -216,8 +200,8 @@ public final class Transfer implements Serializable {
         Transfer transfer = (Transfer) o;
 
         if (completedSize != transfer.completedSize) return false;
+        if (download != transfer.download) return false;
         if (size != transfer.size) return false;
-        if (transferId != transfer.transferId) return false;
         if (!dataInfo.equals(transfer.dataInfo)) return false;
         if (!remotePeerId.equals(transfer.remotePeerId)) return false;
 
@@ -226,7 +210,7 @@ public final class Transfer implements Serializable {
 
     @Override
     public int hashCode() {
-        int result = (int) (transferId ^ (transferId >>> 32));
+        int result = (download ? 1 : 0);
         result = 31 * result + remotePeerId.hashCode();
         result = 31 * result + dataInfo.hashCode();
         result = 31 * result + (int) (size ^ (size >>> 32));

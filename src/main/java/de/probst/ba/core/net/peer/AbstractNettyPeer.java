@@ -17,17 +17,18 @@ import io.netty.channel.group.ChannelGroup;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
+import io.netty.handler.traffic.ChannelTrafficShapingHandler;
 
 import java.net.SocketAddress;
-import java.util.AbstractMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 /**
  * Created by chrisprobst on 12.08.14.
  */
-public abstract class AbstractPeer {
+public abstract class AbstractNettyPeer implements Peer {
+
+    private static final long NETTY_TRAFFIC_SHAPING_INTERVAL = 500;
 
     private final LogLevel logLevel = LogLevel.INFO;
 
@@ -38,22 +39,33 @@ public abstract class AbstractPeer {
 
     private final DataBase dataBase;
 
+    private final Brain brain;
+
     private final ChannelGroupHandler serverChannelGroupHandler =
             new ChannelGroupHandler(eventLoopGroup.next());
 
     private final ChannelGroupHandler channelGroupHandler =
             new ChannelGroupHandler(eventLoopGroup.next());
 
+    private final ChannelFuture initFuture;
+
+    private final LoggingHandler logHandler =
+            new LoggingHandler(logLevel);
+
     protected final ChannelInitializer<Channel> serverChannelInitializer = new ChannelInitializer<Channel>() {
         @Override
         public void initChannel(Channel ch) {
             ch.pipeline().addLast(
+                    new ChannelTrafficShapingHandler(
+                            getUploadRate(),
+                            getDownloadRate(),
+                            NETTY_TRAFFIC_SHAPING_INTERVAL),
+
                     logHandler,
                     serverChannelGroupHandler,
                     new ChunkedWriteHandler(),
-                    new UploadHandler(getDataBase()),
-                    new AnnounceHandler(new Brain() {
-                    }, dataBase)
+                    new UploadHandler(AbstractNettyPeer.this),
+                    new AnnounceHandler(AbstractNettyPeer.this)
             );
         }
     };
@@ -62,6 +74,11 @@ public abstract class AbstractPeer {
         @Override
         public void initChannel(Channel ch) {
             ch.pipeline().addLast(
+                    new ChannelTrafficShapingHandler(
+                            getUploadRate(),
+                            getDownloadRate(),
+                            NETTY_TRAFFIC_SHAPING_INTERVAL),
+
                     logHandler,
 
                     // Manages all outgoing client channels
@@ -75,11 +92,6 @@ public abstract class AbstractPeer {
             );
         }
     };
-
-    private final ChannelFuture initFuture;
-
-    private LoggingHandler logHandler =
-            new LoggingHandler(logLevel);
 
     protected ChannelInitializer<Channel> getServerChannelInitializer() {
         return serverChannelInitializer;
@@ -101,57 +113,23 @@ public abstract class AbstractPeer {
 
     protected abstract ChannelFuture createInitFuture();
 
-    public AbstractPeer(SocketAddress address, DataBase dataBase) {
+    public AbstractNettyPeer(SocketAddress address, DataBase dataBase, Brain brain) {
+
         Objects.requireNonNull(address);
         Objects.requireNonNull(dataBase);
+        Objects.requireNonNull(brain);
 
         // Save args
         this.address = address;
         this.dataBase = dataBase;
+        this.brain = brain;
 
         // Init bootstrap
         initBootstrap();
         initServerBootstrap();
 
-        // Bind to address
+        // Set init future
         initFuture = createInitFuture();
-    }
-
-    public Map<Object, Transfer> getUploads() {
-        return getServerChannelGroup().stream()
-                .map(c -> new AbstractMap.SimpleEntry<>(c,
-                        c.pipeline().get(UploadHandler.class).getTransferManager()))
-                .filter(h -> h.getValue().isPresent())
-                .collect(Collectors.toMap(
-                        p -> p.getKey().id(),
-                        p -> p.getValue().get().getTransfer()));
-    }
-
-    public Map<Object, Transfer> getDownloads() {
-        return getChannelGroup().stream()
-                .map(c -> new AbstractMap.SimpleEntry<>(c, c.pipeline().get(DownloadHandler.class)))
-                .filter(h -> h.getValue() != null)
-                .collect(Collectors.toMap(
-                        p -> p.getKey().id(),
-                        p -> p.getValue().getTransferManager().getTransfer()));
-    }
-
-    public Map<String, DataInfo> getDataInfo() {
-        return getDataBase().getDataInfo();
-    }
-
-    public Map<Object, Map<String, DataInfo>> getRemoteDataInfo() {
-        return getChannelGroup().stream()
-                .map(c -> new AbstractMap.SimpleEntry<>(
-                        c, c.pipeline().get(DataInfoHandler.class).getRemoteDataInfo()))
-                .filter(h -> h.getValue().isPresent())
-                .collect(Collectors.toMap(
-                        p -> p.getKey().id(),
-                        p -> p.getValue().get()));
-    }
-
-    public DataBase getDataBase() {
-        return dataBase;
     }
 
     public ChannelGroup getServerChannelGroup() {
@@ -162,15 +140,61 @@ public abstract class AbstractPeer {
         return channelGroupHandler.getChannelGroup();
     }
 
-    public SocketAddress getAddress() {
-        return address;
-    }
-
     public EventLoopGroup getEventLoopGroup() {
         return eventLoopGroup;
     }
 
     public ChannelFuture getInitFuture() {
         return initFuture;
+    }
+
+    @Override
+    public Brain getBrain() {
+        return brain;
+    }
+
+    @Override
+    public void close() {
+        getEventLoopGroup().shutdownGracefully();
+    }
+
+    @Override
+    public SocketAddress getAddress() {
+        return address;
+    }
+
+    @Override
+    public long getUploadRate() {
+        return 1000;
+    }
+
+    @Override
+    public long getDownloadRate() {
+        return 1000;
+    }
+
+    @Override
+    public Map<Object, Transfer> getUploads() {
+        return UploadHandler.getUploads(getServerChannelGroup());
+    }
+
+    @Override
+    public Map<Object, Transfer> getDownloads() {
+        return DownloadHandler.getDownloads(getChannelGroup());
+    }
+
+    @Override
+    public Map<String, DataInfo> getDataInfo() {
+        return getDataBase().getDataInfo();
+    }
+
+    @Override
+    public Map<Object, Map<String, DataInfo>> getRemoteDataInfo() {
+        return DataInfoHandler.getRemoteDataInfo(getChannelGroup());
+    }
+
+    @Override
+    public DataBase getDataBase() {
+        return dataBase;
     }
 }

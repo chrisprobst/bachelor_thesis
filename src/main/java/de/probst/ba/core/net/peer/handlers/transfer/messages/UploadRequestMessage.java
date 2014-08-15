@@ -8,11 +8,11 @@ import java.util.Objects;
 /**
  * Created by chrisprobst on 14.08.14.
  */
-public final class DownloadRequestMessage implements Serializable {
+public final class UploadRequestMessage implements Serializable {
 
     private final DataInfo dataInfo;
 
-    public DownloadRequestMessage(DataInfo dataInfo) {
+    public UploadRequestMessage(DataInfo dataInfo) {
         Objects.requireNonNull(dataInfo);
         this.dataInfo = dataInfo;
     }

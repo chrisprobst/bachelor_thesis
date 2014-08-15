@@ -1,7 +1,8 @@
 package de.probst.ba.core.net.peer.local;
 
+import de.probst.ba.core.logic.Brain;
 import de.probst.ba.core.media.DataBase;
-import de.probst.ba.core.net.peer.AbstractPeer;
+import de.probst.ba.core.net.peer.AbstractNettyPeer;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
@@ -14,7 +15,7 @@ import io.netty.channel.local.LocalServerChannel;
 /**
  * Created by chrisprobst on 12.08.14.
  */
-public class LocalPeer extends AbstractPeer {
+public class LocalNettyPeer extends AbstractNettyPeer {
 
     private ServerBootstrap serverBootstrap;
 
@@ -45,8 +46,10 @@ public class LocalPeer extends AbstractPeer {
         return new DefaultEventLoopGroup();
     }
 
-    public LocalPeer(String localAddress, DataBase dataBase) {
-        super(new LocalAddress(localAddress), dataBase);
+    public LocalNettyPeer(String localAddress,
+                          DataBase dataBase,
+                          Brain brain) {
+        super(new LocalAddress(localAddress), dataBase, brain);
     }
 
     public ChannelFuture connect(String localAddress) {

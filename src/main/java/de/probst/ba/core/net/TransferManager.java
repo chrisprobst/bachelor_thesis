@@ -1,7 +1,6 @@
-package de.probst.ba.core.net.peer;
+package de.probst.ba.core.net;
 
 import de.probst.ba.core.media.DataBase;
-import de.probst.ba.core.net.Transfer;
 import io.netty.buffer.ByteBuf;
 
 import java.io.IOException;
@@ -23,7 +22,7 @@ public final class TransferManager {
     private final PrimitiveIterator.OfInt missingChunks;
 
     // The transfer
-    // Must be volatile because we access
+    // Must be volatile because we could access
     // this field from other threads
     private volatile Transfer transfer;
 
@@ -42,6 +41,8 @@ public final class TransferManager {
 
         this.dataBase = dataBase;
         this.transfer = transfer;
+
+        // Create an iterator for all missing chunks
         missingChunks = transfer
                 .getDataInfo()
                 .getCompletedChunks()
@@ -59,10 +60,12 @@ public final class TransferManager {
      * otherwise false.
      */
     private boolean setupNextChunkTransfer() {
+        // We have no more chunks to transfer
         if (!missingChunks.hasNext()) {
             return false;
         }
 
+        // Get the next missing chunk index
         chunkIndex = missingChunks.next();
         chunkSize = getTransfer()
                 .getDataInfo()
@@ -88,12 +91,14 @@ public final class TransferManager {
      * byte buffer will be filled or consumed.
      *
      * @param byteBuf
-     * @return
+     * @return True if there is more work to do,
+     * otherwise false.
      * @throws IOException
      */
     public boolean process(ByteBuf byteBuf) throws IOException {
+        // The transfer is already finished
         if (isCompleted()) {
-            throw new IOException("Transfer completed");
+            return false;
         }
 
         // Is download or upload ?

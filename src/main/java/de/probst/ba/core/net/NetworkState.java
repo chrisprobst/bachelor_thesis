@@ -42,15 +42,15 @@ public final class NetworkState implements Serializable {
      * @param downloads
      * @param dataInfo
      * @param remoteDataInfo
-     * @param downloadRate
      * @param uploadRate
+     * @param downloadRate
      */
     public NetworkState(Map<Object, Transfer> uploads,
                         Map<Object, Transfer> downloads,
                         Map<String, DataInfo> dataInfo,
                         Map<Object, Map<String, DataInfo>> remoteDataInfo,
-                        long downloadRate,
-                        long uploadRate) {
+                        long uploadRate,
+                        long downloadRate) {
 
         Objects.requireNonNull(uploads);
         Objects.requireNonNull(downloads);
@@ -63,9 +63,10 @@ public final class NetworkState implements Serializable {
         this.remoteDataInfo = Collections.unmodifiableMap(remoteDataInfo.entrySet().stream()
                 .collect(Collectors.toMap(
                         Map.Entry::getKey,
-                        p -> Collections.unmodifiableMap(new HashMap<>(p.getValue())))));
-        this.downloadRate = downloadRate;
+                        p -> Collections.unmodifiableMap(
+                                new HashMap<>(p.getValue())))));
         this.uploadRate = uploadRate;
+        this.downloadRate = downloadRate;
     }
 
     /**
@@ -94,18 +95,13 @@ public final class NetworkState implements Serializable {
         return dataInfo;
     }
 
+
+
     /**
      * @return The download rate.
      */
     public long getDownloadRate() {
         return downloadRate;
-    }
-
-    /**
-     * @return The upload rate.
-     */
-    public long getUploadRate() {
-        return uploadRate;
     }
 
     /**

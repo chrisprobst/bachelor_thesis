@@ -1,9 +1,8 @@
 package de.probst.ba.core.net.peer.handlers.datainfo;
 
 import de.probst.ba.core.Config;
-import de.probst.ba.core.logic.Brain;
-import de.probst.ba.core.media.DataBase;
 import de.probst.ba.core.media.DataInfo;
+import de.probst.ba.core.net.peer.Peer;
 import de.probst.ba.core.net.peer.handlers.datainfo.messages.DataInfoMessage;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
@@ -29,8 +28,7 @@ public final class AnnounceHandler extends ChannelHandlerAdapter implements Runn
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(AnnounceHandler.class);
 
-    private final Brain brain;
-    private final DataBase dataBase;
+    private final Peer peer;
     private ChannelHandlerContext ctx;
     private ScheduledFuture<?> timer;
 
@@ -55,12 +53,9 @@ public final class AnnounceHandler extends ChannelHandlerAdapter implements Runn
         }
     }
 
-    public AnnounceHandler(Brain brain,
-                           DataBase dataBase) {
-        Objects.requireNonNull(brain);
-        Objects.requireNonNull(dataBase);
-        this.brain = brain;
-        this.dataBase = dataBase;
+    public AnnounceHandler(Peer peer) {
+        Objects.requireNonNull(peer);
+        this.peer = peer;
     }
 
     @Override
@@ -76,20 +71,18 @@ public final class AnnounceHandler extends ChannelHandlerAdapter implements Runn
         super.channelInactive(ctx);
     }
 
-    public DataBase getDataBase() {
-        return dataBase;
-    }
-
-    public Brain getBrain() {
-        return brain;
+    public Peer getPeer() {
+        return peer;
     }
 
     @Override
     public void run() {
+
         // Transform the data info using the brain
         Optional<Map<String, DataInfo>> transformedDataInfo =
-                //getBrain().transformUploadDataInfo(null, getDataBase().getDataInfo());
-                Optional.of(getDataBase().getDataInfo());
+                getPeer().getBrain().transformUploadDataInfo(
+                        getPeer().getNetworkState(),
+                        ctx.channel().id());
 
         // Fail fast
         if (!transformedDataInfo.isPresent()) {
