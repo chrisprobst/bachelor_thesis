@@ -10,9 +10,9 @@ import de.probst.ba.core.net.peer.Peer;
 import de.probst.ba.core.net.peer.netty.handlers.datainfo.AnnounceHandler;
 import de.probst.ba.core.net.peer.netty.handlers.datainfo.DataInfoHandler;
 import de.probst.ba.core.net.peer.netty.handlers.group.ChannelGroupHandler;
-import de.probst.ba.core.net.peer.netty.handlers.throttles.WriteThrottle;
 import de.probst.ba.core.net.peer.netty.handlers.transfer.DownloadHandler;
 import de.probst.ba.core.net.peer.netty.handlers.transfer.UploadHandler;
+import de.probst.ba.core.net.peer.netty.handlers.util.FlushOnWriteHandler;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelId;
@@ -22,6 +22,7 @@ import io.netty.channel.group.ChannelGroup;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
+import io.netty.handler.traffic.ChannelTrafficShapingHandler;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -38,8 +39,11 @@ import java.util.stream.Collectors;
  */
 public abstract class AbstractNettyPeer implements Peer {
 
+
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(AbstractNettyPeer.class);
+
+    private static final long NETTY_TRAFFIC_INTERVAL = 500;
 
     private final long uploadRate;
 
@@ -70,7 +74,11 @@ public abstract class AbstractNettyPeer implements Peer {
         @Override
         public void initChannel(Channel ch) {
             ch.pipeline().addLast(
-                    new WriteThrottle(getUploadRate()),
+                    new FlushOnWriteHandler(),
+                    new ChannelTrafficShapingHandler(
+                            getUploadRate(),
+                            getDownloadRate(),
+                            NETTY_TRAFFIC_INTERVAL),
 
                     logHandler,
                     serverChannelGroupHandler,
@@ -85,6 +93,11 @@ public abstract class AbstractNettyPeer implements Peer {
         @Override
         public void initChannel(Channel ch) {
             ch.pipeline().addLast(
+                    new FlushOnWriteHandler(),
+                    new ChannelTrafficShapingHandler(
+                            getUploadRate(),
+                            getDownloadRate(),
+                            NETTY_TRAFFIC_INTERVAL),
 
                     logHandler,
                     channelGroupHandler,
