@@ -1,4 +1,4 @@
-package de.probst.ba.core.net.peer.handlers;
+package de.probst.ba.core.net.peer.netty.handlers.group;
 
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;

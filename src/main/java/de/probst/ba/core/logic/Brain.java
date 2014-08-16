@@ -29,6 +29,8 @@ public interface Brain {
      *
      * @param networkState
      * @return An optional list of download transfers.
+     * The framework will take care that you do not download
+     * from the same peer in parallel different chunks.
      */
     default Optional<List<Transfer>> process(NetworkState networkState) {
         return Optional.empty();
@@ -57,7 +59,7 @@ public interface Brain {
 
     /**
      * This is an interceptor method to implement the possibility to
-     * control the number of parallel uploads.
+     * control the uploads.
      * <p>
      * The framework internally already checks that one peer cannot start
      * two downloads in parallel because it would not make much sense.

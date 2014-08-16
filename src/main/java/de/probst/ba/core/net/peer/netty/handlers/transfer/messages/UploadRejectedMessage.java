@@ -1,4 +1,4 @@
-package de.probst.ba.core.net.peer.handlers.transfer.messages;
+package de.probst.ba.core.net.peer.netty.handlers.transfer.messages;
 
 import java.io.Serializable;
 

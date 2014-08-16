@@ -1,11 +1,10 @@
-package de.probst.ba.core.net.peer.handlers.transfer;
+package de.probst.ba.core.net.peer.netty.handlers.transfer;
 
 import de.probst.ba.core.media.DataBase;
-import de.probst.ba.core.media.DataInfo;
 import de.probst.ba.core.net.Transfer;
 import de.probst.ba.core.net.TransferManager;
-import de.probst.ba.core.net.peer.handlers.transfer.messages.UploadRejectedMessage;
-import de.probst.ba.core.net.peer.handlers.transfer.messages.UploadRequestMessage;
+import de.probst.ba.core.net.peer.netty.handlers.transfer.messages.UploadRejectedMessage;
+import de.probst.ba.core.net.peer.netty.handlers.transfer.messages.UploadRequestMessage;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerAdapter;
@@ -33,14 +32,31 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
                         p -> p.getValue().getTransferManager().getTransfer()));
     }
 
-    public static DownloadHandler request(DataBase dataBase,
-                                          Channel remotePeer,
-                                          DataInfo dataInfo) {
+    public static synchronized DownloadHandler request(DataBase dataBase,
+                                                       Channel remotePeer,
+                                                       Transfer transfer) {
+        Objects.requireNonNull(dataBase);
+        Objects.requireNonNull(remotePeer);
+        Objects.requireNonNull(transfer);
+
+        if (transfer.isUpload()) {
+            throw new IllegalArgumentException("transfer.isUpload()");
+        }
+
+        if (!transfer.getRemotePeerId().equals(remotePeer.id())) {
+            throw new IllegalArgumentException(
+                    "!transfer.getRemotePeerId().equals(remotePeer.id())");
+        }
 
         // Create a new download handler
         DownloadHandler downloadHandler = new DownloadHandler(
-                dataBase.createDownloadTransferManager(
-                        remotePeer.id(), dataInfo));
+                dataBase.createTransferManager(transfer));
+
+        // Check that the handler does not exist yet
+        if (remotePeer.pipeline().context(DownloadHandler.class) != null) {
+            throw new IllegalStateException(
+                    "remotePeer.pipeline().context(DownloadHandler.class) != null");
+        }
 
         // Add to pipeline
         remotePeer.pipeline().addLast(downloadHandler);
@@ -53,11 +69,17 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
 
     private final TransferManager transferManager;
 
+
+    private void remove(ChannelHandlerContext ctx) {
+        ctx.pipeline().remove(this);
+    }
+
     private DownloadHandler(TransferManager transferManager) {
         Objects.requireNonNull(transferManager);
 
         if (transferManager.getTransfer().isUpload()) {
-            throw new IllegalArgumentException("transferManager.getTransfer().isUpload()");
+            throw new IllegalArgumentException(
+                    "transferManager.getTransfer().isUpload()");
         }
 
         this.transferManager = transferManager;
@@ -96,10 +118,13 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
             logger.warn("Upload rejected",
                     ((UploadRejectedMessage) msg).getCause());
 
-            ctx.close();
+            // Upload rejected, lets just
+            // remove this download
+            remove(ctx);
         } else if (msg instanceof ByteBuf) {
             ByteBuf buffer = (ByteBuf) msg;
 
+            // Consume the whole buffer
             while (buffer.readableBytes() > 0) {
 
                 // Simply process the transfer manager
@@ -107,7 +132,7 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
                     // We are ready when there
                     // are no further chunks to
                     // download
-                    ctx.pipeline().remove(this);
+                    remove(ctx);
                 }
             }
         } else {

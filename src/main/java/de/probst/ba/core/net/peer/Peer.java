@@ -9,11 +9,14 @@ import de.probst.ba.core.net.Transfer;
 import java.io.Closeable;
 import java.net.SocketAddress;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Created by chrisprobst on 15.08.14.
  */
 public interface Peer extends Closeable {
+
+    CompletableFuture<Void> getInitFuture();
 
     long getUploadRate();
 

@@ -1,18 +1,19 @@
-package de.probst.ba.core.net.peer.local;
+package de.probst.ba.core;
 
 import de.probst.ba.core.logic.Brain;
 import de.probst.ba.core.media.DataInfo;
 import de.probst.ba.core.media.databases.DefaultDataBase;
-import de.probst.ba.core.net.peer.handlers.transfer.DownloadHandler;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelId;
+import de.probst.ba.core.net.NetworkState;
+import de.probst.ba.core.net.Transfer;
+import de.probst.ba.core.net.peer.netty.local.LocalNettyPeer;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
  * Created by chrisprobst on 12.08.14.
  */
-public class Server {
+public class App {
 
     public static void main(String[] args) throws InterruptedException {
 
@@ -30,22 +31,35 @@ public class Server {
                 .withChunk(51)
                 .withChunk(33);
 
+        DataInfo dataInfo2 = dataInfo.withoutChunk(55);
+
         Brain defaultBrain = new Brain() {
+
+            @Override
+            public Optional<List<Transfer>> process(NetworkState networkState) {
+                System.out.println(networkState.getEstimatedMissingRemoteDataInfo());
+
+
+                return Optional.empty();
+            }
+        };
+
+        Brain dummyBrain = new Brain() {
         };
 
         // Create both clients
-        LocalNettyPeer localPeerA = new LocalNettyPeer("peer-1", new DefaultDataBase(dataInfo), defaultBrain);
-        LocalNettyPeer localPeerB = new LocalNettyPeer("peer-2", new DefaultDataBase(), defaultBrain);
+        LocalNettyPeer localPeerA = new LocalNettyPeer(1000, 1000, "peer-1", new DefaultDataBase(dataInfo), dummyBrain);
+        LocalNettyPeer localPeerB = new LocalNettyPeer(1000, 1000, "peer-2", new DefaultDataBase(dataInfo2), defaultBrain);
 
         // Wait for init
-        localPeerA.getInitFuture().sync();
-        localPeerB.getInitFuture().sync();
+        localPeerA.getInitFuture().join();
+        localPeerB.getInitFuture().join();
 
         // Connect both clients
         localPeerA.connect("peer-2").sync();
         localPeerB.connect("peer-1").sync();
 
-
+/*
         Thread.sleep(4000);
 
         // Receive announced data info
@@ -91,6 +105,6 @@ public class Server {
         localPeerA.getEventLoopGroup().shutdownGracefully();
         localPeerB.getEventLoopGroup().shutdownGracefully();
 
-        localPeerA.getChannelGroup().forEach(System.out::println);
+        localPeerA.getChannelGroup().forEach(System.out::println);*/
     }
 }

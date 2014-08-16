@@ -1,10 +1,10 @@
-package de.probst.ba.core.net.peer.handlers.transfer;
+package de.probst.ba.core.net.peer.netty.handlers.transfer;
 
 import de.probst.ba.core.net.Transfer;
 import de.probst.ba.core.net.TransferManager;
 import de.probst.ba.core.net.peer.Peer;
-import de.probst.ba.core.net.peer.handlers.transfer.messages.UploadRejectedMessage;
-import de.probst.ba.core.net.peer.handlers.transfer.messages.UploadRequestMessage;
+import de.probst.ba.core.net.peer.netty.handlers.transfer.messages.UploadRejectedMessage;
+import de.probst.ba.core.net.peer.netty.handlers.transfer.messages.UploadRequestMessage;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -56,6 +56,16 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
     private final Peer peer;
     private volatile TransferManager transferManager;
 
+    private void setup(ChannelHandlerContext ctx, TransferManager transferManager) {
+        this.transferManager = transferManager;
+        ctx.channel().config().setAutoRead(false);
+    }
+
+    private void restore(ChannelHandlerContext ctx) {
+        transferManager = null;
+        ctx.channel().config().setAutoRead(true);
+    }
+
     public UploadHandler(Peer peer) {
         Objects.requireNonNull(peer);
         this.peer = peer;
@@ -101,7 +111,8 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
             try {
                 // Create a new transfer manager
                 newTransferManager = getPeer().getDataBase()
-                        .createUploadTransferManager(ctx.channel().id(), msg.getDataInfo());
+                        .createTransferManager(Transfer.upload(
+                                ctx.channel().id(), msg.getDataInfo()));
 
                 // If the upload is not allowed, reject it!
                 if (!getPeer().getBrain().isUploadAllowed(
@@ -111,23 +122,17 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
                     // Not accepted
                     ctx.writeAndFlush(new UploadRejectedMessage(
                             new IllegalStateException(
-                                    "The protocol rejected the upload")));
+                                    "The brain rejected the upload")));
 
                 } else {
-                    // Set the new transfer manager
-                    transferManager = newTransferManager;
-
-                    // Do not read while sending
-                    ctx.channel().config().setAutoRead(false);
+                    // Setup the update
+                    setup(ctx, newTransferManager);
 
                     // Upload chunked input
                     ctx.writeAndFlush(new ChunkedDataBaseInput()).addListener(fut -> {
 
-                        // Upload is finished
-                        transferManager = null;
-
-                        // Enable reading
-                        ctx.channel().config().setAutoRead(true);
+                        // Restore
+                        restore(ctx);
 
                         if (!fut.isSuccess()) {
                             // Upload failed, notify!
@@ -141,8 +146,7 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
                 ctx.writeAndFlush(new UploadRejectedMessage(e));
 
                 // Restore
-                transferManager = null;
-                ctx.channel().config().setAutoRead(true);
+                restore(ctx);
             }
         }
     }

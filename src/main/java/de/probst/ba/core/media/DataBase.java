@@ -101,35 +101,21 @@ public interface DataBase extends Closeable {
                        int length,
                        boolean download) throws IOException;
 
-    default TransferManager createDownloadTransferManager(Object remotePeerId,
-                                                          DataInfo dataInfo) {
-        return createTransferManager(remotePeerId, dataInfo, true);
-    }
+    default TransferManager createTransferManager(Transfer transfer) {
 
-    default TransferManager createUploadTransferManager(Object remotePeerId,
-                                                        DataInfo dataInfo) {
-        return createTransferManager(remotePeerId, dataInfo, false);
-    }
+        Objects.requireNonNull(transfer);
 
-    default TransferManager createTransferManager(Object remotePeerId,
-                                                  DataInfo dataInfo,
-                                                  boolean download) {
-
-        Objects.requireNonNull(remotePeerId);
-        Objects.requireNonNull(dataInfo);
-
-        DataInfo existingDataInfo = get(dataInfo.getHash());
+        DataInfo existingDataInfo = get(transfer.getDataInfo().getHash());
         if (existingDataInfo == null) {
             throw new IllegalArgumentException(
                     "Data info does not exist");
         }
 
-        if (!download && !existingDataInfo.contains(dataInfo)) {
+        if (transfer.isUpload() && !existingDataInfo.contains(transfer.getDataInfo())) {
             throw new IllegalArgumentException(
-                    "!download && !existingDataInfo.contains(dataInfo)");
+                    "!download && !existingDataInfo.contains(transfer.getDataInfo())");
         }
 
-        return new TransferManager(this,
-                new Transfer(remotePeerId, dataInfo, download));
+        return new TransferManager(this, transfer);
     }
 }

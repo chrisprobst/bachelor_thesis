@@ -19,4 +19,12 @@ public final class Config {
     public static TimeUnit getDataInfoAnnounceTimeUnit() {
         return DEFAULT_TIME_UNIT;
     }
+
+    public static long getBrainDelay() {
+        return 4000;
+    }
+
+    public static TimeUnit getBrainTimeUnit() {
+        return DEFAULT_TIME_UNIT;
+    }
 }

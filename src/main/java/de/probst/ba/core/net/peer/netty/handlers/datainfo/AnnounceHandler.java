@@ -1,9 +1,9 @@
-package de.probst.ba.core.net.peer.handlers.datainfo;
+package de.probst.ba.core.net.peer.netty.handlers.datainfo;
 
 import de.probst.ba.core.Config;
 import de.probst.ba.core.media.DataInfo;
 import de.probst.ba.core.net.peer.Peer;
-import de.probst.ba.core.net.peer.handlers.datainfo.messages.DataInfoMessage;
+import de.probst.ba.core.net.peer.netty.handlers.datainfo.messages.DataInfoMessage;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.internal.logging.InternalLogger;
@@ -84,7 +84,15 @@ public final class AnnounceHandler extends ChannelHandlerAdapter implements Runn
                         getPeer().getNetworkState(),
                         ctx.channel().id());
 
-        // Fail fast
+        // This is actually a bug in the brain
+        if (transformedDataInfo == null) {
+            logger.warn("Brain returned null for " +
+                    "the transformed data info");
+            schedule();
+            return;
+        }
+
+        // The brain decided to not upload anything
         if (!transformedDataInfo.isPresent()) {
             schedule();
             return;

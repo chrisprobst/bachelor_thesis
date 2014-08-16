@@ -1,8 +1,8 @@
-package de.probst.ba.core.net.peer.local;
+package de.probst.ba.core.net.peer.netty.local;
 
 import de.probst.ba.core.logic.Brain;
 import de.probst.ba.core.media.DataBase;
-import de.probst.ba.core.net.peer.AbstractNettyPeer;
+import de.probst.ba.core.net.peer.netty.AbstractNettyPeer;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
@@ -46,10 +46,12 @@ public class LocalNettyPeer extends AbstractNettyPeer {
         return new DefaultEventLoopGroup();
     }
 
-    public LocalNettyPeer(String localAddress,
+    public LocalNettyPeer(long uploadRate,
+                          long downloadRate,
+                          String localAddress,
                           DataBase dataBase,
                           Brain brain) {
-        super(new LocalAddress(localAddress), dataBase, brain);
+        super(uploadRate, downloadRate, new LocalAddress(localAddress), dataBase, brain);
     }
 
     public ChannelFuture connect(String localAddress) {

@@ -31,6 +31,63 @@ public class DataInfoTest {
     }
 
     @Test
+    public void union() {
+        DataInfo a = dataInfo
+                .withChunk(2)
+                .withChunk(4);
+
+        DataInfo b = dataInfo
+                .withChunk(4)
+                .withChunk(5)
+                .withChunk(6);
+
+        DataInfo c = dataInfo
+                .withChunk(2)
+                .withChunk(4)
+                .withChunk(5)
+                .withChunk(6);
+
+        assertEquals(a.union(b), c);
+    }
+
+    @Test
+    public void substract() {
+        DataInfo a = dataInfo
+                .withChunk(2)
+                .withChunk(4)
+                .withChunk(5);
+
+        DataInfo b = dataInfo
+                .withChunk(4)
+                .withChunk(5)
+                .withChunk(6);
+
+        DataInfo c = dataInfo
+                .withChunk(2);
+
+        assertEquals(a.substract(b), c);
+    }
+
+    @Test
+    public void intersection() {
+        DataInfo a = dataInfo
+                .withChunk(2)
+                .withChunk(4)
+                .withChunk(5);
+
+        DataInfo b = dataInfo
+                .withChunk(4)
+                .withChunk(5)
+                .withChunk(6);
+
+        DataInfo c = dataInfo
+                .withChunk(4)
+                .withChunk(5);
+
+        assertEquals(a.intersection(b), c);
+    }
+
+    @Test
     public void whereWithWithout() {
         DataInfo a = dataInfo
                 .withChunk(2)

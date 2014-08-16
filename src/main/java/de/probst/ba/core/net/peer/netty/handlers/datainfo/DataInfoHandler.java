@@ -1,7 +1,7 @@
-package de.probst.ba.core.net.peer.handlers.datainfo;
+package de.probst.ba.core.net.peer.netty.handlers.datainfo;
 
 import de.probst.ba.core.media.DataInfo;
-import de.probst.ba.core.net.peer.handlers.datainfo.messages.DataInfoMessage;
+import de.probst.ba.core.net.peer.netty.handlers.datainfo.messages.DataInfoMessage;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.group.ChannelGroup;

@@ -253,6 +253,37 @@ public final class DataInfo implements Serializable {
     }
 
     /**
+     * Creates a new data info which has all completed
+     * chunks of this minus the other data info.
+     *
+     * @param other
+     * @return
+     */
+    public DataInfo substract(DataInfo other) {
+        ensureCompatibility(other);
+
+        DataInfo dataInfo = duplicate();
+        dataInfo.chunks.andNot(other.chunks);
+        return dataInfo;
+    }
+
+    /**
+     * Creates a new data info which has all completed
+     * chunks of this which are also completed in
+     * the other data info.
+     *
+     * @param other
+     * @return
+     */
+    public DataInfo intersection(DataInfo other) {
+        ensureCompatibility(other);
+
+        DataInfo dataInfo = duplicate();
+        dataInfo.chunks.and(other.chunks);
+        return dataInfo;
+    }
+
+    /**
      * @return The size.
      */
     public long getSize() {

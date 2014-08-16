@@ -15,6 +15,16 @@ import java.util.stream.IntStream;
  */
 public final class Transfer implements Serializable {
 
+    public static Transfer upload(Object remotePeerId,
+                                  DataInfo dataInfo) {
+        return new Transfer(remotePeerId, dataInfo, false);
+    }
+
+    public static Transfer download(Object remotePeerId,
+                                    DataInfo dataInfo) {
+        return new Transfer(remotePeerId, dataInfo, true);
+    }
+
     // The remote peer id
     private final Object remotePeerId;
 
@@ -129,7 +139,9 @@ public final class Transfer implements Serializable {
                 completedChunks.add(chunk);
             }
         }
-        return completedChunks.stream().mapToInt(Integer::intValue);
+        return completedChunks
+                .stream()
+                .mapToInt(Integer::intValue);
     }
 
     /**
