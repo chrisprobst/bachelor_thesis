@@ -92,15 +92,9 @@ public final class AnnounceHandler extends ChannelHandlerAdapter implements Runn
             return;
         }
 
-        // The brain decided to not upload anything
-        if (!transformedDataInfo.isPresent()) {
-            schedule();
-            return;
-        }
-
         // Create a new data info message
         DataInfoMessage dataInfoMessage =
-                new DataInfoMessage(transformedDataInfo.get());
+                new DataInfoMessage(transformedDataInfo);
 
         // Write and flush the data info message
         ctx.writeAndFlush(dataInfoMessage)
@@ -118,5 +112,6 @@ public final class AnnounceHandler extends ChannelHandlerAdapter implements Runn
                         ctx.close();
                     }
                 });
+
     }
 }

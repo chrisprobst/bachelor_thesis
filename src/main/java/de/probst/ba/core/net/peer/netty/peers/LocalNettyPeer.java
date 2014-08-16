@@ -1,4 +1,4 @@
-package de.probst.ba.core.net.peer.netty.local;
+package de.probst.ba.core.net.peer.netty.peers;
 
 import de.probst.ba.core.logic.Brain;
 import de.probst.ba.core.media.DataBase;

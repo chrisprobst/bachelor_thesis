@@ -10,6 +10,7 @@ import de.probst.ba.core.net.peer.Peer;
 import de.probst.ba.core.net.peer.netty.handlers.datainfo.AnnounceHandler;
 import de.probst.ba.core.net.peer.netty.handlers.datainfo.DataInfoHandler;
 import de.probst.ba.core.net.peer.netty.handlers.group.ChannelGroupHandler;
+import de.probst.ba.core.net.peer.netty.handlers.throttles.WriteThrottle;
 import de.probst.ba.core.net.peer.netty.handlers.transfer.DownloadHandler;
 import de.probst.ba.core.net.peer.netty.handlers.transfer.UploadHandler;
 import io.netty.channel.Channel;
@@ -21,7 +22,6 @@ import io.netty.channel.group.ChannelGroup;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
-import io.netty.handler.traffic.ChannelTrafficShapingHandler;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -38,12 +38,8 @@ import java.util.stream.Collectors;
  */
 public abstract class AbstractNettyPeer implements Peer {
 
-    private static final long NETTY_TRAFFIC_SHAPING_INTERVAL = 500;
-
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(AbstractNettyPeer.class);
-
-    private final LogLevel logLevel = LogLevel.INFO;
 
     private final long uploadRate;
 
@@ -68,16 +64,13 @@ public abstract class AbstractNettyPeer implements Peer {
             new CompletableFuture<>();
 
     private final LoggingHandler logHandler =
-            new LoggingHandler(logLevel);
+            new LoggingHandler(LogLevel.WARN);
 
     protected final ChannelInitializer<Channel> serverChannelInitializer = new ChannelInitializer<Channel>() {
         @Override
         public void initChannel(Channel ch) {
             ch.pipeline().addLast(
-                    new ChannelTrafficShapingHandler(
-                            getUploadRate(),
-                            getDownloadRate(),
-                            NETTY_TRAFFIC_SHAPING_INTERVAL),
+                    new WriteThrottle(getUploadRate()),
 
                     logHandler,
                     serverChannelGroupHandler,
@@ -92,20 +85,9 @@ public abstract class AbstractNettyPeer implements Peer {
         @Override
         public void initChannel(Channel ch) {
             ch.pipeline().addLast(
-                    new ChannelTrafficShapingHandler(
-                            getUploadRate(),
-                            getDownloadRate(),
-                            NETTY_TRAFFIC_SHAPING_INTERVAL),
 
                     logHandler,
-
-                    // Manages all outgoing client channels
-                    // for downloading data and receiving
-                    // data info announcements
                     channelGroupHandler,
-
-                    // Only the clients receive announcements
-                    // from other peers
                     new DataInfoHandler()
             );
         }

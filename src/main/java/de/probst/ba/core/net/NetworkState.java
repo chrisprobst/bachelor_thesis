@@ -5,6 +5,7 @@ import de.probst.ba.core.media.DataInfo;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,6 +43,28 @@ public final class NetworkState implements Serializable {
     // The download rate
     private final long downloadRate;
 
+    private Map<String, DataInfo> createEstimatedDataInfo() {
+        // Our own data info (create a copy for manipulation)
+        Map<String, DataInfo> dataInfo = new HashMap<>(getDataInfo());
+
+        // Group all pending data info by hash
+        Map<String, List<DataInfo>> estimatedDataInfo = getDownloads().values().stream()
+                .map(Transfer::getDataInfo)
+                .collect(Collectors.groupingBy(DataInfo::getHash));
+
+        // Make a union of all pending data info to get an estimation
+        // of all data info which will be available in the future
+        Map<String, DataInfo> flatEstimatedDataInfo = estimatedDataInfo.entrySet().stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        p -> p.getValue().stream().reduce(DataInfo::union).get()));
+
+        // Merge with already available data info
+        flatEstimatedDataInfo.forEach((k, v) -> dataInfo.merge(k, v, DataInfo::union));
+
+        return Collections.unmodifiableMap(dataInfo);
+    }
+
     private Map<Object, Map<String, DataInfo>> createEstimatedMissingRemoteDataInfo() {
         return getRemoteDataInfo().entrySet().stream()
                 .collect(Collectors.toMap(
@@ -72,42 +95,20 @@ public final class NetworkState implements Serializable {
                         Map.Entry::getValue));
     }
 
-    private Map<String, DataInfo> createEstimatedDataInfo() {
-        // Our own data info (create a copy for manipulation)
-        Map<String, DataInfo> dataInfo = new HashMap<>(getDataInfo());
-
-        // Group all pending data info by hash
-        Map<String, List<DataInfo>> estimatedDataInfo = getDownloads().values().stream()
-                .map(Transfer::getDataInfo)
-                .collect(Collectors.groupingBy(DataInfo::getHash));
-
-        // Make a union of all pending data info to get an estimation
-        // of all data info which will be available in the future
-        Map<String, DataInfo> flatEstimatedDataInfo = estimatedDataInfo.entrySet().stream()
-                .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        p -> p.getValue().stream().reduce(DataInfo::union).get()));
-
-        // Merge with already available data info
-        flatEstimatedDataInfo.forEach((k, v) -> dataInfo.merge(k, v, DataInfo::union));
-
-        return Collections.unmodifiableMap(dataInfo);
-    }
-
     /**
      * Creates a network state.
      *
-     * @param uploads
      * @param downloads
      * @param dataInfo
      * @param remoteDataInfo
+     * @param uploads
      * @param uploadRate
      * @param downloadRate
      */
-    public NetworkState(Map<Object, Transfer> uploads,
-                        Map<Object, Transfer> downloads,
+    public NetworkState(Map<Object, Transfer> downloads,
                         Map<String, DataInfo> dataInfo,
                         Map<Object, Map<String, DataInfo>> remoteDataInfo,
+                        Map<Object, Transfer> uploads,
                         long uploadRate,
                         long downloadRate) {
 
@@ -135,6 +136,17 @@ public final class NetworkState implements Serializable {
     }
 
     /**
+     * @return The lowest id of all uncompleted
+     * data info.
+     */
+    public long getLowestUncompletedDataInfoId() {
+        return getDataInfo().entrySet().stream()
+                .filter(p -> !p.getValue().isCompleted())
+                .sorted(Comparator.comparing(p -> p.getValue().getId()))
+                .findFirst().get().getValue().getId();
+    }
+
+    /**
      * @return A combined view which takes pending
      * downloads and already available data info into account.
      */
@@ -148,20 +160,6 @@ public final class NetworkState implements Serializable {
      */
     public Map<Object, Map<String, DataInfo>> getEstimatedMissingRemoteDataInfo() {
         return estimatedMissingRemoteDataInfo;
-    }
-
-    /**
-     * @return The upload rate.
-     */
-    public long getUploadRate() {
-        return uploadRate;
-    }
-
-    /**
-     * @return The download rate.
-     */
-    public long getDownloadRate() {
-        return downloadRate;
     }
 
     /**
@@ -190,5 +188,20 @@ public final class NetworkState implements Serializable {
      */
     public Map<Object, Map<String, DataInfo>> getRemoteDataInfo() {
         return remoteDataInfo;
+    }
+
+
+    /**
+     * @return The upload rate.
+     */
+    public long getUploadRate() {
+        return uploadRate;
+    }
+
+    /**
+     * @return The download rate.
+     */
+    public long getDownloadRate() {
+        return downloadRate;
     }
 }

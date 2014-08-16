@@ -1,13 +1,11 @@
 package de.probst.ba.core;
 
 import de.probst.ba.core.logic.Brain;
+import de.probst.ba.core.logic.brains.DefaultTotalOrderedBrain;
 import de.probst.ba.core.media.DataInfo;
 import de.probst.ba.core.media.databases.DefaultDataBase;
-import de.probst.ba.core.net.NetworkState;
-import de.probst.ba.core.net.Transfer;
-import de.probst.ba.core.net.peer.netty.local.LocalNettyPeer;
+import de.probst.ba.core.net.peer.netty.peers.LocalNettyPeer;
 
-import java.util.List;
 import java.util.Optional;
 
 /**
@@ -18,11 +16,30 @@ public class App {
     public static void main(String[] args) throws InterruptedException {
 
         // Demo data
-        DataInfo dataInfo = new DataInfo(1000 * 1000,
+        DataInfo dataInfo = new DataInfo(
+                0,
+                1000 * 1000,
                 Optional.empty(),
                 Optional.empty(),
                 "Hello world",
-                100, String::valueOf)
+                60,
+                String::valueOf)
+                .withChunk(3)
+                .withChunk(6)
+                .withChunk(7)
+                .withChunk(55)
+                .withChunk(12)
+                .withChunk(51)
+                .withChunk(33);
+
+        DataInfo dataInfo1 = new DataInfo(
+                1,
+                1000 * 1000,
+                Optional.empty(),
+                Optional.empty(),
+                "Hello world 2",
+                100,
+                String::valueOf)
                 .withChunk(3)
                 .withChunk(6)
                 .withChunk(7)
@@ -33,22 +50,11 @@ public class App {
 
         DataInfo dataInfo2 = dataInfo.withoutChunk(55);
 
-        Brain defaultBrain = new Brain() {
-
-            @Override
-            public Optional<List<Transfer>> process(NetworkState networkState) {
-                System.out.println(networkState.getEstimatedMissingRemoteDataInfo());
-
-
-                return Optional.empty();
-            }
-        };
-
-        Brain dummyBrain = new Brain() {
-        };
+        Brain defaultBrain = new DefaultTotalOrderedBrain();
+        Brain defaultBrain2 = new DefaultTotalOrderedBrain();
 
         // Create both clients
-        LocalNettyPeer localPeerA = new LocalNettyPeer(1000, 1000, "peer-1", new DefaultDataBase(dataInfo), dummyBrain);
+        LocalNettyPeer localPeerA = new LocalNettyPeer(1000, 1000, "peer-1", new DefaultDataBase(dataInfo, dataInfo1), defaultBrain2);
         LocalNettyPeer localPeerB = new LocalNettyPeer(1000, 1000, "peer-2", new DefaultDataBase(dataInfo2), defaultBrain);
 
         // Wait for init

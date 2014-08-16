@@ -38,10 +38,10 @@ public interface Peer extends Closeable {
 
     default NetworkState getNetworkState() {
         return new NetworkState(
-                getUploads(),
                 getDownloads(),
                 getDataInfo(),
                 getRemoteDataInfo(),
+                getUploads(),
                 getUploadRate(),
                 getDownloadRate());
     }

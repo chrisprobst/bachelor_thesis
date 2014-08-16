@@ -129,10 +129,16 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
 
                 // Simply process the transfer manager
                 if (!getTransferManager().process(buffer)) {
+                    logger.info("Download completed: " +
+                            getTransferManager().getTransfer());
+
                     // We are ready when there
                     // are no further chunks to
                     // download
                     remove(ctx);
+                } else {
+                    logger.info("Download processed: " +
+                            getTransferManager().getTransfer());
                 }
             }
         } else {

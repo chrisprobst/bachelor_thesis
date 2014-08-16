@@ -11,6 +11,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.handler.stream.ChunkedInput;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.AbstractMap;
 import java.util.Map;
@@ -22,6 +24,9 @@ import java.util.stream.Collectors;
  * Created by chrisprobst on 13.08.14.
  */
 public final class UploadHandler extends SimpleChannelInboundHandler<UploadRequestMessage> {
+
+    private static final InternalLogger logger =
+            InternalLoggerFactory.getInstance(UploadHandler.class);
 
     public static Map<Object, Transfer> getUploads(ChannelGroup channelGroup) {
         return channelGroup.stream()
@@ -102,6 +107,8 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
                                    UploadRequestMessage msg) throws Exception {
 
         if (!isUploadRequestMessageValid(msg)) {
+            logger.warn("Upload request message null or empty");
+
             // Not a valid request
             ctx.writeAndFlush(new UploadRejectedMessage(
                     new IllegalArgumentException("Upload request message null or empty")));
@@ -119,6 +126,8 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
                         getPeer().getNetworkState(),
                         newTransferManager.getTransfer())) {
 
+                    logger.warn("The brain rejected the upload");
+
                     // Not accepted
                     ctx.writeAndFlush(new UploadRejectedMessage(
                             new IllegalStateException(
@@ -128,6 +137,8 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
                     // Setup the update
                     setup(ctx, newTransferManager);
 
+                    logger.info("Starting upload: " + newTransferManager.getTransfer());
+
                     // Upload chunked input
                     ctx.writeAndFlush(new ChunkedDataBaseInput()).addListener(fut -> {
 
@@ -135,13 +146,19 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
                         restore(ctx);
 
                         if (!fut.isSuccess()) {
+                            logger.info("Upload failed", fut.cause());
+
                             // Upload failed, notify!
                             ctx.writeAndFlush(new UploadRejectedMessage(fut.cause()));
+                        } else {
+                            logger.info("Upload succeeded");
                         }
                     });
                 }
 
             } catch (Exception e) {
+                logger.info("Upload failed", e);
+
                 // If the creation failed, reject!
                 ctx.writeAndFlush(new UploadRejectedMessage(e));
 

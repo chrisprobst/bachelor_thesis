@@ -43,7 +43,8 @@ public final class DataInfoHandler extends SimpleChannelInboundHandler<DataInfoM
     private boolean isDataInfoMessageValid(DataInfoMessage dataInfoMessage) {
         return dataInfoMessage != null &&
                 dataInfoMessage.getDataInfo() != null &&
-                !dataInfoMessage.getDataInfo().isEmpty();
+                dataInfoMessage.getDataInfo().isPresent() &&
+                !dataInfoMessage.getDataInfo().get().isEmpty();
     }
 
     @Override
@@ -52,7 +53,7 @@ public final class DataInfoHandler extends SimpleChannelInboundHandler<DataInfoM
             remoteDataInfo = Optional.empty();
         } else {
             remoteDataInfo = Optional.of(Collections.unmodifiableMap(
-                    new HashMap<>(msg.getDataInfo())));
+                    new HashMap<>(msg.getDataInfo().get())));
         }
     }
 

@@ -22,6 +22,7 @@ public class DataInfoTest {
 
         // 11 parts are needed for this tests
         dataInfo = new DataInfo(
+                0,
                 100,
                 Optional.empty(),
                 Optional.empty(),

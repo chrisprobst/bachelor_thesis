@@ -19,6 +19,9 @@ import java.util.stream.IntStream;
  */
 public final class DataInfo implements Serializable {
 
+    // The id of this data info
+    private final long id;
+
     // The total size
     private final long size;
 
@@ -49,6 +52,7 @@ public final class DataInfo implements Serializable {
     /**
      * Initialize a data info with a chunk creator.
      *
+     * @param id
      * @param size
      * @param name
      * @param description
@@ -56,24 +60,30 @@ public final class DataInfo implements Serializable {
      * @param chunkCount
      * @param chunkCreator
      */
-    public DataInfo(long size,
+    public DataInfo(long id,
+                    long size,
                     Optional<String> name,
                     Optional<String> description,
                     String hash,
                     int chunkCount,
                     IntFunction<String> chunkCreator) {
-        this(size, name, description, hash, IntStream
-                .range(0, chunkCount)
-                .mapToObj(chunkCreator)
-                .collect(Collectors.toList()));
+        this(
+                id,
+                size,
+                name,
+                description,
+                hash,
+                IntStream.range(0, chunkCount)
+                        .mapToObj(chunkCreator)
+                        .collect(Collectors.toList()));
     }
 
-    public DataInfo(long size,
+    public DataInfo(long id,
+                    long size,
                     Optional<String> name,
                     Optional<String> description,
                     String hash,
                     List<String> chunkHashes) {
-        Objects.requireNonNull(hash);
         Objects.requireNonNull(name);
         Objects.requireNonNull(description);
         Objects.requireNonNull(hash);
@@ -92,6 +102,7 @@ public final class DataInfo implements Serializable {
             throw new IllegalArgumentException("chunkHashes.size() > size");
         }
 
+        this.id = id;
         this.size = size;
         this.name = name;
         this.description = description;
@@ -151,6 +162,7 @@ public final class DataInfo implements Serializable {
      */
     public DataInfo empty() {
         return new DataInfo(
+                getId(),
                 getSize(),
                 getName(),
                 getDescription(),
@@ -281,6 +293,13 @@ public final class DataInfo implements Serializable {
         DataInfo dataInfo = duplicate();
         dataInfo.chunks.and(other.chunks);
         return dataInfo;
+    }
+
+    /**
+     * @return The id.
+     */
+    public long getId() {
+        return id;
     }
 
     /**
@@ -432,9 +451,10 @@ public final class DataInfo implements Serializable {
     @Override
     public String toString() {
         return "DataInfo{" +
-                "size=" + size +
-                ", name='" + name + '\'' +
-                ", description='" + description + '\'' +
+                "id=" + id +
+                ", size=" + size +
+                ", name=" + name +
+                ", description=" + description +
                 ", hash='" + hash + '\'' +
                 ", chunkHashes=" + chunkHashes +
                 ", chunks=" + chunks +
@@ -448,6 +468,7 @@ public final class DataInfo implements Serializable {
 
         DataInfo dataInfo = (DataInfo) o;
 
+        if (id != dataInfo.id) return false;
         if (size != dataInfo.size) return false;
         if (!chunkHashes.equals(dataInfo.chunkHashes)) return false;
         if (!chunks.equals(dataInfo.chunks)) return false;
@@ -460,7 +481,8 @@ public final class DataInfo implements Serializable {
 
     @Override
     public int hashCode() {
-        int result = (int) (size ^ (size >>> 32));
+        int result = (int) (id ^ (id >>> 32));
+        result = 31 * result + (int) (size ^ (size >>> 32));
         result = 31 * result + name.hashCode();
         result = 31 * result + description.hashCode();
         result = 31 * result + hash.hashCode();
