@@ -12,7 +12,6 @@ import de.probst.ba.core.net.peer.netty.handlers.datainfo.DataInfoHandler;
 import de.probst.ba.core.net.peer.netty.handlers.group.ChannelGroupHandler;
 import de.probst.ba.core.net.peer.netty.handlers.transfer.DownloadHandler;
 import de.probst.ba.core.net.peer.netty.handlers.transfer.UploadHandler;
-import de.probst.ba.core.net.peer.netty.handlers.util.FlushOnWriteHandler;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelId;
@@ -74,7 +73,7 @@ public abstract class AbstractNettyPeer implements Peer {
         @Override
         public void initChannel(Channel ch) {
             ch.pipeline().addLast(
-                    new FlushOnWriteHandler(),
+
                     new ChannelTrafficShapingHandler(
                             getUploadRate(),
                             getDownloadRate(),
@@ -93,7 +92,7 @@ public abstract class AbstractNettyPeer implements Peer {
         @Override
         public void initChannel(Channel ch) {
             ch.pipeline().addLast(
-                    new FlushOnWriteHandler(),
+
                     new ChannelTrafficShapingHandler(
                             getUploadRate(),
                             getDownloadRate(),

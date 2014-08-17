@@ -5,6 +5,7 @@ import de.probst.ba.core.net.Transfer;
 import de.probst.ba.core.net.TransferManager;
 import de.probst.ba.core.net.peer.netty.handlers.transfer.messages.UploadRejectedMessage;
 import de.probst.ba.core.net.peer.netty.handlers.transfer.messages.UploadRequestMessage;
+import de.probst.ba.core.util.Tuple;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerAdapter;
@@ -13,7 +14,6 @@ import io.netty.channel.group.ChannelGroup;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.util.AbstractMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -25,11 +25,11 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
 
     public static Map<Object, Transfer> getDownloads(ChannelGroup channelGroup) {
         return channelGroup.stream()
-                .map(c -> new AbstractMap.SimpleEntry<>(c, c.pipeline().get(DownloadHandler.class)))
-                .filter(h -> h.getValue() != null)
+                .map(c -> Tuple.of(c, c.pipeline().get(DownloadHandler.class)))
+                .filter(h -> h.second() != null)
                 .collect(Collectors.toMap(
-                        p -> p.getKey().id(),
-                        p -> p.getValue().getTransferManager().getTransfer()));
+                        p -> p.first().id(),
+                        p -> p.second().getTransferManager().getTransfer()));
     }
 
     public static synchronized DownloadHandler request(DataBase dataBase,

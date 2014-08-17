@@ -7,13 +7,14 @@ import de.probst.ba.core.media.databases.DefaultDataBase;
 import de.probst.ba.core.net.peer.netty.peers.LocalNettyPeer;
 
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
 
 /**
  * Created by chrisprobst on 12.08.14.
  */
 public class App {
 
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) throws InterruptedException, ExecutionException {
 
         // Demo data
         DataInfo dataInfo = new DataInfo(
@@ -64,6 +65,8 @@ public class App {
         // Connect both clients
         localPeerA.connect("peer-2").sync();
         localPeerB.connect("peer-1").sync();
+
+        localPeerA.getEventLoopGroup().terminationFuture().get();
 
 /*
         Thread.sleep(4000);

@@ -5,6 +5,7 @@ import de.probst.ba.core.net.TransferManager;
 import de.probst.ba.core.net.peer.Peer;
 import de.probst.ba.core.net.peer.netty.handlers.transfer.messages.UploadRejectedMessage;
 import de.probst.ba.core.net.peer.netty.handlers.transfer.messages.UploadRequestMessage;
+import de.probst.ba.core.util.Tuple;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -14,7 +15,6 @@ import io.netty.handler.stream.ChunkedInput;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.util.AbstractMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -30,12 +30,12 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
 
     public static Map<Object, Transfer> getUploads(ChannelGroup channelGroup) {
         return channelGroup.stream()
-                .map(c -> new AbstractMap.SimpleEntry<>(c,
+                .map(c -> Tuple.of(c,
                         c.pipeline().get(UploadHandler.class).getTransferManager()))
-                .filter(h -> h.getValue().isPresent())
+                .filter(h -> h.second().isPresent())
                 .collect(Collectors.toMap(
-                        p -> p.getKey().id(),
-                        p -> p.getValue().get().getTransfer()));
+                        p -> p.first().id(),
+                        p -> p.second().get().getTransfer()));
     }
 
     private final class ChunkedDataBaseInput implements ChunkedInput<ByteBuf> {
@@ -55,6 +55,16 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
             ByteBuf byteBuf = Unpooled.buffer(8192);
             getTransferManager().get().process(byteBuf);
             return byteBuf;
+        }
+
+        @Override
+        public long length() {
+            return getTransferManager().get().getTransfer().getSize();
+        }
+
+        @Override
+        public long progress() {
+            return getTransferManager().get().getTransfer().getCompletedSize();
         }
     }
 

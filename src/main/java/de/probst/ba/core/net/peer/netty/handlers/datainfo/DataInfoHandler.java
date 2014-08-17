@@ -2,11 +2,11 @@ package de.probst.ba.core.net.peer.netty.handlers.datainfo;
 
 import de.probst.ba.core.media.DataInfo;
 import de.probst.ba.core.net.peer.netty.handlers.datainfo.messages.DataInfoMessage;
+import de.probst.ba.core.util.Tuple;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.group.ChannelGroup;
 
-import java.util.AbstractMap;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -28,12 +28,12 @@ public final class DataInfoHandler extends SimpleChannelInboundHandler<DataInfoM
 
     public static Map<Object, Map<String, DataInfo>> getRemoteDataInfo(ChannelGroup channelGroup) {
         return channelGroup.stream()
-                .map(c -> new AbstractMap.SimpleEntry<>(
-                        c, c.pipeline().get(DataInfoHandler.class).getRemoteDataInfo()))
-                .filter(h -> h.getValue().isPresent())
+                .map(c -> Tuple.of(c,
+                        c.pipeline().get(DataInfoHandler.class).getRemoteDataInfo()))
+                .filter(h -> h.second().isPresent())
                 .collect(Collectors.toMap(
-                        p -> p.getKey().id(),
-                        p -> p.getValue().get()));
+                        p -> p.first().id(),
+                        p -> p.second().get()));
     }
 
     // All remote data info are stored here
