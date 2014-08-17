@@ -21,8 +21,6 @@ public interface Peer extends AutoCloseable {
 
     NetworkState getNetworkState();
 
-    SocketAddress getLocalAddress();
-
     DataBase getDataBase();
 
     Brain getBrain();

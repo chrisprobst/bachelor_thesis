@@ -131,11 +131,22 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
                         .createTransferManager(Transfer.upload(
                                 ctx.channel().id(), msg.getDataInfo()));
 
-                // If the upload is not allowed, reject it!
-                if (!getPeer().getBrain().isUploadAllowed(
-                        getPeer().getNetworkState(),
-                        newTransferManager.getTransfer())) {
+                // Protect the brain to be executed in parallel (headache! =D)
+                boolean allowed;
+                synchronized (getPeer().getBrain()) {
+                    // Check if the upload is allowed
+                    allowed = getPeer().getBrain().isUploadAllowed(
+                            getPeer().getNetworkState(),
+                            newTransferManager.getTransfer());
 
+                    // Allowed, setup it up!
+                    if (allowed) {
+                        setup(ctx, newTransferManager);
+                    }
+                }
+
+                // If the upload is not allowed, reject it!
+                if (!allowed) {
                     logger.warn("The brain rejected the upload");
 
                     // Not accepted
@@ -144,9 +155,6 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
                                     "The brain rejected the upload")));
 
                 } else {
-                    // Setup the update
-                    setup(ctx, newTransferManager);
-
                     logger.info("Starting upload: " + newTransferManager.getTransfer());
 
                     // Upload chunked input

@@ -12,19 +12,19 @@ import java.util.stream.Collectors;
 /**
  * Created by chrisprobst on 13.08.14.
  */
-public final class DefaultDataBase extends AbstractDataBase {
+public final class FakeDataBase extends AbstractDataBase {
 
-    public DefaultDataBase() {
+    public FakeDataBase() {
     }
 
-    public DefaultDataBase(DataInfo... dataInfo) {
+    public FakeDataBase(DataInfo... dataInfo) {
         this(Arrays.stream(dataInfo)
                 .collect(Collectors.toMap(
                         DataInfo::getHash,
                         Function.identity())));
     }
 
-    public DefaultDataBase(Map<String, DataInfo> initialDataInfo) {
+    public FakeDataBase(Map<String, DataInfo> initialDataInfo) {
         dataInfo.putAll(initialDataInfo);
     }
 

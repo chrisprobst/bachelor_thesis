@@ -22,6 +22,10 @@ public interface Brain {
      * undefined intervals and can be triggered by network metrics,
      * timers and events randomly.
      * <p>
+     * This method usually only invoked by one thread at a time
+     * but the thread can change over time. So make sure that you
+     * do not introduce any races.
+     * <p>
      * The purpose of this method is to implement synchronization strategies.
      * In other words: To request downloads in the most effective way.
      * <p>
@@ -40,6 +44,8 @@ public interface Brain {
      * This method is called by the framework internally at
      * undefined intervals and can be triggered by network metrics,
      * timers and events randomly.
+     * <p>
+     * This method can be invoked by many threads in parallel.
      * <p>
      * The purpose of this method is to transform the local data info we are willing
      * to upload. This way for instance we could stop announcing data info if
@@ -60,6 +66,10 @@ public interface Brain {
     /**
      * This is an interceptor method to implement the possibility to
      * control the uploads.
+     * <p>
+     * This method can only be invoked by one thread at a time, this way
+     * we can guarantee that decisions based on the network state will be
+     * safe against races. The thread can change over time.
      * <p>
      * The framework internally already checks that one peer cannot start
      * two downloads in parallel because it would not make much sense.

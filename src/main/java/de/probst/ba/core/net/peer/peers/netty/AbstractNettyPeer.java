@@ -9,10 +9,13 @@ import de.probst.ba.core.net.peer.AbstractPeer;
 import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.AnnounceHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.DataInfoHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.group.ChannelGroupHandler;
+import de.probst.ba.core.net.peer.peers.netty.handlers.throttle.WriteThrottle;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.DownloadHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.UploadHandler;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandlerAdapter;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelId;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
@@ -20,7 +23,6 @@ import io.netty.channel.group.ChannelGroup;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
-import io.netty.handler.traffic.ChannelTrafficShapingHandler;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -40,7 +42,7 @@ abstract class AbstractNettyPeer extends AbstractPeer implements Body {
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(AbstractNettyPeer.class);
 
-    private static final long NETTY_TRAFFIC_INTERVAL = 500;
+//    private static final long NETTY_TRAFFIC_INTERVAL = 10;
 
     private final long uploadRate;
 
@@ -59,17 +61,28 @@ abstract class AbstractNettyPeer extends AbstractPeer implements Body {
             new CompletableFuture<>();
 
     private final LoggingHandler logHandler =
-            new LoggingHandler(LogLevel.WARN);
+            new LoggingHandler(LogLevel.DEBUG);
+
 
     protected final ChannelInitializer<Channel> serverChannelInitializer = new ChannelInitializer<Channel>() {
         @Override
         public void initChannel(Channel ch) {
             ch.pipeline().addLast(
 
-                    new ChannelTrafficShapingHandler(
+                   /* new ChannelTrafficShapingHandler(
                             getUploadRate(),
                             getDownloadRate(),
-                            NETTY_TRAFFIC_INTERVAL),
+                            NETTY_TRAFFIC_INTERVAL),*/
+
+                    new WriteThrottle(getUploadRate()),
+
+                    new ChannelHandlerAdapter() {
+                        @Override
+                        public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
+                            System.out.println("WRITABLE: " + ctx.channel().isWritable());
+                            super.channelWritabilityChanged(ctx);
+                        }
+                    },
 
                     logHandler,
                     serverChannelGroupHandler,
@@ -77,6 +90,8 @@ abstract class AbstractNettyPeer extends AbstractPeer implements Body {
                     new UploadHandler(AbstractNettyPeer.this),
                     new AnnounceHandler(AbstractNettyPeer.this)
             );
+
+            AbstractNettyPeer.this.initServerChannel(ch);
         }
     };
 
@@ -84,18 +99,30 @@ abstract class AbstractNettyPeer extends AbstractPeer implements Body {
         @Override
         public void initChannel(Channel ch) {
             ch.pipeline().addLast(
-
+/*
                     new ChannelTrafficShapingHandler(
                             getUploadRate(),
                             getDownloadRate(),
-                            NETTY_TRAFFIC_INTERVAL),
+                            NETTY_TRAFFIC_INTERVAL),*/
+
+                    new WriteThrottle(getUploadRate()),
 
                     logHandler,
                     channelGroupHandler,
                     new DataInfoHandler()
             );
+
+            AbstractNettyPeer.this.initChannel(ch);
         }
     };
+
+    protected void initChannel(Channel ch) {
+
+    }
+
+    protected void initServerChannel(Channel ch) {
+
+    }
 
     protected ChannelInitializer<Channel> getServerChannelInitializer() {
         return serverChannelInitializer;
@@ -212,13 +239,14 @@ abstract class AbstractNettyPeer extends AbstractPeer implements Body {
         if (remotePeer == null) {
             logger.warn("The brain requested to " +
                     "download from a dead peer");
-        }
+        } else {
 
-        // Request the download
-        DownloadHandler.request(
-                getDataBase(),
-                remotePeer,
-                transfer);
+            // Request the download
+            DownloadHandler.request(
+                    getDataBase(),
+                    remotePeer,
+                    transfer);
+        }
     }
 
     @Override

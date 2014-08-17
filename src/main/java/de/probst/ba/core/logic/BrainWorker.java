@@ -39,7 +39,7 @@ public final class BrainWorker implements Runnable {
     }
 
     @Override
-    public void run() {
+    public synchronized void run() {
         try {
             // Get the active network state
             NetworkState networkState = getBody().getNetworkState();

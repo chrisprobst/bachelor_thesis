@@ -13,7 +13,7 @@ public final class Config {
     private static final TimeUnit DEFAULT_TIME_UNIT = TimeUnit.MILLISECONDS;
 
     public static long getDataInfoAnnounceDelay() {
-        return 2000;
+        return 700;
     }
 
     public static TimeUnit getDataInfoAnnounceTimeUnit() {
@@ -21,7 +21,7 @@ public final class Config {
     }
 
     public static long getBrainDelay() {
-        return 4000;
+        return 1400;
     }
 
     public static TimeUnit getBrainTimeUnit() {

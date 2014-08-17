@@ -69,7 +69,6 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
 
     private final TransferManager transferManager;
 
-
     private void remove(ChannelHandlerContext ctx) {
         ctx.pipeline().remove(this);
     }
@@ -116,7 +115,7 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof UploadRejectedMessage) {
             logger.warn("Upload rejected",
-                    ((UploadRejectedMessage) msg).getCause());
+                    ((UploadRejectedMessage) msg).getCause().getMessage());
 
             // Upload rejected, lets just
             // remove this download
@@ -137,7 +136,7 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
                     // download
                     remove(ctx);
                 } else {
-                    logger.info("Download processed: " +
+                    logger.debug("Download processed: " +
                             getTransferManager().getTransfer());
                 }
             }

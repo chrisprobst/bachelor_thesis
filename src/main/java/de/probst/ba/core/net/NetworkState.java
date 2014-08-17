@@ -3,6 +3,7 @@ package de.probst.ba.core.net;
 import de.probst.ba.core.media.DataInfo;
 
 import java.io.Serializable;
+import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -10,6 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -18,6 +20,9 @@ import java.util.stream.Collectors;
  * Created by chrisprobst on 10.08.14.
  */
 public final class NetworkState implements Serializable {
+
+    // The local address
+    private final SocketAddress localAddress;
 
     // All pending uploads
     private final Map<Object, Transfer> uploads;
@@ -98,25 +103,29 @@ public final class NetworkState implements Serializable {
     /**
      * Creates a network state.
      *
-     * @param downloads
+     * @param localAddress
      * @param dataInfo
      * @param remoteDataInfo
      * @param uploads
+     * @param downloads
      * @param uploadRate
      * @param downloadRate
      */
-    public NetworkState(Map<Object, Transfer> downloads,
+    public NetworkState(SocketAddress localAddress,
                         Map<String, DataInfo> dataInfo,
                         Map<Object, Map<String, DataInfo>> remoteDataInfo,
                         Map<Object, Transfer> uploads,
+                        Map<Object, Transfer> downloads,
                         long uploadRate,
                         long downloadRate) {
 
+        Objects.requireNonNull(localAddress);
         Objects.requireNonNull(uploads);
         Objects.requireNonNull(downloads);
         Objects.requireNonNull(dataInfo);
         Objects.requireNonNull(remoteDataInfo);
 
+        this.localAddress = localAddress;
         this.uploads = Collections.unmodifiableMap(new HashMap<>(uploads));
         this.downloads = Collections.unmodifiableMap(new HashMap<>(downloads));
         this.dataInfo = Collections.unmodifiableMap(new HashMap<>(dataInfo));
@@ -139,11 +148,11 @@ public final class NetworkState implements Serializable {
      * @return The lowest id of all uncompleted
      * data info.
      */
-    public long getLowestUncompletedDataInfoId() {
+    public Optional<Long> getLowestUncompletedDataInfoId() {
         return getDataInfo().entrySet().stream()
                 .filter(p -> !p.getValue().isCompleted())
                 .sorted(Comparator.comparing(p -> p.getValue().getId()))
-                .findFirst().get().getValue().getId();
+                .findFirst().map(p -> p.getValue().getId());
     }
 
     /**
@@ -160,6 +169,13 @@ public final class NetworkState implements Serializable {
      */
     public Map<Object, Map<String, DataInfo>> getEstimatedMissingRemoteDataInfo() {
         return estimatedMissingRemoteDataInfo;
+    }
+
+    /**
+     * @return The local address of the peer.
+     */
+    public SocketAddress getLocalAddress() {
+        return localAddress;
     }
 
     /**

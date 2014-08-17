@@ -34,9 +34,9 @@ public abstract class AbstractPeer implements Peer {
         return brainWorker;
     }
 
-    protected abstract long getUploadRate();
-
-    protected abstract long getDownloadRate();
+    protected SocketAddress getLocalAddress() {
+        return localAddress;
+    }
 
     protected abstract Map<Object, Transfer> getUploads();
 
@@ -45,6 +45,10 @@ public abstract class AbstractPeer implements Peer {
     protected abstract Map<String, DataInfo> getDataInfo();
 
     protected abstract Map<Object, Map<String, DataInfo>> getRemoteDataInfo();
+
+    protected abstract long getUploadRate();
+
+    protected abstract long getDownloadRate();
 
     protected abstract Body getBody();
 
@@ -78,17 +82,13 @@ public abstract class AbstractPeer implements Peer {
     }
 
     @Override
-    public SocketAddress getLocalAddress() {
-        return localAddress;
-    }
-
-    @Override
     public NetworkState getNetworkState() {
         return new NetworkState(
-                getDownloads(),
+                getLocalAddress(),
                 getDataInfo(),
                 getRemoteDataInfo(),
                 getUploads(),
+                getDownloads(),
                 getUploadRate(),
                 getDownloadRate());
     }
