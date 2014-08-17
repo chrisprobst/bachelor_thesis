@@ -2,33 +2,22 @@ package de.probst.ba.core.net.peer;
 
 import de.probst.ba.core.logic.Brain;
 import de.probst.ba.core.media.DataBase;
-import de.probst.ba.core.media.DataInfo;
 import de.probst.ba.core.net.NetworkState;
-import de.probst.ba.core.net.Transfer;
 
-import java.io.Closeable;
 import java.net.SocketAddress;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Future;
 
 /**
  * Created by chrisprobst on 15.08.14.
  */
-public interface Peer extends Closeable {
+public interface Peer extends AutoCloseable {
 
-    CompletableFuture<Void> getInitFuture();
+    CompletableFuture<?> getInitFuture();
 
-    long getUploadRate();
+    Future<?> getCloseFuture();
 
-    long getDownloadRate();
-
-    Map<Object, Transfer> getUploads();
-
-    Map<Object, Transfer> getDownloads();
-
-    Map<String, DataInfo> getDataInfo();
-
-    Map<Object, Map<String, DataInfo>> getRemoteDataInfo();
+    NetworkState getNetworkState();
 
     SocketAddress getAddress();
 
@@ -36,13 +25,6 @@ public interface Peer extends Closeable {
 
     Brain getBrain();
 
-    default NetworkState getNetworkState() {
-        return new NetworkState(
-                getDownloads(),
-                getDataInfo(),
-                getRemoteDataInfo(),
-                getUploads(),
-                getUploadRate(),
-                getDownloadRate());
-    }
+    @Override
+    void close();
 }

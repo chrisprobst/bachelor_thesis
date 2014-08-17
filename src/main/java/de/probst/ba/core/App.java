@@ -66,7 +66,7 @@ public class App {
         localPeerA.connect("peer-2").sync();
         localPeerB.connect("peer-1").sync();
 
-        localPeerA.getEventLoopGroup().terminationFuture().get();
+        localPeerA.getCloseFuture().get();
 
 /*
         Thread.sleep(4000);

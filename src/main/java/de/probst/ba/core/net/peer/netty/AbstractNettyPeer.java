@@ -1,7 +1,8 @@
 package de.probst.ba.core.net.peer.netty;
 
-import de.probst.ba.core.Config;
+import de.probst.ba.core.logic.Body;
 import de.probst.ba.core.logic.Brain;
+import de.probst.ba.core.logic.BrainWorker;
 import de.probst.ba.core.media.DataBase;
 import de.probst.ba.core.media.DataInfo;
 import de.probst.ba.core.net.NetworkState;
@@ -26,17 +27,16 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.SocketAddress;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
 
 /**
  * Created by chrisprobst on 12.08.14.
  */
-public abstract class AbstractNettyPeer implements Peer {
+public abstract class AbstractNettyPeer implements Peer, Body {
 
 
     private static final InternalLogger logger =
@@ -50,12 +50,15 @@ public abstract class AbstractNettyPeer implements Peer {
 
     private final SocketAddress address;
 
-    private final EventLoopGroup eventLoopGroup =
-            createEventGroup();
-
     private final DataBase dataBase;
 
     private final Brain brain;
+
+    private final BrainWorker brainWorker =
+            new BrainWorker(this);
+
+    private final EventLoopGroup eventLoopGroup =
+            createEventGroup();
 
     private final ChannelGroupHandler serverChannelGroupHandler =
             new ChannelGroupHandler(eventLoopGroup.next());
@@ -63,7 +66,7 @@ public abstract class AbstractNettyPeer implements Peer {
     private final ChannelGroupHandler channelGroupHandler =
             new ChannelGroupHandler(eventLoopGroup.next());
 
-    private final CompletableFuture<Void> initFuture =
+    private final CompletableFuture<?> initFuture =
             new CompletableFuture<>();
 
     private final LoggingHandler logHandler =
@@ -105,69 +108,6 @@ public abstract class AbstractNettyPeer implements Peer {
         }
     };
 
-    protected void scheduleBrainWorker() {
-        getEventLoopGroup().schedule(brainWorker,
-                Config.getBrainDelay(),
-                Config.getBrainTimeUnit());
-    }
-
-    protected void requestDownload(Transfer transfer) {
-        Channel remotePeer = getChannelGroup().find(
-                (ChannelId) transfer.getRemotePeerId());
-
-        if (remotePeer == null) {
-            logger.warn("The brain requested to " +
-                    "download from a dead peer");
-        }
-
-        // Rquest the download
-        DownloadHandler.request(
-                getDataBase(),
-                remotePeer,
-                transfer);
-    }
-
-    protected final Runnable brainWorker = () -> {
-        try {
-            // Get the active network state
-            NetworkState networkState = getNetworkState();
-
-            // Let the brain generate transfers
-            Optional<List<Transfer>> transfers = getBrain().process(networkState);
-
-            // This is most likely a brain bug
-            if (transfers == null) {
-                logger.warn("Brain returned null for optional list of transfers");
-                scheduleBrainWorker();
-                return;
-            }
-
-            // The brain do not want to
-            // download anything
-            if (!transfers.isPresent() ||
-                    transfers.get().isEmpty()) {
-                scheduleBrainWorker();
-                return;
-            }
-
-            // Create a list of transfers with distinct remote peer ids
-            // and request them to download
-            transfers.get().stream()
-                    .filter(t -> !networkState.getDownloads().containsKey(t.getRemotePeerId()))
-                    .collect(Collectors.groupingBy(Transfer::getRemotePeerId))
-                    .entrySet().stream()
-                    .filter(p -> p.getValue().size() == 1)
-                    .map(p -> p.getValue().get(0))
-                    .forEach(AbstractNettyPeer.this::requestDownload);
-
-            // Rerun later
-            scheduleBrainWorker();
-        } catch (Exception e) {
-            logger.error("The brain is dead, shutting peer down", e);
-            getEventLoopGroup().shutdownGracefully();
-        }
-    };
-
     protected ChannelInitializer<Channel> getServerChannelInitializer() {
         return serverChannelInitializer;
     }
@@ -178,6 +118,42 @@ public abstract class AbstractNettyPeer implements Peer {
 
     protected LoggingHandler getLogHandler() {
         return logHandler;
+    }
+
+    protected ChannelGroup getServerChannelGroup() {
+        return serverChannelGroupHandler.getChannelGroup();
+    }
+
+    protected ChannelGroup getChannelGroup() {
+        return channelGroupHandler.getChannelGroup();
+    }
+
+    protected EventLoopGroup getEventLoopGroup() {
+        return eventLoopGroup;
+    }
+
+    protected long getUploadRate() {
+        return uploadRate;
+    }
+
+    protected long getDownloadRate() {
+        return downloadRate;
+    }
+
+    protected Map<Object, Transfer> getUploads() {
+        return UploadHandler.getUploads(getServerChannelGroup());
+    }
+
+    protected Map<Object, Transfer> getDownloads() {
+        return DownloadHandler.getDownloads(getChannelGroup());
+    }
+
+    protected Map<String, DataInfo> getDataInfo() {
+        return getDataBase().getDataInfo();
+    }
+
+    protected Map<Object, Map<String, DataInfo>> getRemoteDataInfo() {
+        return DataInfoHandler.getRemoteDataInfo(getChannelGroup());
     }
 
     protected abstract void initServerBootstrap();
@@ -210,7 +186,7 @@ public abstract class AbstractNettyPeer implements Peer {
         initServerBootstrap();
 
         // Register the brain worker for execution
-        getInitFuture().thenRun(this::scheduleBrainWorker);
+        getInitFuture().thenRun(brainWorker::schedule);
 
         // Set init future
         createInitFuture().addListener(fut -> {
@@ -222,25 +198,45 @@ public abstract class AbstractNettyPeer implements Peer {
         });
     }
 
-    public ChannelGroup getServerChannelGroup() {
-        return serverChannelGroupHandler.getChannelGroup();
-    }
+    // ************ INTERFACE METHODS
 
-    public ChannelGroup getChannelGroup() {
-        return channelGroupHandler.getChannelGroup();
-    }
-
-    public EventLoopGroup getEventLoopGroup() {
-        return eventLoopGroup;
-    }
-
-    public CompletableFuture<Void> getInitFuture() {
+    @Override
+    public CompletableFuture<?> getInitFuture() {
         return initFuture;
+    }
+
+    @Override
+    public Future<?> getCloseFuture() {
+        return getEventLoopGroup().terminationFuture();
     }
 
     @Override
     public Brain getBrain() {
         return brain;
+    }
+
+    @Override
+    public ScheduledExecutorService getScheduler() {
+        return getEventLoopGroup();
+    }
+
+    @Override
+    public void requestTransfer(Transfer transfer) {
+        Objects.requireNonNull(transfer);
+
+        Channel remotePeer = getChannelGroup().find(
+                (ChannelId) transfer.getRemotePeerId());
+
+        if (remotePeer == null) {
+            logger.warn("The brain requested to " +
+                    "download from a dead peer");
+        }
+
+        // Request the download
+        DownloadHandler.request(
+                getDataBase(),
+                remotePeer,
+                transfer);
     }
 
     @Override
@@ -254,33 +250,14 @@ public abstract class AbstractNettyPeer implements Peer {
     }
 
     @Override
-    public long getUploadRate() {
-        return uploadRate;
-    }
-
-    @Override
-    public long getDownloadRate() {
-        return downloadRate;
-    }
-
-    @Override
-    public Map<Object, Transfer> getUploads() {
-        return UploadHandler.getUploads(getServerChannelGroup());
-    }
-
-    @Override
-    public Map<Object, Transfer> getDownloads() {
-        return DownloadHandler.getDownloads(getChannelGroup());
-    }
-
-    @Override
-    public Map<String, DataInfo> getDataInfo() {
-        return getDataBase().getDataInfo();
-    }
-
-    @Override
-    public Map<Object, Map<String, DataInfo>> getRemoteDataInfo() {
-        return DataInfoHandler.getRemoteDataInfo(getChannelGroup());
+    public NetworkState getNetworkState() {
+        return new NetworkState(
+                getDownloads(),
+                getDataInfo(),
+                getRemoteDataInfo(),
+                getUploads(),
+                getUploadRate(),
+                getDownloadRate());
     }
 
     @Override
