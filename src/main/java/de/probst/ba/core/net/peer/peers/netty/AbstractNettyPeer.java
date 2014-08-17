@@ -1,18 +1,16 @@
-package de.probst.ba.core.net.peer.netty;
+package de.probst.ba.core.net.peer.peers.netty;
 
 import de.probst.ba.core.logic.Body;
 import de.probst.ba.core.logic.Brain;
-import de.probst.ba.core.logic.BrainWorker;
 import de.probst.ba.core.media.DataBase;
 import de.probst.ba.core.media.DataInfo;
-import de.probst.ba.core.net.NetworkState;
 import de.probst.ba.core.net.Transfer;
-import de.probst.ba.core.net.peer.Peer;
-import de.probst.ba.core.net.peer.netty.handlers.datainfo.AnnounceHandler;
-import de.probst.ba.core.net.peer.netty.handlers.datainfo.DataInfoHandler;
-import de.probst.ba.core.net.peer.netty.handlers.group.ChannelGroupHandler;
-import de.probst.ba.core.net.peer.netty.handlers.transfer.DownloadHandler;
-import de.probst.ba.core.net.peer.netty.handlers.transfer.UploadHandler;
+import de.probst.ba.core.net.peer.AbstractPeer;
+import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.AnnounceHandler;
+import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.DataInfoHandler;
+import de.probst.ba.core.net.peer.peers.netty.handlers.group.ChannelGroupHandler;
+import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.DownloadHandler;
+import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.UploadHandler;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelId;
@@ -36,7 +34,7 @@ import java.util.concurrent.ScheduledExecutorService;
 /**
  * Created by chrisprobst on 12.08.14.
  */
-public abstract class AbstractNettyPeer implements Peer, Body {
+abstract class AbstractNettyPeer extends AbstractPeer implements Body {
 
 
     private static final InternalLogger logger =
@@ -47,15 +45,6 @@ public abstract class AbstractNettyPeer implements Peer, Body {
     private final long uploadRate;
 
     private final long downloadRate;
-
-    private final SocketAddress address;
-
-    private final DataBase dataBase;
-
-    private final Brain brain;
-
-    private final BrainWorker brainWorker =
-            new BrainWorker(this);
 
     private final EventLoopGroup eventLoopGroup =
             createEventGroup();
@@ -132,28 +121,39 @@ public abstract class AbstractNettyPeer implements Peer, Body {
         return eventLoopGroup;
     }
 
+    @Override
     protected long getUploadRate() {
         return uploadRate;
     }
 
+    @Override
     protected long getDownloadRate() {
         return downloadRate;
     }
 
+    @Override
     protected Map<Object, Transfer> getUploads() {
         return UploadHandler.getUploads(getServerChannelGroup());
     }
 
+    @Override
     protected Map<Object, Transfer> getDownloads() {
         return DownloadHandler.getDownloads(getChannelGroup());
     }
 
+    @Override
     protected Map<String, DataInfo> getDataInfo() {
         return getDataBase().getDataInfo();
     }
 
+    @Override
     protected Map<Object, Map<String, DataInfo>> getRemoteDataInfo() {
         return DataInfoHandler.getRemoteDataInfo(getChannelGroup());
+    }
+
+    @Override
+    protected Body getBody() {
+        return this;
     }
 
     protected abstract void initServerBootstrap();
@@ -164,36 +164,28 @@ public abstract class AbstractNettyPeer implements Peer, Body {
 
     protected abstract ChannelFuture createInitFuture();
 
-    public AbstractNettyPeer(long uploadRate,
-                             long downloadRate,
-                             SocketAddress address,
-                             DataBase dataBase,
-                             Brain brain) {
+    protected AbstractNettyPeer(long uploadRate,
+                                long downloadRate,
+                                SocketAddress localAddress,
+                                DataBase dataBase,
+                                Brain brain) {
 
-        Objects.requireNonNull(address);
-        Objects.requireNonNull(dataBase);
-        Objects.requireNonNull(brain);
+        super(localAddress, dataBase, brain);
 
         // Save args
         this.uploadRate = uploadRate;
         this.downloadRate = downloadRate;
-        this.address = address;
-        this.dataBase = dataBase;
-        this.brain = brain;
 
         // Init bootstrap
         initBootstrap();
         initServerBootstrap();
 
-        // Register the brain worker for execution
-        getInitFuture().thenRun(brainWorker::schedule);
-
         // Set init future
         createInitFuture().addListener(fut -> {
             if (fut.isSuccess()) {
-                initFuture.complete(null);
+                getInitFuture().complete(null);
             } else {
-                initFuture.completeExceptionally(fut.cause());
+                getInitFuture().completeExceptionally(fut.cause());
             }
         });
     }
@@ -201,18 +193,8 @@ public abstract class AbstractNettyPeer implements Peer, Body {
     // ************ INTERFACE METHODS
 
     @Override
-    public CompletableFuture<?> getInitFuture() {
-        return initFuture;
-    }
-
-    @Override
     public Future<?> getCloseFuture() {
         return getEventLoopGroup().terminationFuture();
-    }
-
-    @Override
-    public Brain getBrain() {
-        return brain;
     }
 
     @Override
@@ -242,26 +224,5 @@ public abstract class AbstractNettyPeer implements Peer, Body {
     @Override
     public void close() {
         getEventLoopGroup().shutdownGracefully();
-    }
-
-    @Override
-    public SocketAddress getAddress() {
-        return address;
-    }
-
-    @Override
-    public NetworkState getNetworkState() {
-        return new NetworkState(
-                getDownloads(),
-                getDataInfo(),
-                getRemoteDataInfo(),
-                getUploads(),
-                getUploadRate(),
-                getDownloadRate());
-    }
-
-    @Override
-    public DataBase getDataBase() {
-        return dataBase;
     }
 }

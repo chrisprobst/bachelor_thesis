@@ -1,10 +1,10 @@
-package de.probst.ba.core.net.peer.netty.handlers.transfer;
+package de.probst.ba.core.net.peer.peers.netty.handlers.transfer;
 
 import de.probst.ba.core.media.DataBase;
 import de.probst.ba.core.net.Transfer;
 import de.probst.ba.core.net.TransferManager;
-import de.probst.ba.core.net.peer.netty.handlers.transfer.messages.UploadRejectedMessage;
-import de.probst.ba.core.net.peer.netty.handlers.transfer.messages.UploadRequestMessage;
+import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.messages.UploadRejectedMessage;
+import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.messages.UploadRequestMessage;
 import de.probst.ba.core.util.Tuple;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;

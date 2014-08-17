@@ -1,4 +1,4 @@
-package de.probst.ba.core.net.peer.netty.handlers.transfer.messages;
+package de.probst.ba.core.net.peer.peers.netty.handlers.transfer.messages;
 
 import de.probst.ba.core.media.DataInfo;
 

@@ -17,9 +17,11 @@ public interface Peer extends AutoCloseable {
 
     Future<?> getCloseFuture();
 
+    void connect(SocketAddress remoteSocketAddress);
+
     NetworkState getNetworkState();
 
-    SocketAddress getAddress();
+    SocketAddress getLocalAddress();
 
     DataBase getDataBase();
 

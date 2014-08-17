@@ -4,7 +4,9 @@ import de.probst.ba.core.logic.Brain;
 import de.probst.ba.core.logic.brains.DefaultTotalOrderedBrain;
 import de.probst.ba.core.media.DataInfo;
 import de.probst.ba.core.media.databases.DefaultDataBase;
-import de.probst.ba.core.net.peer.netty.peers.LocalNettyPeer;
+import de.probst.ba.core.net.peer.Peer;
+import de.probst.ba.core.net.peer.peers.Peers;
+import io.netty.channel.local.LocalAddress;
 
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
@@ -55,18 +57,26 @@ public class App {
         Brain defaultBrain2 = new DefaultTotalOrderedBrain();
 
         // Create both clients
-        LocalNettyPeer localPeerA = new LocalNettyPeer(1000, 1000, "peer-1", new DefaultDataBase(dataInfo, dataInfo1), defaultBrain2);
-        LocalNettyPeer localPeerB = new LocalNettyPeer(1000, 1000, "peer-2", new DefaultDataBase(dataInfo2), defaultBrain);
+        Peer localPeerA = Peers.localPeer(1000, 1000,
+                new LocalAddress("peer-1"),
+                new DefaultDataBase(dataInfo, dataInfo1),
+                defaultBrain2);
+
+        Peer localPeerB = Peers.localPeer(1000, 1000,
+                new LocalAddress("peer-2"),
+                new DefaultDataBase(dataInfo2),
+                defaultBrain);
 
         // Wait for init
         localPeerA.getInitFuture().join();
         localPeerB.getInitFuture().join();
 
         // Connect both clients
-        localPeerA.connect("peer-2").sync();
-        localPeerB.connect("peer-1").sync();
+        localPeerA.connect(new LocalAddress("peer-2"));
+        localPeerB.connect(new LocalAddress("peer-1"));
 
         localPeerA.getCloseFuture().get();
+        localPeerB.getCloseFuture().get();
 
 /*
         Thread.sleep(4000);
