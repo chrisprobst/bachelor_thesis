@@ -27,7 +27,7 @@ public class DefaultTotalOrderedBrain extends AbstractOrderedBrain {
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(DefaultTotalOrderedBrain.class);
 
-    private volatile boolean ready = false;
+    private boolean ready = false;
 
     @Override
     public Optional<List<Transfer>> process(NetworkState networkState) {
