@@ -6,6 +6,7 @@ import de.probst.ba.core.net.peer.Peer;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.messages.UploadRejectedMessage;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.messages.UploadRequestMessage;
 import de.probst.ba.core.util.Tuple;
+import de.probst.ba.core.util.concurrent.AtomicCounter;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -69,10 +70,23 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
     }
 
     private final Peer peer;
+    private final AtomicCounter parallelUploads;
     private volatile TransferManager transferManager;
 
-    public UploadHandler(Peer peer) {
+    private void setup(ChannelHandlerContext ctx, TransferManager transferManager) {
+        this.transferManager = transferManager;
+        ctx.channel().config().setAutoRead(false);
+    }
+
+    private void restore(ChannelHandlerContext ctx) {
+        transferManager = null;
+        ctx.channel().config().setAutoRead(true);
+    }
+
+    public UploadHandler(Peer peer, AtomicCounter parallelUploads) {
         Objects.requireNonNull(peer);
+        Objects.requireNonNull(parallelUploads);
+        this.parallelUploads = parallelUploads;
         this.peer = peer;
     }
 
@@ -121,47 +135,39 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
                         .createTransferManager(Transfer.upload(
                                 ctx.channel().id(), msg.getDataInfo()));
 
-                // Protect the brain to be executed in parallel (headache! =D)
-                boolean allowed;
-                synchronized (getPeer().getBrain()) {
-                    allowed = getPeer().getBrain().isUploadAllowed(
-                            getPeer().getNetworkState(),
-                            newTransferManager.getTransfer());
-
-                    if (allowed) {
-                        transferManager = newTransferManager;
-                    }
-                }
-
                 // If the upload is not allowed, reject it!
-                if (!allowed) {
-                    logger.warn("The brain rejected the upload");
+                if (!parallelUploads.tryIncrement(getPeer().getBrain().getMaxParallelUploads())) {
+                    logger.warn("Reached maximum parallel uploads, rejecting upload");
 
                     // Not accepted
                     ctx.writeAndFlush(new UploadRejectedMessage(
                             new IllegalStateException(
-                                    "The brain rejected the upload")));
+                                    "The brain rejected the upload, because it " +
+                                            "reached the maximum number of uploads")));
 
                 } else {
-                    logger.info("Starting upload: " + newTransferManager.getTransfer());
+                    System.out.println("MAX PARALLEL UPLOADS: " + parallelUploads.get());
 
-                    // Disable auto read
-                    ctx.channel().config().setAutoRead(false);
+                    // Setup
+                    setup(ctx, newTransferManager);
+
+                    logger.info("Starting upload: " + newTransferManager.getTransfer());
 
                     // Upload chunked input
                     ctx.writeAndFlush(new ChunkedDataBaseInput()).addListener(fut -> {
+                        try {
+                            restore(ctx);
 
-                        // Restore
-                        transferManager = null;
-                        ctx.channel().config().setAutoRead(true);
+                            if (!fut.isSuccess()) {
+                                logger.info("Upload failed", fut.cause());
 
-                        if (!fut.isSuccess()) {
-                            logger.info("Upload failed", fut.cause());
-
-                            // Upload failed, notify!
-                            ctx.writeAndFlush(new UploadRejectedMessage(fut.cause()));
-                        } else {
-                            logger.info("Upload succeeded");
+                                // Upload failed, notify!
+                                ctx.writeAndFlush(new UploadRejectedMessage(fut.cause()));
+                            } else {
+                                logger.info("Upload succeeded");
+                            }
+                        } finally {
+                            parallelUploads.tryDecrement();
                         }
                     });
                 }
@@ -173,8 +179,7 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
                 ctx.writeAndFlush(new UploadRejectedMessage(e));
 
                 // Restore
-                transferManager = null;
-                ctx.channel().config().setAutoRead(true);
+                restore(ctx);
             }
         }
     }

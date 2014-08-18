@@ -43,8 +43,8 @@ public interface Brain {
      * undefined intervals and can be triggered by network metrics,
      * timers and events randomly.
      * <p>
-     * This method can be invoked by many threads in parallel.
-     * You should not add state to this method.
+     * This method is called by different threads concurrently, so
+     * make sure you have no race conditions.
      * <p>
      * The purpose of this method is to transform the local data info we are willing
      * to upload. This way for instance we could stop announcing data info if
@@ -63,23 +63,21 @@ public interface Brain {
     }
 
     /**
-     * This is an interceptor method to implement the possibility to
-     * control the uploads.
+     * Returns the maximum number of active uploads running in
+     * parallel.
      * <p>
-     * This method is thread-safe.
+     * This method is called by different threads concurrently, so
+     * make sure you have no race conditions.
+     * <p>
+     * Default is one.
      * <p>
      * The framework internally already checks that one peer cannot start
      * two downloads in parallel because it would not make much sense.
-     * <p>
-     * The default implementation always returns true so every distinct peer
-     * will be served.
+     * So this number is for distinct peers.
      *
-     * @param networkState
-     * @param transfer
-     * @return
+     * @return A positive integer > 0.
      */
-    default boolean isUploadAllowed(NetworkState networkState,
-                                    Transfer transfer) {
-        return true;
+    default int getMaxParallelUploads() {
+        return 1;
     }
 }

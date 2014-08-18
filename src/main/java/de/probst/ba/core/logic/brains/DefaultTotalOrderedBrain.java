@@ -88,10 +88,4 @@ public class DefaultTotalOrderedBrain extends AbstractOrderedBrain {
         logger.debug(networkState.getLocalAddress() + ": Is transforming: " + networkState.getDataInfo());
         return networkState.getUploads().isEmpty() ? Optional.of(networkState.getDataInfo()) : Optional.empty();
     }
-
-    @Override
-    public boolean isUploadAllowed(NetworkState networkState, Transfer transfer) {
-        logger.info(networkState.getLocalAddress() + ": Was asked for an upload: " + transfer);
-        return networkState.getUploads().isEmpty();
-    }
 }

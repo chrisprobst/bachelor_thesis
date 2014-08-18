@@ -45,7 +45,8 @@ public final class BrainWorker implements Runnable {
             NetworkState networkState = getBody().getNetworkState();
 
             // Let the brain generate transfers
-            Optional<List<Transfer>> transfers = getBody().getBrain().process(networkState);
+            Optional<List<Transfer>> transfers =
+                    getBody().getBrain().process(networkState);
 
             // This is most likely a brain bug
             if (transfers == null) {
@@ -76,7 +77,7 @@ public final class BrainWorker implements Runnable {
             schedule();
         } catch (Exception e) {
             logger.error("The brain is dead, shutting peer down", e);
-            getBody().close();
+            getBody().brainDead(e);
         }
     }
 }

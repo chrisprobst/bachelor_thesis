@@ -52,7 +52,6 @@ public class App {
                 .withoutChunk(5)
                 .withoutChunk(6);*/
 
-
         // List of peers
         List<Peer> peers = new LinkedList<>();
 

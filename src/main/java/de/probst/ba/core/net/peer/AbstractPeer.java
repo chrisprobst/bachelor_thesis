@@ -7,6 +7,7 @@ import de.probst.ba.core.media.DataBase;
 import de.probst.ba.core.media.DataInfo;
 import de.probst.ba.core.net.NetworkState;
 import de.probst.ba.core.net.Transfer;
+import de.probst.ba.core.util.concurrent.AtomicCounter;
 
 import java.net.SocketAddress;
 import java.util.Map;
@@ -29,6 +30,13 @@ public abstract class AbstractPeer implements Peer {
 
     private final CompletableFuture<?> initFuture =
             new CompletableFuture<>();
+
+    private final AtomicCounter parallelUploads =
+            new AtomicCounter();
+
+    protected AtomicCounter getParallelUploads() {
+        return parallelUploads;
+    }
 
     protected BrainWorker getBrainWorker() {
         return brainWorker;

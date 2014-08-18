@@ -114,7 +114,7 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof UploadRejectedMessage) {
-            logger.warn("Upload rejected",
+            logger.warn("Upload rejected: " +
                     ((UploadRejectedMessage) msg).getCause().getMessage());
 
             // Upload rejected, lets just

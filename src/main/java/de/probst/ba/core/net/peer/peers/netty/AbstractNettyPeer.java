@@ -85,7 +85,7 @@ abstract class AbstractNettyPeer extends AbstractPeer implements Body {
                     logHandler,
                     serverChannelGroupHandler,
                     new ChunkedWriteHandler(),
-                    new UploadHandler(AbstractNettyPeer.this),
+                    new UploadHandler(AbstractNettyPeer.this, getParallelUploads()),
                     new AnnounceHandler(AbstractNettyPeer.this)
             );
 
@@ -256,6 +256,12 @@ abstract class AbstractNettyPeer extends AbstractPeer implements Body {
                     remotePeer,
                     transfer);
         }
+    }
+
+    @Override
+    public void brainDead(Exception e) {
+        // Simply close the peer if the brain is dead
+        close();
     }
 
     @Override

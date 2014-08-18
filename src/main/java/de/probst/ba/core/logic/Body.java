@@ -6,12 +6,12 @@ import de.probst.ba.core.net.Transfer;
 import java.util.concurrent.ScheduledExecutorService;
 
 /**
- * A useful abstraction for the body worker
+ * A useful abstraction for the brain worker
  * to do its job.
  * <p>
  * Created by chrisprobst on 17.08.14.
  */
-public interface Body extends AutoCloseable {
+public interface Body {
 
     /**
      * @return The network state.
@@ -35,6 +35,11 @@ public interface Body extends AutoCloseable {
      */
     void requestTransfer(Transfer transfer);
 
-    @Override
-    void close();
+    /**
+     * If the brain has an exception,
+     * this method is called.
+     *
+     * @param e
+     */
+    void brainDead(Exception e);
 }
