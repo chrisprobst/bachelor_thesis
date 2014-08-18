@@ -150,6 +150,13 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
             // Consume the whole buffer
             while (buffer.readableBytes() > 0) {
 
+                if (!receivedBuffer) {
+                    receivedBuffer = true;
+                    // DIAGNOSTIC
+                    getPeer().getDiagnostic().peerStartedDownload(
+                            getPeer(), getTransferManager());
+                }
+
                 // Simply process the transfer manager
                 if (!getTransferManager().process(buffer)) {
                     logger.debug("Download completed: " +
@@ -169,13 +176,6 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
 
                     // DIAGNOSTIC
                     getPeer().getDiagnostic().peerProgressedDownload(
-                            getPeer(), getTransferManager());
-                }
-
-                if (!receivedBuffer) {
-                    receivedBuffer = true;
-                    // DIAGNOSTIC
-                    getPeer().getDiagnostic().peerStartedDownload(
                             getPeer(), getTransferManager());
                 }
             }

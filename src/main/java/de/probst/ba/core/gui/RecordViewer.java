@@ -30,8 +30,8 @@ import java.util.stream.Collectors;
  */
 public class RecordViewer extends Application {
 
-    public static int width = 1024;
-    public static int height = 768;
+    public static int width = 1200;
+    public static int height = 850;
     private List<RecordDiagnostic.Record> rawRecords;
     private List<RecordDiagnostic.Record> filteredRecords;
     private List<PeerId> peers;
@@ -44,6 +44,7 @@ public class RecordViewer extends Application {
     private CheckBox downloadProgressedCheckBox = new CheckBox("Progressed downloads");
     private CheckBox downloadStartedCheckBox = new CheckBox("Started downloads");
     private CheckBox downloadSucceededCheckBox = new CheckBox("Succeeded downloads");
+    private CheckBox clearCheckBox = new CheckBox("Clear canvas");
 
     private void initPeers() {
         peers = rawRecords.stream()
@@ -168,18 +169,23 @@ public class RecordViewer extends Application {
 
         Point2D local = peerPositions.get(record.getLocalPeerId().getAddress());
 
-        gc.strokeArc(local.getX() - 54, local.getY() - 54, 108, 108, 0, 360, ArcType.OPEN);
+        gc.strokeArc(local.getX() - 50, local.getY() - 29, 100, 58, 0, 360, ArcType.OPEN);
     }
 
     private void clearScreen(GraphicsContext gc) {
         gc.clearRect(0, 0, gc.getCanvas().getWidth(), gc.getCanvas().getHeight());
     }
 
+    private void renderPeerRecord(int index) {
+        if (index < filteredRecords.size()) {
+            renderPeers(filteredRecords.get(index));
+        }
+    }
 
-    private void renderNodes(GraphicsContext gc,
-                             boolean clear,
-                             RecordDiagnostic.Record... records) {
-        if (clear) {
+    private void renderPeers(RecordDiagnostic.Record... records) {
+        GraphicsContext gc = canvas.getGraphicsContext2D();
+
+        if (clearCheckBox.isSelected()) {
             clearScreen(gc);
         }
 
@@ -207,13 +213,13 @@ public class RecordViewer extends Application {
             double x = peer.getValue().getX();
             double y = peer.getValue().getY();
 
-            gc.setStroke(Color.BLUE);
             gc.setLineWidth(3);
-            gc.strokeArc(x - 50, y - 50, 100, 100, 0, 360, ArcType.OPEN);
+            gc.setFill(Color.LIGHTBLUE);
+            gc.fillArc(x - 46, y - 25, 92, 50, 0, 360, ArcType.OPEN);
 
             gc.setStroke(Color.BLACK);
-            gc.setLineWidth(1);
-            gc.strokeText(peer.getKey().toString(), x - 40, y);
+            gc.setLineWidth(1.2);
+            gc.strokeText(peer.getKey().toString(), x - 34, y + 3);
         }
     }
 
@@ -222,7 +228,7 @@ public class RecordViewer extends Application {
                 .filter(this::isValidRecord)
                 .collect(Collectors.toList());
 
-        if (filteredRecords.size() > 1) {
+        if (filteredRecords.size() > 0) {
 
             // Setup slider
             slider.setMin(0);
@@ -233,8 +239,7 @@ public class RecordViewer extends Application {
             slider.setMajorTickUnit((filteredRecords.size() - 1) / 2.0);
             slider.setBlockIncrement(1);
 
-            renderNodes(canvas.getGraphicsContext2D(),
-                    true, filteredRecords.get(0));
+            renderPeerRecord(0);
         } else {
             // Reset slider
             slider.setMin(0);
@@ -244,11 +249,20 @@ public class RecordViewer extends Application {
             slider.setShowTickMarks(false);
             slider.setBlockIncrement(1);
 
-            clearScreen(canvas.getGraphicsContext2D());
+            if (clearCheckBox.isSelected()) {
+                clearScreen(canvas.getGraphicsContext2D());
+            }
         }
     }
 
     private final ChangeListener<Boolean> guiSetupListener = (observable, oldValue, newValue) -> setupData();
+    private final ChangeListener<Number> sliderUpdateListener = (observable, oldValue, newValue) -> {
+        if (oldValue.intValue() != newValue.intValue()) {
+            renderPeerRecord(newValue.intValue());
+        }
+    };
+    private final ChangeListener<Boolean> clearListener =
+            (observable, oldValue, newValue) -> renderPeerRecord(slider.valueProperty().intValue());
 
     private void setupGui(Stage primaryStage) {
         HBox menuBar = new HBox();
@@ -259,6 +273,8 @@ public class RecordViewer extends Application {
         menuBar.getChildren().add(downloadProgressedCheckBox);
         menuBar.getChildren().add(downloadStartedCheckBox);
         menuBar.getChildren().add(downloadSucceededCheckBox);
+        menuBar.getChildren().add(clearCheckBox);
+        clearCheckBox.setSelected(true);
 
         slider.setPadding(new Insets(20, 20, 20, 20));
 
@@ -286,14 +302,10 @@ public class RecordViewer extends Application {
         downloadSucceededCheckBox.selectedProperty().addListener(guiSetupListener);
         downloadSucceededCheckBox.setPadding(new Insets(5, 5, 5, 5));
 
-        slider.valueProperty().addListener((obs, oldValue, newValue) -> {
-            if (oldValue.intValue() != newValue.intValue()) {
-                System.out.println(newValue.intValue());
-                renderNodes(
-                        canvas.getGraphicsContext2D(), true,
-                        filteredRecords.get(newValue.intValue()));
-            }
-        });
+        clearCheckBox.setPadding(new Insets(5, 5, 5, 5));
+        clearCheckBox.selectedProperty().addListener(clearListener);
+
+        slider.valueProperty().addListener(sliderUpdateListener);
 
         Scene scene = new Scene(borderPane, width, height + 150);
         primaryStage.setTitle("Records viewer 0.1");

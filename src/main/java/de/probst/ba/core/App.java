@@ -26,7 +26,7 @@ import java.util.concurrent.ExecutionException;
  */
 public class App {
 
-    public static int n = 4;
+    public static int n = 21;
     public static CountDownLatch countDownLatch = new CountDownLatch(n);
 
     public static void main(String[] args) throws InterruptedException, ExecutionException, IOException {
@@ -65,7 +65,7 @@ public class App {
 
         // Create both clients
         peers.add(Peers.localPeer(1000, 1000,
-                new LocalAddress("peer-0"),
+                new LocalAddress("P-0"),
                 DataBases.fakeDataBase(dataInfo),
                 Brains.logarithmicBrain(),
                 diagnostic,
@@ -73,7 +73,7 @@ public class App {
 
         for (int i = 1; i <= n - 1; i++) {
             peers.add(Peers.localPeer(1000, 1000,
-                    new LocalAddress("peer-" + i),
+                    new LocalAddress("P-" + i),
                     DataBases.fakeDataBase(dataInfo.empty()),
                     Brains.logarithmicBrain(),
                     diagnostic,
