@@ -71,16 +71,6 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
     private final Peer peer;
     private volatile TransferManager transferManager;
 
-    private void setup(ChannelHandlerContext ctx, TransferManager transferManager) {
-        this.transferManager = transferManager;
-        ctx.channel().config().setAutoRead(false);
-    }
-
-    private void restore(ChannelHandlerContext ctx) {
-        transferManager = null;
-        ctx.channel().config().setAutoRead(true);
-    }
-
     public UploadHandler(Peer peer) {
         Objects.requireNonNull(peer);
         this.peer = peer;
@@ -134,14 +124,12 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
                 // Protect the brain to be executed in parallel (headache! =D)
                 boolean allowed;
                 synchronized (getPeer().getBrain()) {
-                    // Check if the upload is allowed
                     allowed = getPeer().getBrain().isUploadAllowed(
                             getPeer().getNetworkState(),
                             newTransferManager.getTransfer());
 
-                    // Allowed, setup it up!
                     if (allowed) {
-                        setup(ctx, newTransferManager);
+                        transferManager = newTransferManager;
                     }
                 }
 
@@ -157,11 +145,15 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
                 } else {
                     logger.info("Starting upload: " + newTransferManager.getTransfer());
 
+                    // Disable auto read
+                    ctx.channel().config().setAutoRead(false);
+
                     // Upload chunked input
                     ctx.writeAndFlush(new ChunkedDataBaseInput()).addListener(fut -> {
 
                         // Restore
-                        restore(ctx);
+                        transferManager = null;
+                        ctx.channel().config().setAutoRead(true);
 
                         if (!fut.isSuccess()) {
                             logger.info("Upload failed", fut.cause());
@@ -181,7 +173,8 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
                 ctx.writeAndFlush(new UploadRejectedMessage(e));
 
                 // Restore
-                restore(ctx);
+                transferManager = null;
+                ctx.channel().config().setAutoRead(true);
             }
         }
     }
