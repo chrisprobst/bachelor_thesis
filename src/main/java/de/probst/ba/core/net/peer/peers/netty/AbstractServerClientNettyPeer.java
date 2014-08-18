@@ -1,5 +1,6 @@
 package de.probst.ba.core.net.peer.peers.netty;
 
+import de.probst.ba.core.diag.Diagnostic;
 import de.probst.ba.core.logic.Brain;
 import de.probst.ba.core.media.DataBase;
 import io.netty.bootstrap.Bootstrap;
@@ -51,8 +52,9 @@ abstract class AbstractServerClientNettyPeer extends AbstractNettyPeer {
                                             SocketAddress localAddress,
                                             DataBase dataBase,
                                             Brain brain,
+                                            Diagnostic diagnostic,
                                             Optional<EventLoopGroup> eventLoopGroup) {
-        super(uploadRate, downloadRate, localAddress, dataBase, brain, eventLoopGroup);
+        super(uploadRate, downloadRate, localAddress, dataBase, brain, diagnostic, eventLoopGroup);
     }
 
     @Override

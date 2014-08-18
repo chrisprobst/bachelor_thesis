@@ -73,14 +73,21 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
     private final AtomicCounter parallelUploads;
     private volatile TransferManager transferManager;
 
-    private void setup(ChannelHandlerContext ctx, TransferManager transferManager) {
-        this.transferManager = transferManager;
-        ctx.channel().config().setAutoRead(false);
+    private boolean setup(ChannelHandlerContext ctx, TransferManager transferManager) {
+        if (parallelUploads.tryIncrement(getPeer().getBrain().getMaxParallelUploads())) {
+            this.transferManager = transferManager;
+            ctx.channel().config().setAutoRead(false);
+            return true;
+        }
+        return false;
     }
 
-    private void restore(ChannelHandlerContext ctx) {
+    private void restore(ChannelHandlerContext ctx, boolean decrement) {
         transferManager = null;
         ctx.channel().config().setAutoRead(true);
+        if (decrement) {
+            parallelUploads.tryDecrement();
+        }
     }
 
     public UploadHandler(Peer peer, AtomicCounter parallelUploads) {
@@ -121,14 +128,17 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
                                    UploadRequestMessage msg) throws Exception {
 
         if (!isUploadRequestMessageValid(msg)) {
-            logger.warn("Upload request message null or empty");
+            Exception cause = new IllegalArgumentException("Upload request message null or empty");
 
-            // Not a valid request
-            ctx.writeAndFlush(new UploadRejectedMessage(
-                    new IllegalArgumentException("Upload request message null or empty")));
+            logger.warn(cause.getMessage());
+            ctx.writeAndFlush(new UploadRejectedMessage(cause));
+
+            // DIAGNOSTIC
+            getPeer().getDiagnostic().peerRejectedUpload(
+                    getPeer(), null, cause);
         } else {
             TransferManager newTransferManager;
-
+            boolean wasIncremented = false;
             try {
                 // Create a new transfer manager
                 newTransferManager = getPeer().getDataBase()
@@ -136,50 +146,62 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
                                 ctx.channel().id(), msg.getDataInfo()));
 
                 // If the upload is not allowed, reject it!
-                if (!parallelUploads.tryIncrement(getPeer().getBrain().getMaxParallelUploads())) {
-                    logger.warn("Reached maximum parallel uploads, rejecting upload");
+                if (!(wasIncremented = setup(ctx, newTransferManager))) {
+                    Exception cause = new IllegalStateException(
+                            "The brain rejected the upload, because it " +
+                                    "reached the maximum number of uploads");
 
-                    // Not accepted
-                    ctx.writeAndFlush(new UploadRejectedMessage(
-                            new IllegalStateException(
-                                    "The brain rejected the upload, because it " +
-                                            "reached the maximum number of uploads")));
+                    logger.debug(cause.getMessage());
+                    ctx.writeAndFlush(new UploadRejectedMessage(cause));
 
+                    // DIAGNOSTIC
+                    getPeer().getDiagnostic().peerRejectedUpload(
+                            getPeer(), newTransferManager, cause);
                 } else {
-                    System.out.println("MAX PARALLEL UPLOADS: " + parallelUploads.get());
-
-                    // Setup
-                    setup(ctx, newTransferManager);
-
-                    logger.info("Starting upload: " + newTransferManager.getTransfer());
+                    logger.debug("Starting upload: " + newTransferManager.getTransfer());
 
                     // Upload chunked input
                     ctx.writeAndFlush(new ChunkedDataBaseInput()).addListener(fut -> {
                         try {
-                            restore(ctx);
-
                             if (!fut.isSuccess()) {
-                                logger.info("Upload failed", fut.cause());
+                                logger.warn("Upload failed", fut.cause());
 
                                 // Upload failed, notify!
                                 ctx.writeAndFlush(new UploadRejectedMessage(fut.cause()));
+
+                                // DIAGNOSTIC
+                                getPeer().getDiagnostic().peerRejectedUpload(
+                                        getPeer(), transferManager, fut.cause());
                             } else {
-                                logger.info("Upload succeeded");
+                                logger.debug("Upload succeeded");
+
+                                // DIAGNOSTIC
+                                getPeer().getDiagnostic().peerSucceededUpload(
+                                        getPeer(), transferManager);
                             }
                         } finally {
-                            parallelUploads.tryDecrement();
+                            restore(ctx, true);
                         }
                     });
+
+                    // DIAGNOSTIC
+                    getPeer().getDiagnostic().peerStartedUpload(
+                            getPeer(), newTransferManager);
                 }
 
             } catch (Exception e) {
-                logger.info("Upload failed", e);
+                try {
+                    logger.warn("Upload failed", e);
 
-                // If the creation failed, reject!
-                ctx.writeAndFlush(new UploadRejectedMessage(e));
+                    // If the creation failed, reject!
+                    ctx.writeAndFlush(new UploadRejectedMessage(e));
 
-                // Restore
-                restore(ctx);
+                    // DIAGNOSTIC
+                    getPeer().getDiagnostic().peerRejectedUpload(
+                            getPeer(), transferManager, e);
+                } finally {
+                    restore(ctx, wasIncremented);
+                }
             }
         }
     }

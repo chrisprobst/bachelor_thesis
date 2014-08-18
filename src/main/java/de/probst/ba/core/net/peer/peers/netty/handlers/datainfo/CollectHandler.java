@@ -1,6 +1,7 @@
 package de.probst.ba.core.net.peer.peers.netty.handlers.datainfo;
 
 import de.probst.ba.core.media.DataInfo;
+import de.probst.ba.core.net.peer.Peer;
 import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.messages.DataInfoMessage;
 import de.probst.ba.core.util.Tuple;
 import io.netty.channel.ChannelHandlerContext;
@@ -10,31 +11,26 @@ import io.netty.channel.group.ChannelGroup;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
- * Represents a sharable data info handler which accumulates
- * all incoming data info messages and stores them according
- * to the channel id they come from.
- * <p>
- * In other words: Put this handler in all of your pipelines
- * and you have a consistent snapshot of all available remote
- * data info.
- * <p>
  * Created by chrisprobst on 11.08.14.
  */
-public final class DataInfoHandler extends SimpleChannelInboundHandler<DataInfoMessage> {
+public final class CollectHandler extends SimpleChannelInboundHandler<DataInfoMessage> {
 
     public static Map<Object, Map<String, DataInfo>> getRemoteDataInfo(ChannelGroup channelGroup) {
         return channelGroup.stream()
                 .map(c -> Tuple.of(c,
-                        c.pipeline().get(DataInfoHandler.class).getRemoteDataInfo()))
+                        c.pipeline().get(CollectHandler.class).getRemoteDataInfo()))
                 .filter(h -> h.second().isPresent())
                 .collect(Collectors.toMap(
                         p -> p.first().id(),
                         p -> p.second().get()));
     }
+
+    private final Peer peer;
 
     // All remote data info are stored here
     private volatile Optional<Map<String, DataInfo>> remoteDataInfo =
@@ -55,6 +51,18 @@ public final class DataInfoHandler extends SimpleChannelInboundHandler<DataInfoM
             remoteDataInfo = Optional.of(Collections.unmodifiableMap(
                     new HashMap<>(msg.getDataInfo().get())));
         }
+
+        getPeer().getDiagnostic().peerCollectedDataInfo(
+                getPeer(), ctx.channel().id(), getRemoteDataInfo());
+    }
+
+    public CollectHandler(Peer peer) {
+        Objects.requireNonNull(peer);
+        this.peer = peer;
+    }
+
+    public Peer getPeer() {
+        return peer;
     }
 
     public Optional<Map<String, DataInfo>> getRemoteDataInfo() {

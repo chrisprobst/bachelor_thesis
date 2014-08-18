@@ -1,5 +1,6 @@
 package de.probst.ba.core.net.peer.peers.netty;
 
+import de.probst.ba.core.diag.Diagnostic;
 import de.probst.ba.core.logic.Body;
 import de.probst.ba.core.logic.Brain;
 import de.probst.ba.core.media.DataBase;
@@ -7,7 +8,7 @@ import de.probst.ba.core.media.DataInfo;
 import de.probst.ba.core.net.Transfer;
 import de.probst.ba.core.net.peer.AbstractPeer;
 import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.AnnounceHandler;
-import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.DataInfoHandler;
+import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.CollectHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.group.ChannelGroupHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.throttle.WriteThrottle;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.DownloadHandler;
@@ -107,7 +108,7 @@ abstract class AbstractNettyPeer extends AbstractPeer implements Body {
 
                     logHandler,
                     channelGroupHandler,
-                    new DataInfoHandler()
+                    new CollectHandler(AbstractNettyPeer.this)
             );
 
             AbstractNettyPeer.this.initChannel(ch);
@@ -173,7 +174,7 @@ abstract class AbstractNettyPeer extends AbstractPeer implements Body {
 
     @Override
     protected Map<Object, Map<String, DataInfo>> getRemoteDataInfo() {
-        return DataInfoHandler.getRemoteDataInfo(getChannelGroup());
+        return CollectHandler.getRemoteDataInfo(getChannelGroup());
     }
 
     @Override
@@ -194,9 +195,10 @@ abstract class AbstractNettyPeer extends AbstractPeer implements Body {
                                 SocketAddress localAddress,
                                 DataBase dataBase,
                                 Brain brain,
+                                Diagnostic diagnostic,
                                 Optional<EventLoopGroup> eventLoopGroup) {
 
-        super(localAddress, dataBase, brain);
+        super(localAddress, dataBase, brain, diagnostic);
 
         Objects.requireNonNull(eventLoopGroup);
 
@@ -252,7 +254,7 @@ abstract class AbstractNettyPeer extends AbstractPeer implements Body {
 
             // Request the download
             DownloadHandler.request(
-                    getDataBase(),
+                    this,
                     remotePeer,
                     transfer);
         }

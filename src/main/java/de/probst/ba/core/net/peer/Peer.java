@@ -1,5 +1,6 @@
 package de.probst.ba.core.net.peer;
 
+import de.probst.ba.core.diag.Diagnostic;
 import de.probst.ba.core.logic.Brain;
 import de.probst.ba.core.media.DataBase;
 import de.probst.ba.core.net.NetworkState;
@@ -22,6 +23,8 @@ public interface Peer extends AutoCloseable {
     NetworkState getNetworkState();
 
     DataBase getDataBase();
+
+    Diagnostic getDiagnostic();
 
     Brain getBrain();
 

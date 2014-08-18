@@ -149,4 +149,14 @@ public final class TransferManager {
     public Transfer getTransfer() {
         return transfer;
     }
+
+    @Override
+    public String toString() {
+        return "TransferManager{" +
+                "transfer=" + transfer +
+                ", chunkIndex=" + chunkIndex +
+                ", chunkSize=" + chunkSize +
+                ", offset=" + offset +
+                '}';
+    }
 }

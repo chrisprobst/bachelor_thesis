@@ -1,5 +1,7 @@
 package de.probst.ba.core;
 
+import de.probst.ba.core.diag.Diagnostic;
+import de.probst.ba.core.diag.LoggingDiagnostic;
 import de.probst.ba.core.logic.brains.Brains;
 import de.probst.ba.core.media.DataInfo;
 import de.probst.ba.core.media.databases.DataBases;
@@ -57,11 +59,14 @@ public class App {
 
         EventLoopGroup eventLoopGroup = new DefaultEventLoopGroup();
 
+        Diagnostic diagnostic = new LoggingDiagnostic();
+
         // Create both clients
         peers.add(Peers.localPeer(1000, 1000,
                 new LocalAddress("peer-0"),
                 DataBases.fakeDataBase(dataInfo),
                 Brains.logarithmicBrain(),
+                diagnostic,
                 Optional.of(eventLoopGroup)));
 
         for (int i = 1; i <= n - 1; i++) {
@@ -69,6 +74,7 @@ public class App {
                     new LocalAddress("peer-" + i),
                     DataBases.fakeDataBase(dataInfo.empty()),
                     Brains.logarithmicBrain(),
+                    diagnostic,
                     Optional.of(eventLoopGroup)));
         }
 

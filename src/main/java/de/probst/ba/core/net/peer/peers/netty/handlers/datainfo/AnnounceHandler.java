@@ -112,6 +112,8 @@ public final class AnnounceHandler extends ChannelHandlerAdapter implements Runn
                         ctx.close();
                     }
                 });
-
+       
+        getPeer().getDiagnostic().peerAnnouncedDataInfo(
+                getPeer(), ctx.channel().id(), dataInfoMessage.getDataInfo());
     }
 }

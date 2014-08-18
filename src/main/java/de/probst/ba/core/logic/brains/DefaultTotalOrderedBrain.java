@@ -33,7 +33,7 @@ public class DefaultTotalOrderedBrain extends AbstractOrderedBrain {
     public Optional<List<Transfer>> process(NetworkState networkState) {
 
         if (!networkState.getDownloads().isEmpty()) {
-            logger.info(networkState.getLocalAddress() + ": We are downloading already");
+            logger.debug(networkState.getLocalAddress() + ": We are downloading already");
             return Optional.empty();
         }
 
@@ -42,8 +42,7 @@ public class DefaultTotalOrderedBrain extends AbstractOrderedBrain {
 
         // This brain has no missing data info
         if (!lowestId.isPresent()) {
-            logger.info(networkState.getLocalAddress() + ": Nothing to download right now");
-            System.out.println(networkState.getLocalAddress() + " is READY!");
+            logger.debug(networkState.getLocalAddress() + ": Nothing to download right now");
 
             if (!ready) {
                 ready = true;
@@ -58,7 +57,7 @@ public class DefaultTotalOrderedBrain extends AbstractOrderedBrain {
                 lowestId.get());
 
         if (nextOrderedDataInfo.isEmpty()) {
-            logger.info(networkState.getLocalAddress() + ": Pending, check later again.");
+            logger.debug(networkState.getLocalAddress() + ": Pending, check later again.");
             return Optional.empty();
         }
 
@@ -70,12 +69,12 @@ public class DefaultTotalOrderedBrain extends AbstractOrderedBrain {
         Map.Entry<Object, DataInfo> lastEntry = list.get(list.size() - 1);
 
         if (!lastEntry.getValue().isCompleted()) {
-            logger.info(networkState.getLocalAddress() +
+            logger.debug(networkState.getLocalAddress() +
                     ": This brain does not download incomplete data info");
             return Optional.empty();
         }
 
-        logger.info(networkState.getLocalAddress() + ": Requesting " + lastEntry);
+        logger.debug(networkState.getLocalAddress() + ": Requesting " + lastEntry);
 
         // Request this as download
         return Optional.of(Arrays.asList(

@@ -1,5 +1,6 @@
 package de.probst.ba.core.net.peer.peers;
 
+import de.probst.ba.core.diag.Diagnostic;
 import de.probst.ba.core.logic.Brain;
 import de.probst.ba.core.media.DataBase;
 import de.probst.ba.core.net.peer.Peer;
@@ -25,8 +26,9 @@ public class Peers {
                                  SocketAddress localAddress,
                                  DataBase dataBase,
                                  Brain brain,
+                                 Diagnostic diagnostic,
                                  Optional<EventLoopGroup> eventLoopGroup) {
-        return new LocalNettyPeer(uploadRate, downloadRate, localAddress, dataBase, brain, eventLoopGroup);
+        return new LocalNettyPeer(uploadRate, downloadRate, localAddress, dataBase, brain, diagnostic, eventLoopGroup);
     }
 
     public static void waitForInit(List<Peer> peers) throws ExecutionException, InterruptedException {

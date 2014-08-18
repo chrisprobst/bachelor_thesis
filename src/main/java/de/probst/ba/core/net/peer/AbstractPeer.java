@@ -1,5 +1,6 @@
 package de.probst.ba.core.net.peer;
 
+import de.probst.ba.core.diag.Diagnostic;
 import de.probst.ba.core.logic.Body;
 import de.probst.ba.core.logic.Brain;
 import de.probst.ba.core.logic.BrainWorker;
@@ -24,6 +25,8 @@ public abstract class AbstractPeer implements Peer {
     private final DataBase dataBase;
 
     private final Brain brain;
+
+    private final Diagnostic diagnostic;
 
     private final BrainWorker brainWorker =
             new BrainWorker(getBody());
@@ -62,16 +65,19 @@ public abstract class AbstractPeer implements Peer {
 
     protected AbstractPeer(SocketAddress localAddress,
                            DataBase dataBase,
-                           Brain brain) {
+                           Brain brain,
+                           Diagnostic diagnostic) {
 
         Objects.requireNonNull(localAddress);
         Objects.requireNonNull(dataBase);
         Objects.requireNonNull(brain);
+        Objects.requireNonNull(diagnostic);
 
         // Save args
         this.localAddress = localAddress;
         this.dataBase = dataBase;
         this.brain = brain;
+        this.diagnostic = diagnostic;
 
         // Register the brain worker for execution
         getInitFuture().thenRun(brainWorker::schedule);
@@ -87,6 +93,11 @@ public abstract class AbstractPeer implements Peer {
     @Override
     public Brain getBrain() {
         return brain;
+    }
+
+    @Override
+    public Diagnostic getDiagnostic() {
+        return diagnostic;
     }
 
     @Override

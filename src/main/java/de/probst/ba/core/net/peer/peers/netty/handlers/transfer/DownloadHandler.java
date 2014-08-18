@@ -1,8 +1,8 @@
 package de.probst.ba.core.net.peer.peers.netty.handlers.transfer;
 
-import de.probst.ba.core.media.DataBase;
 import de.probst.ba.core.net.Transfer;
 import de.probst.ba.core.net.TransferManager;
+import de.probst.ba.core.net.peer.Peer;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.messages.UploadRejectedMessage;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.messages.UploadRequestMessage;
 import de.probst.ba.core.util.Tuple;
@@ -32,10 +32,10 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
                         p -> p.second().getTransferManager().getTransfer()));
     }
 
-    public static synchronized DownloadHandler request(DataBase dataBase,
+    public static synchronized DownloadHandler request(Peer peer,
                                                        Channel remotePeer,
                                                        Transfer transfer) {
-        Objects.requireNonNull(dataBase);
+        Objects.requireNonNull(peer);
         Objects.requireNonNull(remotePeer);
         Objects.requireNonNull(transfer);
 
@@ -49,8 +49,8 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
         }
 
         // Create a new download handler
-        DownloadHandler downloadHandler = new DownloadHandler(
-                dataBase.createTransferManager(transfer));
+        DownloadHandler downloadHandler = new DownloadHandler(peer,
+                peer.getDataBase().createTransferManager(transfer));
 
         // Check that the handler does not exist yet
         if (remotePeer.pipeline().context(DownloadHandler.class) != null) {
@@ -67,21 +67,30 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(DownloadHandler.class);
 
+    private final Peer peer;
     private final TransferManager transferManager;
 
     private void remove(ChannelHandlerContext ctx) {
         ctx.pipeline().remove(this);
     }
 
-    private DownloadHandler(TransferManager transferManager) {
+    private DownloadHandler(Peer peer,
+                            TransferManager transferManager) {
+        Objects.requireNonNull(peer);
         Objects.requireNonNull(transferManager);
+
 
         if (transferManager.getTransfer().isUpload()) {
             throw new IllegalArgumentException(
                     "transferManager.getTransfer().isUpload()");
         }
 
+        this.peer = peer;
         this.transferManager = transferManager;
+    }
+
+    public Peer getPeer() {
+        return peer;
     }
 
     public TransferManager getTransferManager() {
@@ -97,7 +106,7 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
         Transfer transfer = getTransferManager().getTransfer();
-        logger.info("Request upload transfer: " + transfer);
+        logger.debug("Request upload transfer: " + transfer);
         ctx.writeAndFlush(new UploadRequestMessage(transfer.getDataInfo()))
                 .addListener(fut -> {
                     if (!fut.isSuccess()) {
@@ -109,12 +118,16 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
                         ctx.close();
                     }
                 });
+
+        // DIAGNOSTIC
+        getPeer().getDiagnostic().peerRequestedDownload(
+                getPeer(), getTransferManager());
     }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof UploadRejectedMessage) {
-            logger.warn("Upload rejected: " +
+            logger.debug("Upload rejected: " +
                     ((UploadRejectedMessage) msg).getCause().getMessage());
 
             // Upload rejected, lets just
@@ -128,16 +141,24 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
 
                 // Simply process the transfer manager
                 if (!getTransferManager().process(buffer)) {
-                    logger.info("Download completed: " +
+                    logger.debug("Download completed: " +
                             getTransferManager().getTransfer());
 
                     // We are ready when there
                     // are no further chunks to
                     // download
                     remove(ctx);
+
+                    // DIAGNOSTIC
+                    getPeer().getDiagnostic().peerSucceededDownload(
+                            getPeer(), getTransferManager());
                 } else {
                     logger.debug("Download processed: " +
                             getTransferManager().getTransfer());
+
+                    // DIAGNOSTIC
+                    getPeer().getDiagnostic().peerProgressedDownload(
+                            getPeer(), getTransferManager());
                 }
             }
         } else {
