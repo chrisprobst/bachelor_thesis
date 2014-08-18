@@ -4,12 +4,16 @@ import de.probst.ba.core.diag.RecordDiagnostic;
 import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.util.IOUtil;
 import javafx.application.Application;
+import javafx.beans.value.ChangeListener;
+import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.Slider;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.ArcType;
 import javafx.stage.Stage;
@@ -28,54 +32,54 @@ public class RecordViewer extends Application {
 
     public static int width = 1024;
     public static int height = 768;
-    private List<RecordDiagnostic.Record> sortedByTimeRecords;
+    private List<RecordDiagnostic.Record> rawRecords;
+    private List<RecordDiagnostic.Record> filteredRecords;
     private List<PeerId> peers;
-    private Map<SocketAddress, Point2D> nodePositions = new HashMap<>();
+    private Map<SocketAddress, Point2D> peerPositions = new HashMap<>();
+    private Canvas canvas = new Canvas(width, height);
+    private Slider slider = new Slider();
+    private CheckBox collectedCheckBox = new CheckBox("Data Info");
+    private CheckBox downloadRejectedCheckBox = new CheckBox("Rejected downloads");
+    private CheckBox downloadRequestedCheckBox = new CheckBox("Requested downloads");
+    private CheckBox downloadProgressedCheckBox = new CheckBox("Progressed downloads");
+    private CheckBox downloadStartedCheckBox = new CheckBox("Started downloads");
+    private CheckBox downloadSucceededCheckBox = new CheckBox("Succeeded downloads");
 
-    private boolean isValidRecord(RecordDiagnostic.Record record) {
-        return record instanceof RecordDiagnostic.CollectedRecord ||
-                record instanceof RecordDiagnostic.DownloadRejectedRecord ||
-                record instanceof RecordDiagnostic.DownloadRequestedRecord ||
-                record instanceof RecordDiagnostic.DownloadProgressedRecord ||
-                record instanceof RecordDiagnostic.DownloadStartedRecord ||
-                record instanceof RecordDiagnostic.DownloadSucceededRecord;
-    }
-
-    @Override
-    public void init() throws Exception {
-        sortedByTimeRecords = IOUtil.deserialize(Paths.get("/Users/chrisprobst/Desktop/records.dat"));
-        sortedByTimeRecords = sortedByTimeRecords.stream()
-                .filter(this::isValidRecord)
-                .collect(Collectors.toList());
-        peers = sortedByTimeRecords.stream()
+    private void initPeers() {
+        peers = rawRecords.stream()
                 .map(RecordDiagnostic.Record::getLocalPeerId)
                 .distinct()
                 .collect(Collectors.toList());
 
-        System.out.println("Deserialized records: " + sortedByTimeRecords.size());
+        double target = Math.PI * 2;
+        double step = target / peers.size();
+        double originX = width / 2;
+        double originY = height / 2;
+        double angle = 0;
+
+        for (PeerId nextPeerId : peers) {
+            double x = originX + Math.sin(angle) * (width - 240) / 2;
+            double y = originY + Math.cos(angle) * (height - 120) / 2;
+
+            peerPositions.put(nextPeerId.getAddress(), new Point2D(x, y));
+            angle += step;
+        }
     }
 
-    private Canvas setupCanvas() {
-        Canvas canvas = new Canvas(width, height);
-        final GraphicsContext gc = canvas.getGraphicsContext2D();
-        gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
-
-        renderNodes(gc, true, true);
-        return canvas;
+    @Override
+    public void init() throws Exception {
+        rawRecords = IOUtil.deserialize(Paths.get("/Users/chrisprobst/Desktop/records.dat"));
+        System.out.println("Deserialized records: " + rawRecords.size());
+        initPeers();
     }
 
-
-    private Slider setupSlider() {
-        Slider slider = new Slider();
-        slider.setMin(0);
-        slider.setMax(sortedByTimeRecords.size() - 1);
-        slider.setValue(0);
-        slider.setShowTickLabels(true);
-        slider.setShowTickMarks(true);
-        slider.setMajorTickUnit(sortedByTimeRecords.size() / 2 - 1);
-        slider.setMinorTickCount(sortedByTimeRecords.size() / 20 - 1);
-        slider.setBlockIncrement(1);
-        return slider;
+    private boolean isValidRecord(RecordDiagnostic.Record record) {
+        return (record instanceof RecordDiagnostic.CollectedRecord && collectedCheckBox.isSelected()) ||
+                (record instanceof RecordDiagnostic.DownloadRejectedRecord && downloadRejectedCheckBox.isSelected()) ||
+                (record instanceof RecordDiagnostic.DownloadRequestedRecord && downloadRequestedCheckBox.isSelected()) ||
+                (record instanceof RecordDiagnostic.DownloadProgressedRecord && downloadProgressedCheckBox.isSelected()) ||
+                (record instanceof RecordDiagnostic.DownloadStartedRecord && downloadStartedCheckBox.isSelected()) ||
+                (record instanceof RecordDiagnostic.DownloadSucceededRecord && downloadSucceededCheckBox.isSelected());
     }
 
     private void renderArrow(GraphicsContext gc, Point2D a, Point2D b, double offset, double backOff) {
@@ -114,8 +118,8 @@ public class RecordViewer extends Application {
         gc.setStroke(Color.GREEN);
         gc.setLineWidth(2);
 
-        Point2D remote = nodePositions.get(record.getRemotePeerId().getAddress());
-        Point2D local = nodePositions.get(record.getLocalPeerId().getAddress());
+        Point2D remote = peerPositions.get(record.getRemotePeerId().getAddress());
+        Point2D local = peerPositions.get(record.getLocalPeerId().getAddress());
         renderArrow(gc, remote, local, 50, 50);
     }
 
@@ -124,8 +128,8 @@ public class RecordViewer extends Application {
         gc.setStroke(Color.BLUE);
         gc.setLineWidth(3);
 
-        Point2D local = nodePositions.get(record.getLocalPeerId().getAddress());
-        Point2D remote = nodePositions.get(record.getTransfer().getRemotePeerId().getAddress());
+        Point2D local = peerPositions.get(record.getLocalPeerId().getAddress());
+        Point2D remote = peerPositions.get(record.getTransfer().getRemotePeerId().getAddress());
         renderArrow(gc, local, remote, 50, 50);
     }
 
@@ -134,43 +138,56 @@ public class RecordViewer extends Application {
         gc.setStroke(Color.RED);
         gc.setLineWidth(3);
 
-        Point2D local = nodePositions.get(record.getLocalPeerId().getAddress());
-        Point2D remote = nodePositions.get(record.getTransfer().getRemotePeerId().getAddress());
+        Point2D local = peerPositions.get(record.getLocalPeerId().getAddress());
+        Point2D remote = peerPositions.get(record.getTransfer().getRemotePeerId().getAddress());
         renderArrow(gc, remote, local, 50, 50);
     }
 
     private void renderDownloadStarted(GraphicsContext gc, RecordDiagnostic.DownloadStartedRecord record) {
-        gc.setStroke(Color.CYAN);
+        gc.setStroke(Color.DARKCYAN);
         gc.setLineWidth(3);
 
-        Point2D local = nodePositions.get(record.getLocalPeerId().getAddress());
-        Point2D remote = nodePositions.get(record.getTransfer().getRemotePeerId().getAddress());
+        Point2D local = peerPositions.get(record.getLocalPeerId().getAddress());
+        Point2D remote = peerPositions.get(record.getTransfer().getRemotePeerId().getAddress());
         renderArrow(gc, remote, local, 50, 50);
     }
 
-    private void renderDownloadSucceeded(GraphicsContext gc, RecordDiagnostic.DownloadSucceededRecord record) {
-        gc.setStroke(Color.DARKGREEN);
+    private void renderDownloadProgressed(GraphicsContext gc, RecordDiagnostic.DownloadProgressedRecord record) {
+        gc.setStroke(Color.ORANGE);
         gc.setLineWidth(3);
 
-        Point2D local = nodePositions.get(record.getLocalPeerId().getAddress());
-
-        gc.strokeArc(local.getX() - 52, local.getY() - 52, 104, 104, 0, 360, ArcType.OPEN);
+        Point2D local = peerPositions.get(record.getLocalPeerId().getAddress());
+        Point2D remote = peerPositions.get(record.getTransfer().getRemotePeerId().getAddress());
+        renderArrow(gc, remote, local, 50, 50);
     }
 
+
+    private void renderDownloadSucceeded(GraphicsContext gc, RecordDiagnostic.DownloadSucceededRecord record) {
+        gc.setStroke(Color.DARKGREEN);
+        gc.setLineWidth(4);
+
+        Point2D local = peerPositions.get(record.getLocalPeerId().getAddress());
+
+        gc.strokeArc(local.getX() - 54, local.getY() - 54, 108, 108, 0, 360, ArcType.OPEN);
+    }
+
+    private void clearScreen(GraphicsContext gc) {
+        gc.clearRect(0, 0, gc.getCanvas().getWidth(), gc.getCanvas().getHeight());
+    }
+
+
     private void renderNodes(GraphicsContext gc,
-                             boolean initPositions,
                              boolean clear,
                              RecordDiagnostic.Record... records) {
         if (clear) {
-            gc.clearRect(0, 0, gc.getCanvas().getWidth(), gc.getCanvas().getHeight());
+            clearScreen(gc);
         }
 
-        double target = Math.PI * 2;
-        double step = target / peers.size();
-        double originX = width / 2;
-        double originY = height / 2;
-
         for (RecordDiagnostic.Record record : records) {
+            gc.setStroke(Color.BLACK);
+            gc.setLineWidth(1);
+            gc.strokeText(record.getClass().getSimpleName(), 30, 30);
+
             if (record instanceof RecordDiagnostic.CollectedRecord) {
                 renderCollectedDataInfo(gc, (RecordDiagnostic.CollectedRecord) record);
             } else if (record instanceof RecordDiagnostic.DownloadRequestedRecord) {
@@ -181,18 +198,14 @@ public class RecordViewer extends Application {
                 renderDownloadSucceeded(gc, (RecordDiagnostic.DownloadSucceededRecord) record);
             } else if (record instanceof RecordDiagnostic.DownloadRejectedRecord) {
                 renderDownloadRejected(gc, (RecordDiagnostic.DownloadRejectedRecord) record);
+            } else if (record instanceof RecordDiagnostic.DownloadProgressedRecord) {
+                renderDownloadProgressed(gc, (RecordDiagnostic.DownloadProgressedRecord) record);
             }
         }
 
-        double angle = 0;
-        for (PeerId nextPeerId : peers) {
-
-            double x = originX + Math.sin(angle) * (width - 200) / 2;
-            double y = originY + Math.cos(angle) * (height - 100) / 2;
-
-            if (initPositions) {
-                nodePositions.put(nextPeerId.getAddress(), new Point2D(x, y));
-            }
+        for (Map.Entry<SocketAddress, Point2D> peer : peerPositions.entrySet()) {
+            double x = peer.getValue().getX();
+            double y = peer.getValue().getY();
 
             gc.setStroke(Color.BLUE);
             gc.setLineWidth(3);
@@ -200,40 +213,98 @@ public class RecordViewer extends Application {
 
             gc.setStroke(Color.BLACK);
             gc.setLineWidth(1);
-            gc.strokeText(nextPeerId.getAddress().toString(), x - 40, y);
-
-            angle += step;
+            gc.strokeText(peer.getKey().toString(), x - 40, y);
         }
     }
 
+    private void setupData() {
+        filteredRecords = rawRecords.stream()
+                .filter(this::isValidRecord)
+                .collect(Collectors.toList());
 
-    @Override
-    public void start(Stage primaryStage) {
+        if (filteredRecords.size() > 1) {
 
-        Canvas canvas = setupCanvas();
-        Slider slider = setupSlider();
+            // Setup slider
+            slider.setMin(0);
+            slider.setMax(filteredRecords.size() - 1);
+            slider.setValue(0);
+            slider.setShowTickLabels(true);
+            slider.setShowTickMarks(true);
+            slider.setMajorTickUnit((filteredRecords.size() - 1) / 2.0);
+            slider.setBlockIncrement(1);
+
+            renderNodes(canvas.getGraphicsContext2D(),
+                    true, filteredRecords.get(0));
+        } else {
+            // Reset slider
+            slider.setMin(0);
+            slider.setMax(0);
+            slider.setValue(0);
+            slider.setShowTickLabels(false);
+            slider.setShowTickMarks(false);
+            slider.setBlockIncrement(1);
+
+            clearScreen(canvas.getGraphicsContext2D());
+        }
+    }
+
+    private final ChangeListener<Boolean> guiSetupListener = (observable, oldValue, newValue) -> setupData();
+
+    private void setupGui(Stage primaryStage) {
+        HBox menuBar = new HBox();
+        menuBar.setPadding(new Insets(20, 20, 20, 20));
+        menuBar.getChildren().add(collectedCheckBox);
+        menuBar.getChildren().add(downloadRequestedCheckBox);
+        menuBar.getChildren().add(downloadRejectedCheckBox);
+        menuBar.getChildren().add(downloadProgressedCheckBox);
+        menuBar.getChildren().add(downloadStartedCheckBox);
+        menuBar.getChildren().add(downloadSucceededCheckBox);
+
+        slider.setPadding(new Insets(20, 20, 20, 20));
 
         BorderPane borderPane = new BorderPane();
+        borderPane.setTop(menuBar);
         borderPane.setCenter(canvas);
         borderPane.setBottom(slider);
+
+        // Link all check boxes
+        collectedCheckBox.selectedProperty().addListener(guiSetupListener);
+        collectedCheckBox.setPadding(new Insets(5, 5, 5, 5));
+
+        downloadRequestedCheckBox.selectedProperty().addListener(guiSetupListener);
+        downloadRequestedCheckBox.setPadding(new Insets(5, 5, 5, 5));
+
+        downloadRejectedCheckBox.selectedProperty().addListener(guiSetupListener);
+        downloadRejectedCheckBox.setPadding(new Insets(5, 5, 5, 5));
+
+        downloadProgressedCheckBox.selectedProperty().addListener(guiSetupListener);
+        downloadProgressedCheckBox.setPadding(new Insets(5, 5, 5, 5));
+
+        downloadStartedCheckBox.selectedProperty().addListener(guiSetupListener);
+        downloadStartedCheckBox.setPadding(new Insets(5, 5, 5, 5));
+
+        downloadSucceededCheckBox.selectedProperty().addListener(guiSetupListener);
+        downloadSucceededCheckBox.setPadding(new Insets(5, 5, 5, 5));
 
         slider.valueProperty().addListener((obs, oldValue, newValue) -> {
             if (oldValue.intValue() != newValue.intValue()) {
                 System.out.println(newValue.intValue());
                 renderNodes(
-                        canvas.getGraphicsContext2D(),
-                        false,
-                        true,
-                        sortedByTimeRecords.get(newValue.intValue()));
+                        canvas.getGraphicsContext2D(), true,
+                        filteredRecords.get(newValue.intValue()));
             }
         });
 
-        Scene scene = new Scene(borderPane, width, height + 80);
-
-        primaryStage.setTitle("Hello World!");
+        Scene scene = new Scene(borderPane, width, height + 150);
+        primaryStage.setTitle("Records viewer 0.1");
         primaryStage.setScene(scene);
-
         primaryStage.show();
+    }
+
+    @Override
+    public void start(Stage primaryStage) {
+        setupGui(primaryStage);
+        setupData();
     }
 
     public static void main(String[] args) {
