@@ -4,6 +4,7 @@ import de.probst.ba.core.diag.RecordDiagnostic;
 import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.util.IOUtil;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
@@ -16,10 +17,12 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.ArcType;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import org.controlsfx.dialog.Dialogs;
 
+import java.io.File;
 import java.net.SocketAddress;
-import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -65,13 +68,6 @@ public class RecordViewer extends Application {
             peerPositions.put(nextPeerId.getAddress(), new Point2D(x, y));
             angle += step;
         }
-    }
-
-    @Override
-    public void init() throws Exception {
-        rawRecords = IOUtil.deserialize(Paths.get("/Users/chrisprobst/Desktop/records.dat"));
-        System.out.println("Deserialized records: " + rawRecords.size());
-        initPeers();
     }
 
     private boolean isValidRecord(RecordDiagnostic.Record record) {
@@ -315,8 +311,31 @@ public class RecordViewer extends Application {
 
     @Override
     public void start(Stage primaryStage) {
-        setupGui(primaryStage);
-        setupData();
+        FileChooser fileChooser = new FileChooser();
+        File file = fileChooser.showOpenDialog(primaryStage);
+
+        if (file == null) {
+            Dialogs.create()
+                    .message("No file selected")
+                    .showInformation();
+
+            Platform.exit();
+        } else {
+            try {
+                rawRecords = IOUtil.deserialize(file);
+                System.out.println("Deserialized records: " + rawRecords.size());
+                initPeers();
+
+                setupGui(primaryStage);
+                setupData();
+            } catch (Exception e) {
+                Dialogs.create()
+                        .message("Failed to load file: " + e.getMessage())
+                        .showInformation();
+
+                Platform.exit();
+            }
+        }
     }
 
     public static void main(String[] args) {

@@ -11,8 +11,8 @@ import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 
+import java.io.File;
 import java.io.IOException;
-import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.LinkedList;
@@ -26,7 +26,7 @@ import java.util.concurrent.ExecutionException;
  */
 public class App {
 
-    public static int n = 21;
+    public static int n = 6;
     public static CountDownLatch countDownLatch = new CountDownLatch(n);
 
     public static void main(String[] args) throws InterruptedException, ExecutionException, IOException {
@@ -96,7 +96,7 @@ public class App {
         System.out.println("==>> READY READY READY! It took: " + duration + ", expected: " + (Math.ceil(Math.log(n) / Math.log(2))) * 5);
 
         // Get records and print
-        IOUtil.serialize(Paths.get("/Users/chrisprobst/Desktop/records.dat"),
+        IOUtil.serialize(new File("/Users/chrisprobst/Desktop/records.dat"),
                 diagnostic.getRecords());
         System.out.println("Serialized records");
 
