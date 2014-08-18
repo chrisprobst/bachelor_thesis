@@ -2,6 +2,7 @@ package de.probst.ba.core.logic.brains;
 
 import de.probst.ba.core.logic.Brain;
 import de.probst.ba.core.media.DataInfo;
+import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.util.Tuple;
 
 import java.util.Comparator;
@@ -25,7 +26,7 @@ public class AbstractOrderedBrain implements Brain {
      * @param dataInfoId
      * @return
      */
-    protected Map<Object, DataInfo> firstOrderedById(Map<Object, Map<String, DataInfo>> remoteDataInfo,
+    protected Map<PeerId, DataInfo> firstOrderedById(Map<PeerId, Map<String, DataInfo>> remoteDataInfo,
                                                      long dataInfoId) {
         return remoteDataInfo.entrySet().stream()
                 .map(p -> Tuple.of(

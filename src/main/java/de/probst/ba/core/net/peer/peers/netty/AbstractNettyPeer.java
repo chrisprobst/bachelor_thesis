@@ -7,6 +7,7 @@ import de.probst.ba.core.media.DataBase;
 import de.probst.ba.core.media.DataInfo;
 import de.probst.ba.core.net.Transfer;
 import de.probst.ba.core.net.peer.AbstractPeer;
+import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.AnnounceHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.CollectHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.group.ChannelGroupHandler;
@@ -15,8 +16,6 @@ import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.DownloadHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.UploadHandler;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandlerAdapter;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelId;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
@@ -27,7 +26,6 @@ import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.net.SocketAddress;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -75,13 +73,13 @@ abstract class AbstractNettyPeer extends AbstractPeer implements Body {
 
                     new WriteThrottle(getUploadRate()),
 
-                    new ChannelHandlerAdapter() {
+                   /* new ChannelHandlerAdapter() {
                         @Override
                         public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
                             System.out.println("WRITABLE: " + ctx.channel().isWritable());
                             super.channelWritabilityChanged(ctx);
                         }
-                    },
+                    },*/
 
                     logHandler,
                     serverChannelGroupHandler,
@@ -158,12 +156,12 @@ abstract class AbstractNettyPeer extends AbstractPeer implements Body {
     }
 
     @Override
-    protected Map<Object, Transfer> getUploads() {
+    protected Map<PeerId, Transfer> getUploads() {
         return UploadHandler.getUploads(getServerChannelGroup());
     }
 
     @Override
-    protected Map<Object, Transfer> getDownloads() {
+    protected Map<PeerId, Transfer> getDownloads() {
         return DownloadHandler.getDownloads(getChannelGroup());
     }
 
@@ -173,7 +171,7 @@ abstract class AbstractNettyPeer extends AbstractPeer implements Body {
     }
 
     @Override
-    protected Map<Object, Map<String, DataInfo>> getRemoteDataInfo() {
+    protected Map<PeerId, Map<String, DataInfo>> getRemoteDataInfo() {
         return CollectHandler.getRemoteDataInfo(getChannelGroup());
     }
 
@@ -192,13 +190,13 @@ abstract class AbstractNettyPeer extends AbstractPeer implements Body {
 
     protected AbstractNettyPeer(long uploadRate,
                                 long downloadRate,
-                                SocketAddress localAddress,
+                                PeerId localPeerId,
                                 DataBase dataBase,
                                 Brain brain,
                                 Diagnostic diagnostic,
                                 Optional<EventLoopGroup> eventLoopGroup) {
 
-        super(localAddress, dataBase, brain, diagnostic);
+        super(localPeerId, dataBase, brain, diagnostic);
 
         Objects.requireNonNull(eventLoopGroup);
 
@@ -245,7 +243,7 @@ abstract class AbstractNettyPeer extends AbstractPeer implements Body {
         Objects.requireNonNull(transfer);
 
         Channel remotePeer = getChannelGroup().find(
-                (ChannelId) transfer.getRemotePeerId());
+                (ChannelId) transfer.getRemotePeerId().getGuid());
 
         if (remotePeer == null) {
             logger.warn("The brain requested to " +

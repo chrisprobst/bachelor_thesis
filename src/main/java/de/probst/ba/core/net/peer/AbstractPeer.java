@@ -10,7 +10,6 @@ import de.probst.ba.core.net.NetworkState;
 import de.probst.ba.core.net.Transfer;
 import de.probst.ba.core.util.concurrent.AtomicCounter;
 
-import java.net.SocketAddress;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -20,7 +19,7 @@ import java.util.concurrent.CompletableFuture;
  */
 public abstract class AbstractPeer implements Peer {
 
-    private final SocketAddress localAddress;
+    private final PeerId localPeerId;
 
     private final DataBase dataBase;
 
@@ -45,17 +44,17 @@ public abstract class AbstractPeer implements Peer {
         return brainWorker;
     }
 
-    protected SocketAddress getLocalAddress() {
-        return localAddress;
+    protected PeerId getLocalPeerId() {
+        return localPeerId;
     }
 
-    protected abstract Map<Object, Transfer> getUploads();
+    protected abstract Map<PeerId, Transfer> getUploads();
 
-    protected abstract Map<Object, Transfer> getDownloads();
+    protected abstract Map<PeerId, Transfer> getDownloads();
 
     protected abstract Map<String, DataInfo> getDataInfo();
 
-    protected abstract Map<Object, Map<String, DataInfo>> getRemoteDataInfo();
+    protected abstract Map<PeerId, Map<String, DataInfo>> getRemoteDataInfo();
 
     protected abstract long getUploadRate();
 
@@ -63,18 +62,18 @@ public abstract class AbstractPeer implements Peer {
 
     protected abstract Body getBody();
 
-    protected AbstractPeer(SocketAddress localAddress,
+    protected AbstractPeer(PeerId localPeerId,
                            DataBase dataBase,
                            Brain brain,
                            Diagnostic diagnostic) {
 
-        Objects.requireNonNull(localAddress);
+        Objects.requireNonNull(localPeerId);
         Objects.requireNonNull(dataBase);
         Objects.requireNonNull(brain);
         Objects.requireNonNull(diagnostic);
 
         // Save args
-        this.localAddress = localAddress;
+        this.localPeerId = localPeerId;
         this.dataBase = dataBase;
         this.brain = brain;
         this.diagnostic = diagnostic;
@@ -103,7 +102,7 @@ public abstract class AbstractPeer implements Peer {
     @Override
     public NetworkState getNetworkState() {
         return new NetworkState(
-                getLocalAddress(),
+                getLocalPeerId(),
                 getDataInfo(),
                 getRemoteDataInfo(),
                 getUploads(),

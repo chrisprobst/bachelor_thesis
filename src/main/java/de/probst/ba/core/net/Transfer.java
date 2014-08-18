@@ -1,6 +1,7 @@
 package de.probst.ba.core.net;
 
 import de.probst.ba.core.media.DataInfo;
+import de.probst.ba.core.net.peer.PeerId;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -15,18 +16,18 @@ import java.util.stream.IntStream;
  */
 public final class Transfer implements Serializable {
 
-    public static Transfer upload(Object remotePeerId,
+    public static Transfer upload(PeerId remotePeerId,
                                   DataInfo dataInfo) {
         return new Transfer(remotePeerId, dataInfo, false);
     }
 
-    public static Transfer download(Object remotePeerId,
+    public static Transfer download(PeerId remotePeerId,
                                     DataInfo dataInfo) {
         return new Transfer(remotePeerId, dataInfo, true);
     }
 
     // The remote peer id
-    private final Object remotePeerId;
+    private final PeerId remotePeerId;
 
     // The data info which describes this transfer
     private final DataInfo dataInfo;
@@ -41,7 +42,7 @@ public final class Transfer implements Serializable {
     // The completed size of this transfer
     private final long completedSize;
 
-    private Transfer(Object remotePeerId,
+    private Transfer(PeerId remotePeerId,
                      DataInfo dataInfo,
                      boolean download,
                      long size,
@@ -53,17 +54,18 @@ public final class Transfer implements Serializable {
         this.completedSize = completedSize;
     }
 
-    public Transfer(Object remotePeerId,
+    public Transfer(PeerId remotePeerId,
                     DataInfo dataInfo,
                     boolean download) {
         this(remotePeerId, dataInfo, download, 0);
     }
 
-    public Transfer(Object remotePeerId,
+    public Transfer(PeerId remotePeerId,
                     DataInfo dataInfo,
                     boolean download,
                     long completedSize) {
 
+        Objects.requireNonNull(remotePeerId);
         Objects.requireNonNull(dataInfo);
 
         // Calc the size
@@ -81,9 +83,9 @@ public final class Transfer implements Serializable {
             throw new IllegalArgumentException("completedSize < 0");
         }
 
-        this.download = download;
         this.remotePeerId = remotePeerId;
         this.dataInfo = dataInfo;
+        this.download = download;
         this.completedSize = completedSize;
     }
 
@@ -154,7 +156,7 @@ public final class Transfer implements Serializable {
     /**
      * @return The remote peer id.
      */
-    public Object getRemotePeerId() {
+    public PeerId getRemotePeerId() {
         return remotePeerId;
     }
 

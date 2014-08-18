@@ -26,10 +26,10 @@ public final class DataInfo implements Serializable {
     private final long size;
 
     // Human readable name of this data
-    private final Optional<String> name;
+    private final String name;
 
     // Human readable description of this data
-    private final Optional<String> description;
+    private final String description;
 
     // The unique hash
     private final String hash;
@@ -104,8 +104,8 @@ public final class DataInfo implements Serializable {
 
         this.id = id;
         this.size = size;
-        this.name = name;
-        this.description = description;
+        this.name = name.orElse(null);
+        this.description = description.orElse(null);
         this.hash = hash;
         this.chunkHashes = Collections.unmodifiableList(
                 new ArrayList<>(chunkHashes));
@@ -313,14 +313,14 @@ public final class DataInfo implements Serializable {
      * @return The name.
      */
     public Optional<String> getName() {
-        return name;
+        return Optional.ofNullable(name);
     }
 
     /**
      * @return The description.
      */
     public Optional<String> getDescription() {
-        return description;
+        return Optional.ofNullable(description);
     }
 
     /**
@@ -453,8 +453,8 @@ public final class DataInfo implements Serializable {
         return "DataInfo{" +
                 "id=" + id +
                 ", size=" + size +
-                ", name=" + name +
-                ", description=" + description +
+                ", name=" + getName() +
+                ", description=" + getDescription() +
                 ", hash='" + hash + '\'' +
                 ", chunkHashes=" + chunkHashes +
                 ", chunks=" + chunks +
@@ -472,9 +472,10 @@ public final class DataInfo implements Serializable {
         if (size != dataInfo.size) return false;
         if (!chunkHashes.equals(dataInfo.chunkHashes)) return false;
         if (!chunks.equals(dataInfo.chunks)) return false;
-        if (!description.equals(dataInfo.description)) return false;
+        if (description != null ? !description.equals(dataInfo.description) : dataInfo.description != null)
+            return false;
         if (!hash.equals(dataInfo.hash)) return false;
-        if (!name.equals(dataInfo.name)) return false;
+        if (name != null ? !name.equals(dataInfo.name) : dataInfo.name != null) return false;
 
         return true;
     }
@@ -483,8 +484,8 @@ public final class DataInfo implements Serializable {
     public int hashCode() {
         int result = (int) (id ^ (id >>> 32));
         result = 31 * result + (int) (size ^ (size >>> 32));
-        result = 31 * result + name.hashCode();
-        result = 31 * result + description.hashCode();
+        result = 31 * result + (name != null ? name.hashCode() : 0);
+        result = 31 * result + (description != null ? description.hashCode() : 0);
         result = 31 * result + hash.hashCode();
         result = 31 * result + chunkHashes.hashCode();
         result = 31 * result + chunks.hashCode();

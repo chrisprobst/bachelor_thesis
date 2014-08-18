@@ -3,6 +3,7 @@ package de.probst.ba.core.diag;
 import de.probst.ba.core.media.DataInfo;
 import de.probst.ba.core.net.TransferManager;
 import de.probst.ba.core.net.peer.Peer;
+import de.probst.ba.core.net.peer.PeerId;
 
 import java.util.Map;
 import java.util.Optional;
@@ -15,11 +16,11 @@ public interface Diagnostic {
     // DATAINFO
 
     void peerAnnouncedDataInfo(Peer peer,
-                               Object remotePeerId,
+                               PeerId remotePeerId,
                                Optional<Map<String, DataInfo>> dataInfo);
 
     void peerCollectedDataInfo(Peer peer,
-                               Object remotePeerId,
+                               PeerId remotePeerId,
                                Optional<Map<String, DataInfo>> dataInfo);
 
     // UPLOAD
@@ -38,6 +39,13 @@ public interface Diagnostic {
 
     void peerRequestedDownload(Peer peer,
                                TransferManager transferManager);
+
+    void peerRejectedDownload(Peer peer,
+                              TransferManager transferManager,
+                              Throwable cause);
+
+    void peerStartedDownload(Peer peer,
+                             TransferManager transferManager);
 
     void peerProgressedDownload(Peer peer,
                                 TransferManager transferManager);

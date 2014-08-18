@@ -3,6 +3,7 @@ package de.probst.ba.core.logic;
 import de.probst.ba.core.media.DataInfo;
 import de.probst.ba.core.net.NetworkState;
 import de.probst.ba.core.net.Transfer;
+import de.probst.ba.core.net.peer.PeerId;
 
 import java.util.List;
 import java.util.Map;
@@ -58,7 +59,7 @@ public interface Brain {
      * @return An optional data info.
      */
     default Optional<Map<String, DataInfo>> transformUploadDataInfo(NetworkState networkState,
-                                                                    Object remotePeerId) {
+                                                                    PeerId remotePeerId) {
         return Optional.of(networkState.getDataInfo());
     }
 

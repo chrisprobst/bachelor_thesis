@@ -3,9 +3,10 @@ package de.probst.ba.core.net.peer.peers.netty.handlers.transfer;
 import de.probst.ba.core.net.Transfer;
 import de.probst.ba.core.net.TransferManager;
 import de.probst.ba.core.net.peer.Peer;
+import de.probst.ba.core.net.peer.PeerId;
+import de.probst.ba.core.net.peer.peers.netty.NettyPeerId;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.messages.UploadRejectedMessage;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.messages.UploadRequestMessage;
-import de.probst.ba.core.util.Tuple;
 import de.probst.ba.core.util.concurrent.AtomicCounter;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -29,14 +30,14 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(UploadHandler.class);
 
-    public static Map<Object, Transfer> getUploads(ChannelGroup channelGroup) {
+    public static Map<PeerId, Transfer> getUploads(ChannelGroup channelGroup) {
         return channelGroup.stream()
-                .map(c -> Tuple.of(c,
-                        c.pipeline().get(UploadHandler.class).getTransferManager()))
-                .filter(h -> h.second().isPresent())
+                .map(c -> c.pipeline().get(UploadHandler.class).getTransferManager())
+                .filter(Optional::isPresent)
+                .map(Optional::get)
                 .collect(Collectors.toMap(
-                        p -> p.first().id(),
-                        p -> p.second().get().getTransfer()));
+                        p -> p.getTransfer().getRemotePeerId(),
+                        p -> p.getTransfer()));
     }
 
     private final class ChunkedDataBaseInput implements ChunkedInput<ByteBuf> {
@@ -143,7 +144,8 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
                 // Create a new transfer manager
                 newTransferManager = getPeer().getDataBase()
                         .createTransferManager(Transfer.upload(
-                                ctx.channel().id(), msg.getDataInfo()));
+                                new NettyPeerId(ctx.channel()),
+                                msg.getDataInfo()));
 
                 // If the upload is not allowed, reject it!
                 if (!(wasIncremented = setup(ctx, newTransferManager))) {

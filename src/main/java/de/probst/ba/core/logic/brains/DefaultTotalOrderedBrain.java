@@ -4,6 +4,7 @@ import de.probst.ba.core.App;
 import de.probst.ba.core.media.DataInfo;
 import de.probst.ba.core.net.NetworkState;
 import de.probst.ba.core.net.Transfer;
+import de.probst.ba.core.net.peer.PeerId;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -33,7 +34,7 @@ public class DefaultTotalOrderedBrain extends AbstractOrderedBrain {
     public Optional<List<Transfer>> process(NetworkState networkState) {
 
         if (!networkState.getDownloads().isEmpty()) {
-            logger.debug(networkState.getLocalAddress() + ": We are downloading already");
+            logger.debug(networkState.getLocalPeerId() + ": We are downloading already");
             return Optional.empty();
         }
 
@@ -42,7 +43,7 @@ public class DefaultTotalOrderedBrain extends AbstractOrderedBrain {
 
         // This brain has no missing data info
         if (!lowestId.isPresent()) {
-            logger.debug(networkState.getLocalAddress() + ": Nothing to download right now");
+            logger.debug(networkState.getLocalPeerId() + ": Nothing to download right now");
 
             if (!ready) {
                 ready = true;
@@ -52,29 +53,29 @@ public class DefaultTotalOrderedBrain extends AbstractOrderedBrain {
         }
 
         // We are only interested in the first data info
-        Map<Object, DataInfo> nextOrderedDataInfo = firstOrderedById(
+        Map<PeerId, DataInfo> nextOrderedDataInfo = firstOrderedById(
                 networkState.getEstimatedMissingRemoteDataInfo(),
                 lowestId.get());
 
         if (nextOrderedDataInfo.isEmpty()) {
-            logger.debug(networkState.getLocalAddress() + ": Pending, check later again.");
+            logger.debug(networkState.getLocalPeerId() + ": Pending, check later again.");
             return Optional.empty();
         }
 
         // As list
-        List<Map.Entry<Object, DataInfo>> list =
+        List<Map.Entry<PeerId, DataInfo>> list =
                 new ArrayList<>(nextOrderedDataInfo.entrySet());
 
         // Get the last entry (most chunks!)
-        Map.Entry<Object, DataInfo> lastEntry = list.get(list.size() - 1);
+        Map.Entry<PeerId, DataInfo> lastEntry = list.get(list.size() - 1);
 
         if (!lastEntry.getValue().isCompleted()) {
-            logger.debug(networkState.getLocalAddress() +
+            logger.debug(networkState.getLocalPeerId() +
                     ": This brain does not download incomplete data info");
             return Optional.empty();
         }
 
-        logger.debug(networkState.getLocalAddress() + ": Requesting " + lastEntry);
+        logger.debug(networkState.getLocalPeerId() + ": Requesting " + lastEntry);
 
         // Request this as download
         return Optional.of(Arrays.asList(
@@ -83,8 +84,8 @@ public class DefaultTotalOrderedBrain extends AbstractOrderedBrain {
     }
 
     @Override
-    public Optional<Map<String, DataInfo>> transformUploadDataInfo(NetworkState networkState, Object remotePeerId) {
-        logger.debug(networkState.getLocalAddress() + ": Is transforming: " + networkState.getDataInfo());
+    public Optional<Map<String, DataInfo>> transformUploadDataInfo(NetworkState networkState, PeerId remotePeerId) {
+        logger.debug(networkState.getLocalPeerId() + ": Is transforming: " + networkState.getDataInfo());
         return networkState.getUploads().isEmpty() ? Optional.of(networkState.getDataInfo()) : Optional.empty();
     }
 }

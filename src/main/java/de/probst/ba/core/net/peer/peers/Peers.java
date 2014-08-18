@@ -4,6 +4,7 @@ import de.probst.ba.core.diag.Diagnostic;
 import de.probst.ba.core.logic.Brain;
 import de.probst.ba.core.media.DataBase;
 import de.probst.ba.core.net.peer.Peer;
+import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.peers.netty.LocalNettyPeer;
 import io.netty.channel.EventLoopGroup;
 
@@ -28,13 +29,24 @@ public class Peers {
                                  Brain brain,
                                  Diagnostic diagnostic,
                                  Optional<EventLoopGroup> eventLoopGroup) {
-        return new LocalNettyPeer(uploadRate, downloadRate, localAddress, dataBase, brain, diagnostic, eventLoopGroup);
+        return new LocalNettyPeer(uploadRate, downloadRate, new PeerId(localAddress), dataBase, brain, diagnostic, eventLoopGroup);
     }
 
     public static void waitForInit(List<Peer> peers) throws ExecutionException, InterruptedException {
         Objects.requireNonNull(peers);
         for (Peer peer : peers) {
             peer.getInitFuture().get();
+        }
+    }
+
+    public static void closeAndWait(List<Peer> peers) throws ExecutionException, InterruptedException {
+        Objects.requireNonNull(peers);
+        for (Peer peer : peers) {
+            peer.close();
+        }
+
+        for (Peer peer : peers) {
+            peer.getCloseFuture().get();
         }
     }
 
@@ -50,7 +62,7 @@ public class Peers {
         for (Peer client : peers) {
             for (Peer server : peers) {
                 if (server != client) {
-                    client.connect(server.getNetworkState().getLocalAddress());
+                    client.connect(server.getNetworkState().getLocalPeerId().getAddress());
                 }
             }
         }

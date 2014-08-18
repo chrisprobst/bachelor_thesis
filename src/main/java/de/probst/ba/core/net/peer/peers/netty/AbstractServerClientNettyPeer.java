@@ -3,6 +3,7 @@ package de.probst.ba.core.net.peer.peers.netty;
 import de.probst.ba.core.diag.Diagnostic;
 import de.probst.ba.core.logic.Brain;
 import de.probst.ba.core.media.DataBase;
+import de.probst.ba.core.net.peer.PeerId;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
@@ -40,7 +41,7 @@ abstract class AbstractServerClientNettyPeer extends AbstractNettyPeer {
 
     @Override
     protected ChannelFuture createInitFuture() {
-        return serverBootstrap.bind(getLocalAddress());
+        return serverBootstrap.bind(getLocalPeerId().getAddress());
     }
 
     protected abstract Class<? extends Channel> getChannelClass();
@@ -49,12 +50,12 @@ abstract class AbstractServerClientNettyPeer extends AbstractNettyPeer {
 
     protected AbstractServerClientNettyPeer(long uploadRate,
                                             long downloadRate,
-                                            SocketAddress localAddress,
+                                            PeerId localPeerId,
                                             DataBase dataBase,
                                             Brain brain,
                                             Diagnostic diagnostic,
                                             Optional<EventLoopGroup> eventLoopGroup) {
-        super(uploadRate, downloadRate, localAddress, dataBase, brain, diagnostic, eventLoopGroup);
+        super(uploadRate, downloadRate, localPeerId, dataBase, brain, diagnostic, eventLoopGroup);
     }
 
     @Override

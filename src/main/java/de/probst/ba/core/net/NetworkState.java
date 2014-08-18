@@ -1,9 +1,9 @@
 package de.probst.ba.core.net;
 
 import de.probst.ba.core.media.DataInfo;
+import de.probst.ba.core.net.peer.PeerId;
 
 import java.io.Serializable;
-import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -21,14 +21,14 @@ import java.util.stream.Collectors;
  */
 public final class NetworkState implements Serializable {
 
-    // The local address
-    private final SocketAddress localAddress;
+    // The local peer id
+    private final PeerId localPeerId;
 
     // All pending uploads
-    private final Map<Object, Transfer> uploads;
+    private final Map<PeerId, Transfer> uploads;
 
     // All pending downloads
-    private final Map<Object, Transfer> downloads;
+    private final Map<PeerId, Transfer> downloads;
 
     // All already available local data info
     private final Map<String, DataInfo> dataInfo;
@@ -37,10 +37,10 @@ public final class NetworkState implements Serializable {
     private final Map<String, DataInfo> estimatedDataInfo;
 
     // The estimated missing remote data info
-    private final Map<Object, Map<String, DataInfo>> estimatedMissingRemoteDataInfo;
+    private final Map<PeerId, Map<String, DataInfo>> estimatedMissingRemoteDataInfo;
 
     // All known remote data info
-    private final Map<Object, Map<String, DataInfo>> remoteDataInfo;
+    private final Map<PeerId, Map<String, DataInfo>> remoteDataInfo;
 
     // The upload rate
     private final long uploadRate;
@@ -70,7 +70,7 @@ public final class NetworkState implements Serializable {
         return Collections.unmodifiableMap(dataInfo);
     }
 
-    private Map<Object, Map<String, DataInfo>> createEstimatedMissingRemoteDataInfo() {
+    private Map<PeerId, Map<String, DataInfo>> createEstimatedMissingRemoteDataInfo() {
         return getRemoteDataInfo().entrySet().stream()
                 .collect(Collectors.toMap(
                         Map.Entry::getKey,
@@ -103,7 +103,7 @@ public final class NetworkState implements Serializable {
     /**
      * Creates a network state.
      *
-     * @param localAddress
+     * @param localPeerId
      * @param dataInfo
      * @param remoteDataInfo
      * @param uploads
@@ -111,21 +111,21 @@ public final class NetworkState implements Serializable {
      * @param uploadRate
      * @param downloadRate
      */
-    public NetworkState(SocketAddress localAddress,
+    public NetworkState(PeerId localPeerId,
                         Map<String, DataInfo> dataInfo,
-                        Map<Object, Map<String, DataInfo>> remoteDataInfo,
-                        Map<Object, Transfer> uploads,
-                        Map<Object, Transfer> downloads,
+                        Map<PeerId, Map<String, DataInfo>> remoteDataInfo,
+                        Map<PeerId, Transfer> uploads,
+                        Map<PeerId, Transfer> downloads,
                         long uploadRate,
                         long downloadRate) {
 
-        Objects.requireNonNull(localAddress);
+        Objects.requireNonNull(localPeerId);
         Objects.requireNonNull(uploads);
         Objects.requireNonNull(downloads);
         Objects.requireNonNull(dataInfo);
         Objects.requireNonNull(remoteDataInfo);
 
-        this.localAddress = localAddress;
+        this.localPeerId = localPeerId;
         this.uploads = Collections.unmodifiableMap(new HashMap<>(uploads));
         this.downloads = Collections.unmodifiableMap(new HashMap<>(downloads));
         this.dataInfo = Collections.unmodifiableMap(new HashMap<>(dataInfo));
@@ -167,28 +167,28 @@ public final class NetworkState implements Serializable {
      * @return A combined view of all missing data info which takes pending
      * downloads and already available data info into account.
      */
-    public Map<Object, Map<String, DataInfo>> getEstimatedMissingRemoteDataInfo() {
+    public Map<PeerId, Map<String, DataInfo>> getEstimatedMissingRemoteDataInfo() {
         return estimatedMissingRemoteDataInfo;
     }
 
     /**
-     * @return The local address of the peer.
+     * @return The local peer id.
      */
-    public SocketAddress getLocalAddress() {
-        return localAddress;
+    public PeerId getLocalPeerId() {
+        return localPeerId;
     }
 
     /**
      * @return All pending uploads.
      */
-    public Map<Object, Transfer> getUploads() {
+    public Map<PeerId, Transfer> getUploads() {
         return uploads;
     }
 
     /**
      * @return All pending downloads.
      */
-    public Map<Object, Transfer> getDownloads() {
+    public Map<PeerId, Transfer> getDownloads() {
         return downloads;
     }
 
@@ -202,7 +202,7 @@ public final class NetworkState implements Serializable {
     /**
      * @return All known remote data info.
      */
-    public Map<Object, Map<String, DataInfo>> getRemoteDataInfo() {
+    public Map<PeerId, Map<String, DataInfo>> getRemoteDataInfo() {
         return remoteDataInfo;
     }
 

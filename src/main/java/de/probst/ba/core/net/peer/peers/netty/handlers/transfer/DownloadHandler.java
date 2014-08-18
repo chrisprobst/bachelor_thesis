@@ -3,9 +3,10 @@ package de.probst.ba.core.net.peer.peers.netty.handlers.transfer;
 import de.probst.ba.core.net.Transfer;
 import de.probst.ba.core.net.TransferManager;
 import de.probst.ba.core.net.peer.Peer;
+import de.probst.ba.core.net.peer.PeerId;
+import de.probst.ba.core.net.peer.peers.netty.NettyPeerId;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.messages.UploadRejectedMessage;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.messages.UploadRequestMessage;
-import de.probst.ba.core.util.Tuple;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerAdapter;
@@ -16,6 +17,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -23,13 +25,14 @@ import java.util.stream.Collectors;
  */
 public final class DownloadHandler extends ChannelHandlerAdapter {
 
-    public static Map<Object, Transfer> getDownloads(ChannelGroup channelGroup) {
+    public static Map<PeerId, Transfer> getDownloads(ChannelGroup channelGroup) {
         return channelGroup.stream()
-                .map(c -> Tuple.of(c, c.pipeline().get(DownloadHandler.class)))
-                .filter(h -> h.second() != null)
+                .map(c -> Optional.ofNullable(c.pipeline().get(DownloadHandler.class)))
+                .filter(Optional::isPresent)
+                .map(Optional::get)
                 .collect(Collectors.toMap(
-                        p -> p.first().id(),
-                        p -> p.second().getTransferManager().getTransfer()));
+                        p -> p.getTransferManager().getTransfer().getRemotePeerId(),
+                        p -> p.getTransferManager().getTransfer()));
     }
 
     public static synchronized DownloadHandler request(Peer peer,
@@ -43,7 +46,7 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
             throw new IllegalArgumentException("transfer.isUpload()");
         }
 
-        if (!transfer.getRemotePeerId().equals(remotePeer.id())) {
+        if (!transfer.getRemotePeerId().equals(new NettyPeerId(remotePeer))) {
             throw new IllegalArgumentException(
                     "!transfer.getRemotePeerId().equals(remotePeer.id())");
         }
@@ -69,6 +72,7 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
 
     private final Peer peer;
     private final TransferManager transferManager;
+    private boolean receivedBuffer = false;
 
     private void remove(ChannelHandlerContext ctx) {
         ctx.pipeline().remove(this);
@@ -127,12 +131,19 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof UploadRejectedMessage) {
+            UploadRejectedMessage uploadRejectedMessage =
+                    (UploadRejectedMessage) msg;
+
             logger.debug("Upload rejected: " +
-                    ((UploadRejectedMessage) msg).getCause().getMessage());
+                    uploadRejectedMessage.getCause().getMessage());
 
             // Upload rejected, lets just
             // remove this download
             remove(ctx);
+
+            // DIAGNOSTIC
+            getPeer().getDiagnostic().peerRejectedDownload(
+                    getPeer(), getTransferManager(), uploadRejectedMessage.getCause());
         } else if (msg instanceof ByteBuf) {
             ByteBuf buffer = (ByteBuf) msg;
 
@@ -158,6 +169,13 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
 
                     // DIAGNOSTIC
                     getPeer().getDiagnostic().peerProgressedDownload(
+                            getPeer(), getTransferManager());
+                }
+
+                if (!receivedBuffer) {
+                    receivedBuffer = true;
+                    // DIAGNOSTIC
+                    getPeer().getDiagnostic().peerStartedDownload(
                             getPeer(), getTransferManager());
                 }
             }

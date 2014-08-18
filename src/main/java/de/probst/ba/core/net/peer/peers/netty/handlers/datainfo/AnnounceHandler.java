@@ -3,6 +3,8 @@ package de.probst.ba.core.net.peer.peers.netty.handlers.datainfo;
 import de.probst.ba.core.Config;
 import de.probst.ba.core.media.DataInfo;
 import de.probst.ba.core.net.peer.Peer;
+import de.probst.ba.core.net.peer.PeerId;
+import de.probst.ba.core.net.peer.peers.netty.NettyPeerId;
 import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.messages.DataInfoMessage;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
@@ -77,12 +79,14 @@ public final class AnnounceHandler extends ChannelHandlerAdapter implements Runn
 
     @Override
     public void run() {
+        // Create the netty peer id
+        PeerId peerId = new NettyPeerId(ctx.channel());
 
         // Transform the data info using the brain
         Optional<Map<String, DataInfo>> transformedDataInfo =
                 getPeer().getBrain().transformUploadDataInfo(
                         getPeer().getNetworkState(),
-                        ctx.channel().id());
+                        peerId);
 
         // This is actually a bug in the brain
         if (transformedDataInfo == null) {
@@ -112,8 +116,8 @@ public final class AnnounceHandler extends ChannelHandlerAdapter implements Runn
                         ctx.close();
                     }
                 });
-       
+
         getPeer().getDiagnostic().peerAnnouncedDataInfo(
-                getPeer(), ctx.channel().id(), dataInfoMessage.getDataInfo());
+                getPeer(), peerId, dataInfoMessage.getDataInfo());
     }
 }
