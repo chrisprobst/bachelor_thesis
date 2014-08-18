@@ -5,6 +5,8 @@ import de.probst.ba.core.media.DataInfo;
 import de.probst.ba.core.media.databases.DataBases;
 import de.probst.ba.core.net.peer.Peer;
 import de.probst.ba.core.net.peer.peers.Peers;
+import io.netty.channel.DefaultEventLoopGroup;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 
 import java.time.Duration;
@@ -54,17 +56,21 @@ public class App {
         // List of peers
         List<Peer> peers = new LinkedList<>();
 
+        EventLoopGroup eventLoopGroup = new DefaultEventLoopGroup();
+
         // Create both clients
         peers.add(Peers.localPeer(1000, 1000,
                 new LocalAddress("peer-0"),
                 DataBases.fakeDataBase(dataInfo),
-                Brains.logarithmicBrain()));
+                Brains.logarithmicBrain(),
+                Optional.of(eventLoopGroup)));
 
         for (int i = 1; i <= n - 1; i++) {
             peers.add(Peers.localPeer(1000, 1000,
                     new LocalAddress("peer-" + i),
                     DataBases.fakeDataBase(dataInfo.empty()),
-                    Brains.logarithmicBrain()));
+                    Brains.logarithmicBrain(),
+                    Optional.of(eventLoopGroup)));
         }
 
 

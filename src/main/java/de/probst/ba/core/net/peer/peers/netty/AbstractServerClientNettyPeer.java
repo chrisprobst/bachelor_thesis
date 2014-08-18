@@ -6,9 +6,11 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 
 import java.net.SocketAddress;
+import java.util.Optional;
 
 /**
  * Created by chrisprobst on 17.08.14.
@@ -48,8 +50,9 @@ abstract class AbstractServerClientNettyPeer extends AbstractNettyPeer {
                                             long downloadRate,
                                             SocketAddress localAddress,
                                             DataBase dataBase,
-                                            Brain brain) {
-        super(uploadRate, downloadRate, localAddress, dataBase, brain);
+                                            Brain brain,
+                                            Optional<EventLoopGroup> eventLoopGroup) {
+        super(uploadRate, downloadRate, localAddress, dataBase, brain, eventLoopGroup);
     }
 
     @Override

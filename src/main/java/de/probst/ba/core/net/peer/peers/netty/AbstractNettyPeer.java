@@ -29,6 +29,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.net.SocketAddress;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
@@ -48,14 +49,11 @@ abstract class AbstractNettyPeer extends AbstractPeer implements Body {
 
     private final long downloadRate;
 
-    private final EventLoopGroup eventLoopGroup =
-            createEventGroup();
+    private final EventLoopGroup eventLoopGroup;
 
-    private final ChannelGroupHandler serverChannelGroupHandler =
-            new ChannelGroupHandler(eventLoopGroup.next());
+    private final ChannelGroupHandler serverChannelGroupHandler;
 
-    private final ChannelGroupHandler channelGroupHandler =
-            new ChannelGroupHandler(eventLoopGroup.next());
+    private final ChannelGroupHandler channelGroupHandler;
 
     private final CompletableFuture<?> initFuture =
             new CompletableFuture<>();
@@ -195,13 +193,24 @@ abstract class AbstractNettyPeer extends AbstractPeer implements Body {
                                 long downloadRate,
                                 SocketAddress localAddress,
                                 DataBase dataBase,
-                                Brain brain) {
+                                Brain brain,
+                                Optional<EventLoopGroup> eventLoopGroup) {
 
         super(localAddress, dataBase, brain);
+
+        Objects.requireNonNull(eventLoopGroup);
 
         // Save args
         this.uploadRate = uploadRate;
         this.downloadRate = downloadRate;
+        this.eventLoopGroup = eventLoopGroup.orElseGet(
+                this::createEventGroup);
+
+        // Implement channel group handlers
+        serverChannelGroupHandler = new ChannelGroupHandler(
+                getEventLoopGroup().next());
+        channelGroupHandler = new ChannelGroupHandler(
+                getEventLoopGroup().next());
 
         // Init bootstrap
         initBootstrap();

@@ -4,10 +4,12 @@ import de.probst.ba.core.logic.Brain;
 import de.probst.ba.core.media.DataBase;
 import de.probst.ba.core.net.peer.Peer;
 import de.probst.ba.core.net.peer.peers.netty.LocalNettyPeer;
+import io.netty.channel.EventLoopGroup;
 
 import java.net.SocketAddress;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 
 /**
@@ -22,8 +24,9 @@ public class Peers {
                                  long downloadRate,
                                  SocketAddress localAddress,
                                  DataBase dataBase,
-                                 Brain brain) {
-        return new LocalNettyPeer(uploadRate, downloadRate, localAddress, dataBase, brain);
+                                 Brain brain,
+                                 Optional<EventLoopGroup> eventLoopGroup) {
+        return new LocalNettyPeer(uploadRate, downloadRate, localAddress, dataBase, brain, eventLoopGroup);
     }
 
     public static void waitForInit(List<Peer> peers) throws ExecutionException, InterruptedException {

@@ -10,6 +10,7 @@ import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
 
 import java.net.SocketAddress;
+import java.util.Optional;
 
 /**
  * Created by chrisprobst on 12.08.14.
@@ -35,7 +36,8 @@ public final class LocalNettyPeer extends AbstractServerClientNettyPeer {
                           long downloadRate,
                           SocketAddress localAddress,
                           DataBase dataBase,
-                          Brain brain) {
-        super(uploadRate, downloadRate, localAddress, dataBase, brain);
+                          Brain brain,
+                          Optional<EventLoopGroup> eventLoopGroup) {
+        super(uploadRate, downloadRate, localAddress, dataBase, brain, eventLoopGroup);
     }
 }
