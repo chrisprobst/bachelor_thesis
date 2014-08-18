@@ -117,7 +117,7 @@ public class RecordViewer extends Application {
 
         Point2D remote = peerPositions.get(record.getRemotePeerId().getAddress());
         Point2D local = peerPositions.get(record.getLocalPeerId().getAddress());
-        renderArrow(gc, remote, local, 50, 50);
+        renderArrow(gc, remote, local, 46, 46);
     }
 
     private void renderDownloadRequested(GraphicsContext gc,
@@ -127,7 +127,7 @@ public class RecordViewer extends Application {
 
         Point2D local = peerPositions.get(record.getLocalPeerId().getAddress());
         Point2D remote = peerPositions.get(record.getTransfer().getRemotePeerId().getAddress());
-        renderArrow(gc, local, remote, 50, 50);
+        renderArrow(gc, local, remote, 46, 46);
     }
 
     private void renderDownloadRejected(GraphicsContext gc,
@@ -137,7 +137,7 @@ public class RecordViewer extends Application {
 
         Point2D local = peerPositions.get(record.getLocalPeerId().getAddress());
         Point2D remote = peerPositions.get(record.getTransfer().getRemotePeerId().getAddress());
-        renderArrow(gc, remote, local, 50, 50);
+        renderArrow(gc, remote, local, 46, 46);
     }
 
     private void renderDownloadStarted(GraphicsContext gc, RecordDiagnostic.DownloadStartedRecord record) {
@@ -146,7 +146,7 @@ public class RecordViewer extends Application {
 
         Point2D local = peerPositions.get(record.getLocalPeerId().getAddress());
         Point2D remote = peerPositions.get(record.getTransfer().getRemotePeerId().getAddress());
-        renderArrow(gc, remote, local, 50, 50);
+        renderArrow(gc, remote, local, 46, 46);
     }
 
     private void renderDownloadProgressed(GraphicsContext gc, RecordDiagnostic.DownloadProgressedRecord record) {
@@ -155,17 +155,18 @@ public class RecordViewer extends Application {
 
         Point2D local = peerPositions.get(record.getLocalPeerId().getAddress());
         Point2D remote = peerPositions.get(record.getTransfer().getRemotePeerId().getAddress());
-        renderArrow(gc, remote, local, 50, 50);
+        renderArrow(gc, remote, local, 46, 46);
     }
 
 
     private void renderDownloadSucceeded(GraphicsContext gc, RecordDiagnostic.DownloadSucceededRecord record) {
         gc.setStroke(Color.DARKGREEN);
-        gc.setLineWidth(4);
+        gc.setLineWidth(6);
 
         Point2D local = peerPositions.get(record.getLocalPeerId().getAddress());
-
-        gc.strokeArc(local.getX() - 50, local.getY() - 29, 100, 58, 0, 360, ArcType.OPEN);
+        Point2D remote = peerPositions.get(record.getTransfer().getRemotePeerId().getAddress());
+        renderArrow(gc, remote, local, 46, 52);
+        gc.strokeArc(local.getX() - 47, local.getY() - 47, 94, 94, 0, 360, ArcType.OPEN);
     }
 
     private void clearScreen(GraphicsContext gc) {
@@ -209,9 +210,13 @@ public class RecordViewer extends Application {
             double x = peer.getValue().getX();
             double y = peer.getValue().getY();
 
-            gc.setLineWidth(3);
+
             gc.setFill(Color.LIGHTBLUE);
-            gc.fillArc(x - 46, y - 25, 92, 50, 0, 360, ArcType.OPEN);
+            gc.fillArc(x - 46, y - 46, 92, 92, 0, 360, ArcType.OPEN);
+
+            gc.setLineWidth(6);
+            gc.setStroke(Color.CORNFLOWERBLUE);
+            gc.strokeArc(x - 43, y - 43, 86, 86, 0, 360, ArcType.OPEN);
 
             gc.setStroke(Color.BLACK);
             gc.setLineWidth(1.2);
@@ -261,6 +266,7 @@ public class RecordViewer extends Application {
             (observable, oldValue, newValue) -> renderPeerRecord(slider.valueProperty().intValue());
 
     private void setupGui(Stage primaryStage) {
+
         HBox menuBar = new HBox();
         menuBar.setPadding(new Insets(20, 20, 20, 20));
         menuBar.getChildren().add(collectedCheckBox);

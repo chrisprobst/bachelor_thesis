@@ -223,6 +223,22 @@ public final class DataInfo implements Serializable {
     }
 
     /**
+     * Creates an empty copy but keeps a random chunk.
+     *
+     * @return
+     */
+    public DataInfo withOneCompletedChunk() {
+        if (isEmpty()) {
+            throw new IllegalStateException("isEmpty()");
+        }
+
+        int[] completedChunks = getCompletedChunks().toArray();
+        int chunkIndex = (int) Math.round(Math.random() * (completedChunks.length - 1));
+
+        return empty().withChunk(completedChunks[chunkIndex]);
+    }
+
+    /**
      * Checks whether or the other data info is
      * compatible with this compatible.
      *

@@ -54,7 +54,7 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
 
         @Override
         public ByteBuf readChunk(ChannelHandlerContext ctx) throws Exception {
-            ByteBuf byteBuf = Unpooled.buffer(8192);
+            ByteBuf byteBuf = Unpooled.buffer(500);
             getTransferManager().get().process(byteBuf);
             return byteBuf;
         }

@@ -60,6 +60,7 @@ abstract class AbstractNettyPeer extends AbstractPeer implements Body {
     private final LoggingHandler logHandler =
             new LoggingHandler(LogLevel.DEBUG);
 
+    private final WriteThrottle writeThrottle;
 
     protected final ChannelInitializer<Channel> serverChannelInitializer = new ChannelInitializer<Channel>() {
         @Override
@@ -71,7 +72,7 @@ abstract class AbstractNettyPeer extends AbstractPeer implements Body {
                             getDownloadRate(),
                             NETTY_TRAFFIC_INTERVAL),*/
 
-                    new WriteThrottle(getUploadRate()),
+                    writeThrottle,
 
                    /* new ChannelHandlerAdapter() {
                         @Override
@@ -102,7 +103,6 @@ abstract class AbstractNettyPeer extends AbstractPeer implements Body {
                             getDownloadRate(),
                             NETTY_TRAFFIC_INTERVAL),*/
 
-                    new WriteThrottle(getUploadRate()),
 
                     logHandler,
                     channelGroupHandler,
@@ -203,6 +203,7 @@ abstract class AbstractNettyPeer extends AbstractPeer implements Body {
         // Save args
         this.uploadRate = uploadRate;
         this.downloadRate = downloadRate;
+        writeThrottle = new WriteThrottle(uploadRate);
         this.eventLoopGroup = eventLoopGroup.orElseGet(
                 this::createEventGroup);
 

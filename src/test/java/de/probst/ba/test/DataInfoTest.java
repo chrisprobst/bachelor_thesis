@@ -32,6 +32,17 @@ public class DataInfoTest {
     }
 
     @Test
+    public void randomChunk() {
+        DataInfo a = dataInfo
+                .randomize();
+
+        DataInfo b = a.withOneCompletedChunk();
+
+        assertTrue(a.contains(b));
+        assertTrue(b.getCompletedChunkCount() == 1);
+    }
+
+    @Test
     public void union() {
         DataInfo a = dataInfo
                 .withChunk(2)

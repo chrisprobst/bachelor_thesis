@@ -4,9 +4,12 @@ import de.probst.ba.core.logic.Brain;
 import de.probst.ba.core.media.DataInfo;
 import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.util.Tuple;
+import de.probst.ba.core.util.Tuple2;
 
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -44,5 +47,21 @@ public class AbstractOrderedBrain implements Brain {
                 ));
     }
 
+    protected List<Tuple2<PeerId, DataInfo>> removeFromAll(List<Tuple2<PeerId, DataInfo>> remoteDataInfo,
+                                                           DataInfo removeDataInfo) {
+        // Remove the data info from the list
+        remoteDataInfo.replaceAll(t -> Tuple.of(
+                t.first(),
+                t.second().substract(removeDataInfo)));
 
+        // Do remove empty data info
+        remoteDataInfo.removeIf(t -> t.second().isEmpty());
+
+        // Reorder
+        Collections.sort(
+                remoteDataInfo,
+                Comparator.comparing(t -> t.second().getCompletedChunkCount()));
+
+        return remoteDataInfo;
+    }
 }

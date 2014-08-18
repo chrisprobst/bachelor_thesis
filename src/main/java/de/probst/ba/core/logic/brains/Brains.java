@@ -13,4 +13,8 @@ public class Brains {
     public static Brain logarithmicBrain() {
         return new DefaultTotalOrderedBrain();
     }
+
+    public static Brain intelligentBrain() {
+        return new IntelligentOrderedBrain();
+    }
 }

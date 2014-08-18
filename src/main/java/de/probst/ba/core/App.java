@@ -31,30 +31,19 @@ public class App {
 
     public static void main(String[] args) throws InterruptedException, ExecutionException, IOException {
 
+        int timePerTransfer = 10;
+
         // Demo data
         DataInfo dataInfo = new DataInfo(
                 0,
-                1000 * 5,
+                1000 * 10,
                 Optional.empty(),
                 Optional.empty(),
                 "Hello world",
                 10,
                 String::valueOf)
                 .full();
-/*
-        DataInfo dataInfo1 = new DataInfo(
-                1,
-                1000 * 20,
-                Optional.empty(),
-                Optional.empty(),
-                "Hello world 2",
-                20,
-                String::valueOf)
-                .full();
 
-        DataInfo dataInfo2 = dataInfo
-                .withoutChunk(5)
-                .withoutChunk(6);*/
 
         // List of peers
         List<Peer> peers = new LinkedList<>();
@@ -67,7 +56,7 @@ public class App {
         peers.add(Peers.localPeer(1000, 1000,
                 new LocalAddress("P-0"),
                 DataBases.fakeDataBase(dataInfo),
-                Brains.logarithmicBrain(),
+                Brains.intelligentBrain(),
                 diagnostic,
                 Optional.of(eventLoopGroup)));
 
@@ -75,7 +64,7 @@ public class App {
             peers.add(Peers.localPeer(1000, 1000,
                     new LocalAddress("P-" + i),
                     DataBases.fakeDataBase(dataInfo.empty()),
-                    Brains.logarithmicBrain(),
+                    Brains.intelligentBrain(),
                     diagnostic,
                     Optional.of(eventLoopGroup)));
         }
@@ -93,7 +82,7 @@ public class App {
 
         Duration duration = Duration.between(first, Instant.now());
 
-        System.out.println("==>> READY READY READY! It took: " + duration + ", expected: " + (Math.ceil(Math.log(n) / Math.log(2))) * 5);
+        System.out.println("==>> READY READY READY! It took: " + duration + ", expected: " + (Math.ceil(Math.log(n) / Math.log(2))) * timePerTransfer);
 
         // Get records and print
         IOUtil.serialize(new File("/Users/chrisprobst/Desktop/records.dat"),
