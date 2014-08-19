@@ -399,6 +399,13 @@ public final class DataInfo implements Serializable {
     }
 
     /**
+     * @return The percentage of this data info.
+     */
+    public double getPercentage() {
+        return getCompletedChunkCount() / (double) getChunkCount();
+    }
+
+    /**
      * Checks whether or not this data info
      * contains the other data info.
      * <p>

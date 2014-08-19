@@ -52,7 +52,7 @@ public class App {
         RecordDiagnostic diagnostic = new RecordDiagnostic();
 
         // Create both clients
-        peers.add(Peers.localPeer(1000, 1000,
+        peers.add(Peers.localPeer(500, 500,
                 new LocalAddress("P-0"),
                 DataBases.fakeDataBase(dataInfo),
                 Brains.intelligentBrain(),
@@ -60,7 +60,7 @@ public class App {
                 Optional.of(eventLoopGroup)));
 
         for (int i = 1; i <= n - 1; i++) {
-            peers.add(Peers.localPeer(1000, 1000,
+            peers.add(Peers.localPeer(500, 500,
                     new LocalAddress("P-" + i),
                     DataBases.fakeDataBase(dataInfo.empty()),
                     Brains.intelligentBrain(),
