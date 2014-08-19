@@ -21,7 +21,7 @@ public final class Config {
     }
 
     public static long getBrainDelay() {
-        return 500;
+        return 50;
     }
 
     public static TimeUnit getBrainTimeUnit() {

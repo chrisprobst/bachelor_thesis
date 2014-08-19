@@ -29,11 +29,11 @@ public interface Body {
     ScheduledExecutorService getScheduler();
 
     /**
-     * Requests a transfer.
+     * Requests a download transfer.
      *
      * @param transfer
      */
-    void requestTransfer(Transfer transfer);
+    void requestDownload(Transfer transfer);
 
     /**
      * If the brain has an exception,

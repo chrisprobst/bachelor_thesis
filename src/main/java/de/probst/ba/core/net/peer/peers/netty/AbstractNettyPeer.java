@@ -240,7 +240,7 @@ abstract class AbstractNettyPeer extends AbstractPeer implements Body {
     }
 
     @Override
-    public void requestTransfer(Transfer transfer) {
+    public void requestDownload(Transfer transfer) {
         Objects.requireNonNull(transfer);
 
         Channel remotePeer = getChannelGroup().find(
@@ -250,12 +250,15 @@ abstract class AbstractNettyPeer extends AbstractPeer implements Body {
             logger.warn("The brain requested to " +
                     "download from a dead peer");
         } else {
-
-            // Request the download
-            DownloadHandler.request(
-                    this,
-                    remotePeer,
-                    transfer);
+            try {
+                // Request the download
+                DownloadHandler.request(
+                        this,
+                        remotePeer,
+                        transfer);
+            } catch (Exception e) {
+                logger.warn("Failed to request download", e);
+            }
         }
     }
 

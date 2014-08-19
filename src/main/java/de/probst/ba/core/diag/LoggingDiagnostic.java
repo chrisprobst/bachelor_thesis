@@ -56,7 +56,7 @@ public class LoggingDiagnostic implements Diagnostic {
 
     @Override
     public void peerStartedDownload(Peer peer, TransferManager transferManager) {
-        logger.info("Peer " + peer.getNetworkState().getLocalPeerId() + " started download " + transferManager);
+        logger.debug("Peer " + peer.getNetworkState().getLocalPeerId() + " started download " + transferManager);
     }
 
     @Override
@@ -66,7 +66,7 @@ public class LoggingDiagnostic implements Diagnostic {
 
     @Override
     public void peerSucceededDownload(Peer peer, TransferManager transferManager) {
-        logger.info("Peer " + peer.getNetworkState().getLocalPeerId() + " succeeded download " + transferManager);
+        logger.debug("Peer " + peer.getNetworkState().getLocalPeerId() + " succeeded download " + transferManager);
     }
 
     @Override

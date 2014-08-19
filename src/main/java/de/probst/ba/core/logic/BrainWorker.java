@@ -71,7 +71,7 @@ public final class BrainWorker implements Runnable {
                     .entrySet().stream()
                     .filter(p -> p.getValue().size() == 1)
                     .map(p -> p.getValue().get(0))
-                    .forEach(getBody()::requestTransfer);
+                    .forEach(getBody()::requestDownload);
 
             // Rerun later
             schedule();

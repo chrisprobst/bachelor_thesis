@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -52,14 +51,11 @@ public final class NetworkState implements Serializable {
         // Our own data info (create a copy for manipulation)
         Map<String, DataInfo> dataInfo = new HashMap<>(getDataInfo());
 
-        // Group all pending data info by hash
-        Map<String, List<DataInfo>> estimatedDataInfo = getDownloads().values().stream()
-                .map(Transfer::getDataInfo)
-                .collect(Collectors.groupingBy(DataInfo::getHash));
-
         // Make a union of all pending data info to get an estimation
         // of all data info which will be available in the future
-        Map<String, DataInfo> flatEstimatedDataInfo = estimatedDataInfo.entrySet().stream()
+        Map<String, DataInfo> flatEstimatedDataInfo = getDownloads().values().stream()
+                .map(Transfer::getDataInfo)
+                .collect(Collectors.groupingBy(DataInfo::getHash)).entrySet().stream()
                 .collect(Collectors.toMap(
                         Map.Entry::getKey,
                         p -> p.getValue().stream().reduce(DataInfo::union).get()));

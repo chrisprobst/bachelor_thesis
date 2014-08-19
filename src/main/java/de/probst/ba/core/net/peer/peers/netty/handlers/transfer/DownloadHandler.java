@@ -35,9 +35,9 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
                         p -> p.getTransferManager().getTransfer()));
     }
 
-    public static synchronized DownloadHandler request(Peer peer,
-                                                       Channel remotePeer,
-                                                       Transfer transfer) {
+    public static void request(Peer peer,
+                               Channel remotePeer,
+                               Transfer transfer) {
         Objects.requireNonNull(peer);
         Objects.requireNonNull(remotePeer);
         Objects.requireNonNull(transfer);
@@ -55,16 +55,10 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
         DownloadHandler downloadHandler = new DownloadHandler(peer,
                 peer.getDataBase().createTransferManager(transfer));
 
-        // Check that the handler does not exist yet
-        if (remotePeer.pipeline().context(DownloadHandler.class) != null) {
-            throw new IllegalStateException(
-                    "remotePeer.pipeline().context(DownloadHandler.class) != null");
-        }
-
         // Add to pipeline
-        remotePeer.pipeline().addLast(downloadHandler);
-
-        return downloadHandler;
+        remotePeer.pipeline().addLast(
+                downloadHandler.getClass().getName(),
+                downloadHandler);
     }
 
     private static final InternalLogger logger =
