@@ -31,7 +31,7 @@ public class App {
 
     public static void main(String[] args) throws InterruptedException, ExecutionException, IOException {
 
-        int timePerTransfer = 10;
+        int timePerTransfer = 20;
 
         // Demo data
         DataInfo dataInfo = new DataInfo(
@@ -59,7 +59,15 @@ public class App {
                 diagnostic,
                 Optional.of(eventLoopGroup)));
 
-        for (int i = 1; i <= n - 1; i++) {
+        peers.add(Peers.localPeer(500, 500,
+                new LocalAddress("P-1"),
+                DataBases.fakeDataBase(dataInfo),
+                Brains.intelligentBrain(),
+                diagnostic,
+                Optional.of(eventLoopGroup)));
+
+
+        for (int i = 2; i <= n - 1; i++) {
             peers.add(Peers.localPeer(500, 500,
                     new LocalAddress("P-" + i),
                     DataBases.fakeDataBase(dataInfo.empty()),
@@ -90,5 +98,8 @@ public class App {
 
         // Wait for close
         Peers.closeAndWait(peers);
+
+
     }
+
 }

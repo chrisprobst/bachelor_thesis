@@ -87,13 +87,13 @@ public class RecordViewer extends Application {
     }
 
     private boolean isValidRecord(RecordDiagnostic.Record record) {
-        return (record instanceof RecordDiagnostic.CollectedRecord && collectedCheckBox.isSelected()) ||
-                (record instanceof RecordDiagnostic.DownloadRejectedRecord && downloadRejectedCheckBox.isSelected()) ||
-                (record instanceof RecordDiagnostic.DownloadRequestedRecord && downloadRequestedCheckBox.isSelected()) ||
-                (record instanceof RecordDiagnostic.DownloadProgressedRecord && downloadProgressedCheckBox.isSelected()) ||
-                (record instanceof RecordDiagnostic.DownloadStartedRecord && downloadStartedCheckBox.isSelected()) ||
-                (record instanceof RecordDiagnostic.DownloadSucceededRecord && downloadSucceededCheckBox.isSelected()) ||
-                (record instanceof RecordDiagnostic.DownloadFailedRecord && downloadFailedCheckBox.isSelected());
+        return (record.getRecordType() == RecordDiagnostic.RecordType.Collected && collectedCheckBox.isSelected()) ||
+                (record.getRecordType() == RecordDiagnostic.RecordType.DownloadRejected && downloadRejectedCheckBox.isSelected()) ||
+                (record.getRecordType() == RecordDiagnostic.RecordType.DownloadRequested && downloadRequestedCheckBox.isSelected()) ||
+                (record.getRecordType() == RecordDiagnostic.RecordType.DownloadProgressed && downloadProgressedCheckBox.isSelected()) ||
+                (record.getRecordType() == RecordDiagnostic.RecordType.DownloadStarted && downloadStartedCheckBox.isSelected()) ||
+                (record.getRecordType() == RecordDiagnostic.RecordType.DownloadSucceeded && downloadSucceededCheckBox.isSelected()) ||
+                (record.getRecordType() == RecordDiagnostic.RecordType.DownloadFailed && downloadFailedCheckBox.isSelected());
     }
 
     private void renderArrow(GraphicsContext gc, Point2D a, Point2D b, double offset, double backOff) {
@@ -126,7 +126,7 @@ public class RecordViewer extends Application {
     }
 
     private void renderCollectedDataInfo(GraphicsContext gc,
-                                         RecordDiagnostic.CollectedRecord record) {
+                                         RecordDiagnostic.Record record) {
 
         gc.setStroke(Color.GREEN);
         gc.setLineWidth(1);
@@ -137,7 +137,7 @@ public class RecordViewer extends Application {
     }
 
     private void renderDownloadRequested(GraphicsContext gc,
-                                         RecordDiagnostic.DownloadRequestedRecord record) {
+                                         RecordDiagnostic.Record record) {
         gc.setStroke(Color.BLUE);
         gc.setLineWidth(3);
 
@@ -147,7 +147,7 @@ public class RecordViewer extends Application {
     }
 
     private void renderDownloadRejected(GraphicsContext gc,
-                                        RecordDiagnostic.DownloadRejectedRecord record) {
+                                        RecordDiagnostic.Record record) {
         gc.setStroke(Color.RED);
         gc.setLineWidth(3);
 
@@ -156,7 +156,7 @@ public class RecordViewer extends Application {
         renderArrow(gc, remote, local, PEER_RADIUS, PEER_RADIUS);
     }
 
-    private void renderDownloadStarted(GraphicsContext gc, RecordDiagnostic.DownloadStartedRecord record) {
+    private void renderDownloadStarted(GraphicsContext gc, RecordDiagnostic.Record record) {
         gc.setStroke(Color.DARKCYAN);
         gc.setLineWidth(3);
 
@@ -165,7 +165,7 @@ public class RecordViewer extends Application {
         renderArrow(gc, remote, local, PEER_RADIUS, PEER_RADIUS);
     }
 
-    private void renderDownloadProgressed(GraphicsContext gc, RecordDiagnostic.DownloadProgressedRecord record) {
+    private void renderDownloadProgressed(GraphicsContext gc, RecordDiagnostic.Record record) {
         gc.setStroke(Color.ORANGE);
         gc.setLineWidth(3);
 
@@ -174,7 +174,7 @@ public class RecordViewer extends Application {
         renderArrow(gc, remote, local, PEER_RADIUS, PEER_RADIUS);
     }
 
-    private void renderDownloadSucceeded(GraphicsContext gc, RecordDiagnostic.DownloadSucceededRecord record) {
+    private void renderDownloadSucceeded(GraphicsContext gc, RecordDiagnostic.Record record) {
         gc.setStroke(Color.DARKGREEN);
         gc.setLineWidth(6);
 
@@ -244,18 +244,18 @@ public class RecordViewer extends Application {
         gc.strokeText(record.getClass().getSimpleName(), 30, 30);
 
         // Render the record
-        if (record instanceof RecordDiagnostic.CollectedRecord) {
-            renderCollectedDataInfo(gc, (RecordDiagnostic.CollectedRecord) record);
-        } else if (record instanceof RecordDiagnostic.DownloadRequestedRecord) {
-            renderDownloadRequested(gc, (RecordDiagnostic.DownloadRequestedRecord) record);
-        } else if (record instanceof RecordDiagnostic.DownloadStartedRecord) {
-            renderDownloadStarted(gc, (RecordDiagnostic.DownloadStartedRecord) record);
-        } else if (record instanceof RecordDiagnostic.DownloadSucceededRecord) {
-            renderDownloadSucceeded(gc, (RecordDiagnostic.DownloadSucceededRecord) record);
-        } else if (record instanceof RecordDiagnostic.DownloadRejectedRecord) {
-            renderDownloadRejected(gc, (RecordDiagnostic.DownloadRejectedRecord) record);
-        } else if (record instanceof RecordDiagnostic.DownloadProgressedRecord) {
-            renderDownloadProgressed(gc, (RecordDiagnostic.DownloadProgressedRecord) record);
+        if (record.getRecordType() == RecordDiagnostic.RecordType.Collected) {
+            renderCollectedDataInfo(gc, record);
+        } else if (record.getRecordType() == RecordDiagnostic.RecordType.DownloadRequested) {
+            renderDownloadRequested(gc, record);
+        } else if (record.getRecordType() == RecordDiagnostic.RecordType.DownloadStarted) {
+            renderDownloadStarted(gc, record);
+        } else if (record.getRecordType() == RecordDiagnostic.RecordType.DownloadSucceeded) {
+            renderDownloadSucceeded(gc, record);
+        } else if (record.getRecordType() == RecordDiagnostic.RecordType.DownloadRejected) {
+            renderDownloadRejected(gc, record);
+        } else if (record.getRecordType() == RecordDiagnostic.RecordType.DownloadProgressed) {
+            renderDownloadProgressed(gc, record);
         }
 
         // Render all peers afterwards
@@ -315,23 +315,24 @@ public class RecordViewer extends Application {
                 .collect(Collectors.toList());
         peerDataInfo = new ArrayList<>(filteredRecords.size());
 
+        // Init peer data info
         Map<SocketAddress, DataInfo> last = null;
-        for (int i = 0; i < filteredRecords.size(); i++) {
-            if (filteredRecords.get(i) instanceof RecordDiagnostic.DownloadSucceededRecord) {
-                RecordDiagnostic.TransferRecord record =
-                        (RecordDiagnostic.TransferRecord) filteredRecords.get(i);
+        for (RecordDiagnostic.Record record : filteredRecords) {
+            if (record.getRecordType() == RecordDiagnostic.RecordType.DownloadStarted ||
+                    record.getRecordType() == RecordDiagnostic.RecordType.DownloadProgressed ||
+                    record.getRecordType() == RecordDiagnostic.RecordType.DownloadSucceeded) {
 
                 if (last != null) {
                     last = new HashMap<>(last);
                     last.merge(record.getLocalPeerId().getAddress(),
-                            record.getTransfer().getDataInfo(),
+                            record.getTransfer().getCompletedDataInfo(),
                             DataInfo::union);
                     peerDataInfo.add(last);
                 } else {
                     last = new HashMap<>();
                     for (SocketAddress addr : peerPositions.keySet()) {
                         last.put(addr, record.getLocalPeerId().getAddress().equals(addr) ?
-                                record.getTransfer().getDataInfo() :
+                                record.getTransfer().getCompletedDataInfo() :
                                 record.getTransfer().getDataInfo().empty());
                     }
 

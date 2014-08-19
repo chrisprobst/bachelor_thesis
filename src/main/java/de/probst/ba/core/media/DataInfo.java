@@ -201,6 +201,20 @@ public final class DataInfo implements Serializable {
     }
 
     /**
+     * Creates a copy and sets the given chunks
+     * to true.
+     *
+     * @param indexStream
+     * @return
+     */
+    public DataInfo withChunks(IntStream indexStream) {
+        Objects.requireNonNull(indexStream);
+        DataInfo copy = duplicate();
+        indexStream.forEach(copy.chunks::set);
+        return copy;
+    }
+
+    /**
      * Creates a copy and sets the given chunk
      * to false.
      *

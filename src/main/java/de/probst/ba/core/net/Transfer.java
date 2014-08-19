@@ -147,6 +147,13 @@ public final class Transfer implements Serializable {
     }
 
     /**
+     * @return A data info which represents all finished chunks.
+     */
+    public DataInfo getCompletedDataInfo() {
+        return getDataInfo().empty().withChunks(getCompletedChunks());
+    }
+
+    /**
      * @return Whether or not this transfer is completed.
      */
     public boolean isCompleted() {
