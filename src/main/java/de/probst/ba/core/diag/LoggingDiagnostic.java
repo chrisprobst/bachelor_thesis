@@ -30,7 +30,7 @@ public class LoggingDiagnostic implements Diagnostic {
 
     @Override
     public void peerRejectedUpload(Peer peer, TransferManager transferManager, Throwable cause) {
-        logger.debug("Peer " + peer.getNetworkState().getLocalPeerId() + " rejected upload " + transferManager + ": " + cause);
+        logger.debug("Peer " + peer.getNetworkState().getLocalPeerId() + " rejected upload " + transferManager + ", cause: " + cause);
     }
 
     @Override
@@ -50,13 +50,13 @@ public class LoggingDiagnostic implements Diagnostic {
 
     @Override
     public void peerRejectedDownload(Peer peer, TransferManager transferManager, Throwable cause) {
-        logger.debug("Peer " + peer.getNetworkState().getLocalPeerId() + " requested the download " + transferManager +
+        logger.info("Peer " + peer.getNetworkState().getLocalPeerId() + " requested the download " + transferManager +
                 ", but was rejected");
     }
 
     @Override
     public void peerStartedDownload(Peer peer, TransferManager transferManager) {
-        logger.debug("Peer " + peer.getNetworkState().getLocalPeerId() + " started download " + transferManager);
+        logger.info("Peer " + peer.getNetworkState().getLocalPeerId() + " started download " + transferManager);
     }
 
     @Override
@@ -66,6 +66,11 @@ public class LoggingDiagnostic implements Diagnostic {
 
     @Override
     public void peerSucceededDownload(Peer peer, TransferManager transferManager) {
-        logger.debug("Peer " + peer.getNetworkState().getLocalPeerId() + " succeeded download " + transferManager);
+        logger.info("Peer " + peer.getNetworkState().getLocalPeerId() + " succeeded download " + transferManager);
+    }
+
+    @Override
+    public void peerFailedDownload(Peer peer, TransferManager transferManager, Throwable cause) {
+        logger.info("Peer " + peer.getNetworkState().getLocalPeerId() + " failed download " + transferManager + ", cause: " + cause);
     }
 }

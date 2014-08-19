@@ -129,7 +129,8 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
                                    UploadRequestMessage msg) throws Exception {
 
         if (!isUploadRequestMessageValid(msg)) {
-            Exception cause = new IllegalArgumentException("Upload request message null or empty");
+            Exception cause = new IllegalArgumentException(
+                    "Upload request message null or empty");
 
             logger.warn(cause.getMessage());
             ctx.writeAndFlush(new UploadRejectedMessage(cause));

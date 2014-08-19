@@ -76,10 +76,6 @@ public class IntelligentOrderedBrain extends AbstractOrderedBrain {
 
             // Add the transfer
             transfers.add(Transfer.download(next.first(), nextDataInfo));
-
-            if (remoteDataInfo.size() == 1) {
-                break;
-            }
         }
 
         logger.debug(networkState.getLocalPeerId() + ": Requesting " + transfers);

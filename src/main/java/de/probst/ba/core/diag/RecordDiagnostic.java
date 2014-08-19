@@ -149,6 +149,27 @@ public class RecordDiagnostic extends LoggingDiagnostic {
         }
     }
 
+    public final static class DownloadFailedRecord extends TransferRecord {
+        private final Throwable cause;
+
+        public DownloadFailedRecord(PeerId localPeerId,
+                                    Transfer transfer,
+                                    Throwable cause) {
+            super(localPeerId, transfer);
+            Objects.requireNonNull(cause);
+            this.cause = cause;
+        }
+
+        public Throwable getCause() {
+            return cause;
+        }
+
+        @Override
+        public String toString() {
+            return super.toString() + " with cause: " + cause;
+        }
+    }
+
     public final static class DownloadStartedRecord extends TransferRecord {
         public DownloadStartedRecord(PeerId localPeerId,
                                      Transfer transfer) {
@@ -274,5 +295,11 @@ public class RecordDiagnostic extends LoggingDiagnostic {
     public void peerSucceededDownload(Peer peer, TransferManager transferManager) {
         super.peerSucceededDownload(peer, transferManager);
         records.add(new DownloadSucceededRecord(peer.getNetworkState().getLocalPeerId(), transferManager.getTransfer()));
+    }
+
+    @Override
+    public void peerFailedDownload(Peer peer, TransferManager transferManager, Throwable cause) {
+        super.peerFailedDownload(peer, transferManager, cause);
+        records.add(new DownloadFailedRecord(peer.getNetworkState().getLocalPeerId(), transferManager.getTransfer(), cause));
     }
 }

@@ -26,7 +26,7 @@ import java.util.concurrent.ExecutionException;
  */
 public class App {
 
-    public static int n = 6;
+    public static int n = 4;
     public static CountDownLatch countDownLatch = new CountDownLatch(n);
 
     public static void main(String[] args) throws InterruptedException, ExecutionException, IOException {

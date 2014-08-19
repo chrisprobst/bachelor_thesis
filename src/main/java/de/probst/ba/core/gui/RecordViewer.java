@@ -33,7 +33,7 @@ import java.util.stream.Collectors;
  */
 public class RecordViewer extends Application {
 
-    public static int width = 1200;
+    public static int width = 1300;
     public static int height = 850;
     private List<RecordDiagnostic.Record> rawRecords;
     private List<RecordDiagnostic.Record> filteredRecords;
@@ -47,6 +47,7 @@ public class RecordViewer extends Application {
     private CheckBox downloadProgressedCheckBox = new CheckBox("Progressed downloads");
     private CheckBox downloadStartedCheckBox = new CheckBox("Started downloads");
     private CheckBox downloadSucceededCheckBox = new CheckBox("Succeeded downloads");
+    private CheckBox downloadFailedCheckBox = new CheckBox("Failed downloads");
     private CheckBox clearCheckBox = new CheckBox("Clear canvas");
 
     private void initPeers() {
@@ -76,7 +77,8 @@ public class RecordViewer extends Application {
                 (record instanceof RecordDiagnostic.DownloadRequestedRecord && downloadRequestedCheckBox.isSelected()) ||
                 (record instanceof RecordDiagnostic.DownloadProgressedRecord && downloadProgressedCheckBox.isSelected()) ||
                 (record instanceof RecordDiagnostic.DownloadStartedRecord && downloadStartedCheckBox.isSelected()) ||
-                (record instanceof RecordDiagnostic.DownloadSucceededRecord && downloadSucceededCheckBox.isSelected());
+                (record instanceof RecordDiagnostic.DownloadSucceededRecord && downloadSucceededCheckBox.isSelected()) ||
+                (record instanceof RecordDiagnostic.DownloadFailedRecord && downloadFailedCheckBox.isSelected());
     }
 
     private void renderArrow(GraphicsContext gc, Point2D a, Point2D b, double offset, double backOff) {
@@ -275,6 +277,7 @@ public class RecordViewer extends Application {
         menuBar.getChildren().add(downloadProgressedCheckBox);
         menuBar.getChildren().add(downloadStartedCheckBox);
         menuBar.getChildren().add(downloadSucceededCheckBox);
+        menuBar.getChildren().add(downloadFailedCheckBox);
         menuBar.getChildren().add(clearCheckBox);
         clearCheckBox.setSelected(true);
 
@@ -303,6 +306,9 @@ public class RecordViewer extends Application {
 
         downloadSucceededCheckBox.selectedProperty().addListener(guiSetupListener);
         downloadSucceededCheckBox.setPadding(new Insets(5, 5, 5, 5));
+
+        downloadFailedCheckBox.selectedProperty().addListener(guiSetupListener);
+        downloadFailedCheckBox.setPadding(new Insets(5, 5, 5, 5));
 
         clearCheckBox.setPadding(new Insets(5, 5, 5, 5));
         clearCheckBox.selectedProperty().addListener(clearListener);

@@ -150,33 +150,56 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
             // Consume the whole buffer
             while (buffer.readableBytes() > 0) {
 
-                if (!receivedBuffer) {
-                    receivedBuffer = true;
-                    // DIAGNOSTIC
-                    getPeer().getDiagnostic().peerStartedDownload(
-                            getPeer(), getTransferManager());
-                }
+                boolean completed = false;
+                try {
+                    // First buffer ? -> Download started!
+                    if (!receivedBuffer) {
+                        receivedBuffer = true;
+                        logger.debug("Download started: " +
+                                getTransferManager().getTransfer());
 
-                // Simply process the transfer manager
-                if (!getTransferManager().process(buffer)) {
-                    logger.debug("Download completed: " +
-                            getTransferManager().getTransfer());
+                        // DIAGNOSTIC
+                        getPeer().getDiagnostic().peerStartedDownload(
+                                getPeer(), getTransferManager());
+                    }
 
-                    // We are ready when there
-                    // are no further chunks to
-                    // download
-                    remove(ctx);
+                    // Process the buffer and check for completion
+                    completed = !getTransferManager().process(buffer);
 
-                    // DIAGNOSTIC
-                    getPeer().getDiagnostic().peerSucceededDownload(
-                            getPeer(), getTransferManager());
-                } else {
                     logger.debug("Download processed: " +
                             getTransferManager().getTransfer());
 
                     // DIAGNOSTIC
                     getPeer().getDiagnostic().peerProgressedDownload(
                             getPeer(), getTransferManager());
+
+                    // Simply process the transfer manager
+                    if (completed) {
+                        logger.debug("Download completed: " +
+                                getTransferManager().getTransfer());
+
+                        // DIAGNOSTIC
+                        getPeer().getDiagnostic().peerSucceededDownload(
+                                getPeer(), getTransferManager());
+                    }
+                } catch (Exception e) {
+                    completed = true;
+
+                    logger.debug("Download failed: " +
+                            getTransferManager().getTransfer() +
+                            ", cause:" + e);
+
+                    // DIAGNOSTIC
+                    getPeer().getDiagnostic().peerFailedDownload(
+                            getPeer(), getTransferManager(), e);
+                } finally {
+                    if (completed) {
+
+                        // We are ready when there
+                        // are no further chunks to
+                        // download
+                        remove(ctx);
+                    }
                 }
             }
         } else {

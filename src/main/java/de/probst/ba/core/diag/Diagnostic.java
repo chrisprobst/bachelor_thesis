@@ -52,4 +52,8 @@ public interface Diagnostic {
 
     void peerSucceededDownload(Peer peer,
                                TransferManager transferManager);
+
+    void peerFailedDownload(Peer peer,
+                            TransferManager transferManager,
+                            Throwable cause);
 }
