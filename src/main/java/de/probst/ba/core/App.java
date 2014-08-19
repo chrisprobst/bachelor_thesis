@@ -26,21 +26,21 @@ import java.util.concurrent.ExecutionException;
  */
 public class App {
 
-    public static int n = 6;
+    public static int n = 11;
     public static CountDownLatch countDownLatch = new CountDownLatch(n);
 
     public static void main(String[] args) throws InterruptedException, ExecutionException, IOException {
 
-        int timePerTransfer = 20;
+        int timePerTransfer = 80;
 
         // Demo data
         DataInfo dataInfo = new DataInfo(
                 0,
-                100 * 100,
+                80 * 1000,
                 Optional.empty(),
                 Optional.empty(),
                 "Hello world",
-                100,
+                80,
                 String::valueOf)
                 .full();
 
@@ -52,23 +52,15 @@ public class App {
         RecordDiagnostic diagnostic = new RecordDiagnostic();
 
         // Create both clients
-        peers.add(Peers.localPeer(500, 500,
+        peers.add(Peers.localPeer(1000, 1000,
                 new LocalAddress("P-0"),
                 DataBases.fakeDataBase(dataInfo),
                 Brains.intelligentBrain(),
                 diagnostic,
                 Optional.of(eventLoopGroup)));
 
-        peers.add(Peers.localPeer(500, 500,
-                new LocalAddress("P-1"),
-                DataBases.fakeDataBase(dataInfo),
-                Brains.intelligentBrain(),
-                diagnostic,
-                Optional.of(eventLoopGroup)));
-
-
-        for (int i = 2; i <= n - 1; i++) {
-            peers.add(Peers.localPeer(500, 500,
+        for (int i = 1; i <= n - 1; i++) {
+            peers.add(Peers.localPeer(1000, 1000,
                     new LocalAddress("P-" + i),
                     DataBases.fakeDataBase(dataInfo.empty()),
                     Brains.intelligentBrain(),
@@ -89,7 +81,7 @@ public class App {
 
         Duration duration = Duration.between(first, Instant.now());
 
-        System.out.println("==>> READY READY READY! It took: " + duration + ", expected: " + (Math.ceil(Math.log(n) / Math.log(2))) * timePerTransfer);
+        System.out.println("==>> READY READY READY! It took: " + duration + ", INT expected: " + timePerTransfer * 2 + ", LOG expected: " + (Math.ceil(Math.log(n) / Math.log(2))) * timePerTransfer);
 
         // Get records and print
         IOUtil.serialize(new File("/Users/chrisprobst/Desktop/records.dat"),
