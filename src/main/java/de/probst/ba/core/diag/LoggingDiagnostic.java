@@ -13,7 +13,7 @@ import java.util.Optional;
 /**
  * Created by chrisprobst on 18.08.14.
  */
-public class LoggingDiagnostic implements Diagnostic {
+public final class LoggingDiagnostic implements Diagnostic {
 
     private static final Logger logger =
             LoggerFactory.getLogger(LoggingDiagnostic.class);
@@ -26,6 +26,11 @@ public class LoggingDiagnostic implements Diagnostic {
     @Override
     public void collected(Peer peer, PeerId remotePeerId, Optional<Map<String, DataInfo>> dataInfo) {
         logger.debug("Peer " + peer.getNetworkState().getLocalPeerId() + " collected data from " + remotePeerId + ": " + dataInfo);
+    }
+
+    @Override
+    public void interestAdded(Peer peer, PeerId remotePeerId, DataInfo addedDataInfo) {
+        logger.info("Peer " + peer.getNetworkState().getLocalPeerId() + " added interest for " + addedDataInfo + " from " + remotePeerId);
     }
 
     @Override

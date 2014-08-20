@@ -17,7 +17,7 @@ import java.util.concurrent.ExecutionException;
 /**
  * Created by chrisprobst on 17.08.14.
  */
-public class Peers {
+public final class Peers {
 
     private Peers() {
     }

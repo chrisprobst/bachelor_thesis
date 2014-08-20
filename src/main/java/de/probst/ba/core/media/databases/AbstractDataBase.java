@@ -6,8 +6,11 @@ import io.netty.buffer.ByteBuf;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 /**
  * Created by chrisprobst on 15.08.14.
@@ -35,14 +38,25 @@ public abstract class AbstractDataBase implements DataBase {
     }
 
     @Override
-    public synchronized boolean addInterest(DataInfo dataInfo) {
+    public synchronized List<Boolean> addInterestsIf(List<DataInfo> dataInfo,
+                                                     Predicate<? super DataInfo> predicate) {
         Objects.requireNonNull(dataInfo);
+        Objects.requireNonNull(predicate);
 
-        if (!dataInfo.isEmpty()) {
-            throw new IllegalArgumentException("!dataInfo.isEmpty()");
-        }
+        return dataInfo.stream()
+                .map(x -> {
+                    if (!x.isEmpty()) {
+                        throw new IllegalArgumentException("!x.isEmpty()");
+                    }
 
-        return this.dataInfo.putIfAbsent(dataInfo.getHash(), dataInfo) == null;
+                    if (!this.dataInfo.containsKey(x.getHash()) && predicate.test(x)) {
+                        this.dataInfo.put(x.getHash(), x);
+                        return true;
+                    }
+
+                    return false;
+                })
+                .collect(Collectors.toList());
     }
 
     @Override

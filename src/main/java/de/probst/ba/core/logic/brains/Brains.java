@@ -5,7 +5,7 @@ import de.probst.ba.core.logic.Brain;
 /**
  * Created by chrisprobst on 17.08.14.
  */
-public class Brains {
+public final class Brains {
 
     private Brains() {
     }

@@ -63,6 +63,11 @@ public interface Brain {
         return Optional.of(networkState.getDataInfo());
     }
 
+    default boolean addInterest(PeerId remotePeerId,
+                                DataInfo newDataInfo) {
+        return true;
+    }
+
     /**
      * Returns the maximum number of active uploads running in
      * parallel.

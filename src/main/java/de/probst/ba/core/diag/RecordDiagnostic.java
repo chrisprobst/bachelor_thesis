@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 public class RecordDiagnostic implements Diagnostic {
 
     public enum RecordType {
-        Announced, Collected,
+        Announced, Collected, InterestAdded,
         UploadStarted, UploadRejected, UploadSucceeded,
         DownloadRequested, DownloadRejected, DownloadStarted, DownloadProgressed, DownloadSucceeded, DownloadFailed,
         DataCompleted
@@ -33,55 +33,60 @@ public class RecordDiagnostic implements Diagnostic {
         // DATA INFO
 
         public static Record announced(PeerId peerId, PeerId remotePeerId, Map<String, DataInfo> dataInfo) {
-            return new Record(RecordType.Announced, peerId, remotePeerId, dataInfo, null, null, null);
+            return new Record(RecordType.Announced, peerId, remotePeerId, dataInfo, null, null, null, null);
         }
 
         public static Record collected(PeerId peerId, PeerId remotePeerId, Map<String, DataInfo> dataInfo) {
-            return new Record(RecordType.Collected, peerId, remotePeerId, dataInfo, null, null, null);
+            return new Record(RecordType.Collected, peerId, remotePeerId, dataInfo, null, null, null, null);
         }
+
+        public static Record interestAdded(PeerId peerId, PeerId remotePeerId, DataInfo addedDataInfo) {
+            return new Record(RecordType.InterestAdded, peerId, remotePeerId, null, addedDataInfo, null, null, null);
+        }
+
 
         // UPLOAD
 
         public static Record uploadStarted(PeerId peerId, Transfer transfer) {
-            return new Record(RecordType.UploadStarted, peerId, null, null, null, transfer, null);
+            return new Record(RecordType.UploadStarted, peerId, null, null, null, null, transfer, null);
         }
 
         public static Record uploadRejected(PeerId peerId, Transfer transfer, Throwable cause) {
-            return new Record(RecordType.UploadRejected, peerId, null, null, null, transfer, cause);
+            return new Record(RecordType.UploadRejected, peerId, null, null, null, null, transfer, cause);
         }
 
         public static Record uploadSucceeded(PeerId peerId, Transfer transfer) {
-            return new Record(RecordType.UploadSucceeded, peerId, null, null, null, transfer, null);
+            return new Record(RecordType.UploadSucceeded, peerId, null, null, null, null, transfer, null);
         }
 
         // DOWNLOAD
 
         public static Record downloadRequested(PeerId peerId, Transfer transfer) {
-            return new Record(RecordType.DownloadRequested, peerId, null, null, null, transfer, null);
+            return new Record(RecordType.DownloadRequested, peerId, null, null, null, null, transfer, null);
         }
 
         public static Record downloadRejected(PeerId peerId, Transfer transfer, Throwable cause) {
-            return new Record(RecordType.DownloadRejected, peerId, null, null, null, transfer, cause);
+            return new Record(RecordType.DownloadRejected, peerId, null, null, null, null, transfer, cause);
         }
 
         public static Record downloadStarted(PeerId peerId, Transfer transfer) {
-            return new Record(RecordType.DownloadStarted, peerId, null, null, null, transfer, null);
+            return new Record(RecordType.DownloadStarted, peerId, null, null, null, null, transfer, null);
         }
 
         public static Record downloadProgressed(PeerId peerId, Transfer transfer) {
-            return new Record(RecordType.DownloadProgressed, peerId, null, null, null, transfer, null);
+            return new Record(RecordType.DownloadProgressed, peerId, null, null, null, null, transfer, null);
         }
 
         public static Record downloadSucceeded(PeerId peerId, Transfer transfer) {
-            return new Record(RecordType.DownloadSucceeded, peerId, null, null, null, transfer, null);
+            return new Record(RecordType.DownloadSucceeded, peerId, null, null, null, null, transfer, null);
         }
 
         public static Record downloadFailed(PeerId peerId, Transfer transfer, Throwable cause) {
-            return new Record(RecordType.DownloadFailed, peerId, null, null, null, transfer, cause);
+            return new Record(RecordType.DownloadFailed, peerId, null, null, null, null, transfer, cause);
         }
 
         public static Record dataCompleted(PeerId peerId, DataInfo completedDataInfo, Transfer lastTransfer) {
-            return new Record(RecordType.DataCompleted, peerId, null, null, completedDataInfo, lastTransfer, null);
+            return new Record(RecordType.DataCompleted, peerId, null, null, null, completedDataInfo, lastTransfer, null);
         }
 
         private final Instant timeStamp = Instant.now();
@@ -89,6 +94,7 @@ public class RecordDiagnostic implements Diagnostic {
         private final PeerId localPeerId;
         private final PeerId remotePeerId;
         private final Map<String, DataInfo> dataInfo;
+        private final DataInfo addedDataInfo;
         private final DataInfo completedDataInfo;
         private final Transfer transfer;
         private final Throwable cause;
@@ -97,6 +103,7 @@ public class RecordDiagnostic implements Diagnostic {
                        PeerId localPeerId,
                        PeerId remotePeerId,
                        Map<String, DataInfo> dataInfo,
+                       DataInfo addedDataInfo,
                        DataInfo completedDataInfo,
                        Transfer transfer,
                        Throwable cause) {
@@ -108,6 +115,7 @@ public class RecordDiagnostic implements Diagnostic {
                     transfer.getRemotePeerId() : null);
             this.recordType = recordType;
             this.dataInfo = dataInfo;
+            this.addedDataInfo = addedDataInfo;
             this.completedDataInfo = completedDataInfo;
             this.transfer = transfer;
             this.cause = cause;
@@ -133,6 +141,10 @@ public class RecordDiagnostic implements Diagnostic {
             return dataInfo;
         }
 
+        public DataInfo getAddedDataInfo() {
+            return addedDataInfo;
+        }
+
         public DataInfo getCompletedDataInfo() {
             return completedDataInfo;
         }
@@ -153,6 +165,7 @@ public class RecordDiagnostic implements Diagnostic {
                     ", localPeerId=" + localPeerId +
                     ", remotePeerId=" + remotePeerId +
                     ", dataInfo=" + dataInfo +
+                    ", addedDataInfo=" + addedDataInfo +
                     ", completedDataInfo=" + completedDataInfo +
                     ", transfer=" + transfer +
                     ", cause=" + cause +
@@ -183,6 +196,11 @@ public class RecordDiagnostic implements Diagnostic {
     @Override
     public void collected(Peer peer, PeerId remotePeerId, Optional<Map<String, DataInfo>> dataInfo) {
         records.add(Record.collected(peer.getNetworkState().getLocalPeerId(), remotePeerId, dataInfo.orElse(null)));
+    }
+
+    @Override
+    public void interestAdded(Peer peer, PeerId remotePeerId, DataInfo addedDataInfo) {
+        records.add(Record.interestAdded(peer.getNetworkState().getLocalPeerId(), remotePeerId, addedDataInfo));
     }
 
     @Override

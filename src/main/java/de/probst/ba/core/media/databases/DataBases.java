@@ -6,7 +6,7 @@ import de.probst.ba.core.media.DataInfo;
 /**
  * Created by chrisprobst on 17.08.14.
  */
-public class DataBases {
+public final class DataBases {
 
     private DataBases() {
 

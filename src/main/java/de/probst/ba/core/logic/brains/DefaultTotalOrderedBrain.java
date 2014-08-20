@@ -1,5 +1,7 @@
 package de.probst.ba.core.logic.brains;
 
+import de.probst.ba.core.logic.Brain;
+import de.probst.ba.core.logic.Transform;
 import de.probst.ba.core.media.DataInfo;
 import de.probst.ba.core.net.NetworkState;
 import de.probst.ba.core.net.Transfer;
@@ -22,7 +24,7 @@ import java.util.Optional;
  * <p>
  * Created by chrisprobst on 16.08.14.
  */
-class DefaultTotalOrderedBrain extends AbstractOrderedBrain {
+class DefaultTotalOrderedBrain implements Brain {
 
     private static final Logger logger =
             LoggerFactory.getLogger(DefaultTotalOrderedBrain.class);
@@ -45,7 +47,7 @@ class DefaultTotalOrderedBrain extends AbstractOrderedBrain {
         }
 
         // We are only interested in the first data info
-        Map<PeerId, DataInfo> nextOrderedDataInfo = firstOrderedById(
+        Map<PeerId, DataInfo> nextOrderedDataInfo = Transform.firstOrderedById(
                 networkState.getEstimatedMissingRemoteDataInfo(),
                 lowestId.get());
 

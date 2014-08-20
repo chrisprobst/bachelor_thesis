@@ -6,8 +6,10 @@ import io.netty.buffer.ByteBuf;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Predicate;
 
 /**
  * A data base manages data info and the content.
@@ -23,18 +25,14 @@ public interface DataBase extends Closeable {
     Map<String, DataInfo> getDataInfo();
 
     /**
-     * Add a new data info interest.
-     * This means that you have to add
-     * a data info first before processing
-     * any buffers.
-     * <p>
-     * The data info must be empty.
+     * Adds interests.
      *
      * @param dataInfo
-     * @return True if the data info was not already
-     * added, otherwise false.
+     * @param predicate
+     * @return
      */
-    boolean addInterest(DataInfo dataInfo);
+    List<Boolean> addInterestsIf(List<DataInfo> dataInfo,
+                                 Predicate<? super DataInfo> predicate);
 
     /**
      * @param hash

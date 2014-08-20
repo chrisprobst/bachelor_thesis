@@ -23,6 +23,10 @@ public interface Diagnostic {
                    PeerId remotePeerId,
                    Optional<Map<String, DataInfo>> dataInfo);
 
+    void interestAdded(Peer peer,
+                       PeerId remotePeerId,
+                       DataInfo addedDataInfo);
+
     // UPLOAD
 
     void uploadRejected(Peer peer,

@@ -84,7 +84,7 @@ public class App {
         for (int i = 1; i <= n - 1; i++) {
             peers.add(Peers.localPeer(1000, 1000,
                     new LocalAddress("P-" + i),
-                    DataBases.fakeDataBase(dataInfo.empty()),
+                    DataBases.fakeDataBase(),
                     Brains.intelligentBrain(),
                     combined,
                     Optional.of(eventLoopGroup)));

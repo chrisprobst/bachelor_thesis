@@ -1,6 +1,5 @@
-package de.probst.ba.core.logic.brains;
+package de.probst.ba.core.logic;
 
-import de.probst.ba.core.logic.Brain;
 import de.probst.ba.core.media.DataInfo;
 import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.util.Tuple;
@@ -14,9 +13,12 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * Created by chrisprobst on 16.08.14.
+ * Created by chrisprobst on 20.08.14.
  */
-class AbstractOrderedBrain implements Brain {
+public final class Transform {
+
+    private Transform() {
+    }
 
     /**
      * This method returns a map with remote peer ids mapped
@@ -29,8 +31,8 @@ class AbstractOrderedBrain implements Brain {
      * @param dataInfoId
      * @return
      */
-    protected Map<PeerId, DataInfo> firstOrderedById(Map<PeerId, Map<String, DataInfo>> remoteDataInfo,
-                                                     long dataInfoId) {
+    public static Map<PeerId, DataInfo> firstOrderedById(Map<PeerId, Map<String, DataInfo>> remoteDataInfo,
+                                                         long dataInfoId) {
         return remoteDataInfo.entrySet().stream()
                 .map(p -> Tuple.of(
                         p.getKey(),
@@ -47,8 +49,8 @@ class AbstractOrderedBrain implements Brain {
                 ));
     }
 
-    protected List<Tuple2<PeerId, DataInfo>> removeFromAll(List<Tuple2<PeerId, DataInfo>> remoteDataInfo,
-                                                           DataInfo removeDataInfo) {
+    public static List<Tuple2<PeerId, DataInfo>> removeFromAll(List<Tuple2<PeerId, DataInfo>> remoteDataInfo,
+                                                               DataInfo removeDataInfo) {
         // Remove the data info from the list
         remoteDataInfo.replaceAll(t -> Tuple.of(
                 t.first(),

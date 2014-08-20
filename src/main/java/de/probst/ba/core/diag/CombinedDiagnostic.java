@@ -34,6 +34,11 @@ public final class CombinedDiagnostic implements Diagnostic {
     }
 
     @Override
+    public void interestAdded(Peer peer, PeerId remotePeerId, DataInfo addedDataInfo) {
+        diagnosticList.forEach(d -> d.interestAdded(peer, remotePeerId, addedDataInfo));
+    }
+
+    @Override
     public void uploadRejected(Peer peer, TransferManager transferManager, Throwable cause) {
         diagnosticList.forEach(d -> d.uploadRejected(peer, transferManager, cause));
     }

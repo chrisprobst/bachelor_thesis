@@ -13,6 +13,7 @@ import io.netty.channel.group.ChannelGroup;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -39,6 +40,30 @@ public final class CollectHandler extends SimpleChannelInboundHandler<DataInfoMe
     private volatile Optional<Tuple2<PeerId, Map<String, DataInfo>>> remoteDataInfo =
             Optional.empty();
 
+    private void updateInterests() {
+        if (remoteDataInfo.isPresent()) {
+            PeerId remotePeerId = remoteDataInfo.get().first();
+
+            List<DataInfo> dataInfoList = remoteDataInfo.get().second()
+                    .values()
+                    .stream()
+                    .map(DataInfo::empty)
+                    .collect(Collectors.toList());
+
+            List<Boolean> succeeded = getPeer().getDataBase().addInterestsIf(
+                    dataInfoList, y -> getPeer().getBrain().addInterest(remotePeerId, y));
+
+            for (int i = 0; i < succeeded.size(); i++) {
+                if (succeeded.get(i)) {
+
+                    // DIAGNOSTIC
+                    getPeer().getDiagnostic().interestAdded(
+                            getPeer(), remotePeerId, dataInfoList.get(i));
+                }
+            }
+        }
+    }
+
     private boolean isDataInfoMessageValid(DataInfoMessage dataInfoMessage) {
         return dataInfoMessage != null &&
                 dataInfoMessage.getDataInfo() != null &&
@@ -50,16 +75,23 @@ public final class CollectHandler extends SimpleChannelInboundHandler<DataInfoMe
     protected void messageReceived(ChannelHandlerContext ctx, DataInfoMessage msg) throws Exception {
         PeerId peerId = new NettyPeerId(ctx.channel());
 
+        boolean update = false;
         if (!isDataInfoMessageValid(msg)) {
             remoteDataInfo = Optional.empty();
         } else {
             remoteDataInfo = Optional.of(Tuple2.of(
                     peerId,
                     Collections.unmodifiableMap(new HashMap<>(msg.getDataInfo().get()))));
+            update = true;
         }
 
+        // DIAGNOSTIC
         getPeer().getDiagnostic().collected(
                 getPeer(), peerId, getRemoteDataInfo().map(Tuple2::second));
+
+        if (update) {
+            updateInterests();
+        }
     }
 
     public CollectHandler(Peer peer) {

@@ -1,5 +1,7 @@
 package de.probst.ba.core.logic.brains;
 
+import de.probst.ba.core.logic.Brain;
+import de.probst.ba.core.logic.Transform;
 import de.probst.ba.core.media.DataInfo;
 import de.probst.ba.core.net.NetworkState;
 import de.probst.ba.core.net.Transfer;
@@ -18,7 +20,7 @@ import java.util.stream.Collectors;
 /**
  * Created by chrisprobst on 18.08.14.
  */
-class IntelligentOrderedBrain extends AbstractOrderedBrain {
+class IntelligentOrderedBrain implements Brain {
 
     private static final Logger logger =
             LoggerFactory.getLogger(DefaultTotalOrderedBrain.class);
@@ -36,7 +38,7 @@ class IntelligentOrderedBrain extends AbstractOrderedBrain {
         }
 
         // We are only interested in the first data info
-        Map<PeerId, DataInfo> nextOrderedDataInfo = firstOrderedById(
+        Map<PeerId, DataInfo> nextOrderedDataInfo = Transform.firstOrderedById(
                 networkState.getEstimatedMissingRemoteDataInfo(),
                 lowestId.get());
 
@@ -64,7 +66,7 @@ class IntelligentOrderedBrain extends AbstractOrderedBrain {
             remoteDataInfo.remove(0);
 
             // Delete the next remote data info
-            remoteDataInfo = removeFromAll(remoteDataInfo, nextDataInfo);
+            remoteDataInfo = Transform.removeFromAll(remoteDataInfo, nextDataInfo);
 
             // Add the transfer
             transfers.add(Transfer.download(next.first(), nextDataInfo));

@@ -23,6 +23,11 @@ public abstract class DiagnosticAdapter implements Diagnostic {
     }
 
     @Override
+    public void interestAdded(Peer peer, PeerId remotePeerId, DataInfo addedDataInfo) {
+
+    }
+
+    @Override
     public void uploadRejected(Peer peer, TransferManager transferManager, Throwable cause) {
 
     }
