@@ -18,6 +18,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.ArcType;
+import javafx.scene.text.Font;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import org.controlsfx.dialog.Dialogs;
@@ -44,6 +45,8 @@ public class RecordViewer extends Application {
 
     // Initialized once
     private List<RecordDiagnostic.Record> rawRecords;
+    private RecordDiagnostic.Record start;
+    private RecordDiagnostic.Record end;
     private Map<SocketAddress, Point2D> peerPositions = new HashMap<>();
 
     // Dynamically created
@@ -51,6 +54,7 @@ public class RecordViewer extends Application {
     private List<Map<SocketAddress, DataInfo>> peerDataInfo;
 
     // Gui stuff
+    private Font timeFont = Font.font("monospace");
     private Canvas canvas = new Canvas(WIDTH, HEIGHT);
     private Slider slider = new Slider();
     private CheckBox collectedCheckBox = new CheckBox("Data Info");
@@ -64,6 +68,25 @@ public class RecordViewer extends Application {
 
     private void initPeers(File file) throws IOException, ClassNotFoundException {
         rawRecords = IOUtil.deserialize(file);
+
+        if (rawRecords.size() > 0) {
+            int index = 0;
+            RecordDiagnostic.Record tmp = rawRecords.get(index);
+            if (tmp.getRecordType() == RecordDiagnostic.RecordType.Start) {
+                start = tmp;
+                rawRecords.remove(index);
+            }
+        }
+
+        if (rawRecords.size() > 0) {
+            int index = rawRecords.size() - 1;
+            RecordDiagnostic.Record tmp = rawRecords.get(index);
+            if (tmp.getRecordType() == RecordDiagnostic.RecordType.End) {
+                end = tmp;
+                rawRecords.remove(index);
+            }
+        }
+
         List<PeerId> peers = rawRecords.stream()
                 .map(RecordDiagnostic.Record::getLocalPeerId)
                 .distinct()
@@ -239,9 +262,24 @@ public class RecordViewer extends Application {
         }
 
         // Render the record name
+        gc.setFont(timeFont);
         gc.setStroke(Color.BLACK);
         gc.setLineWidth(1);
-        gc.strokeText(record.getClass().getSimpleName(), 30, 30);
+        gc.strokeText(record.getRecordType().toString(), 30, 30);
+
+        gc.setStroke(Color.BLUE);
+        gc.strokeText("Record time: " + record.getTimeStamp().toString(), 200, 50);
+
+        // Render the start/end
+        if (start != null) {
+            gc.setStroke(Color.DARKGREEN);
+            gc.strokeText(" Start time: " + start.getTimeStamp().toString(), 200, 30);
+        }
+        if (end != null) {
+            gc.setStroke(Color.ORANGERED);
+            gc.strokeText("   End time: " + end.getTimeStamp().toString(), 200, 70);
+        }
+
 
         // Render the record
         if (record.getRecordType() == RecordDiagnostic.RecordType.Collected) {
@@ -454,6 +492,8 @@ public class RecordViewer extends Application {
                 setupGui(primaryStage);
                 setupData();
             } catch (Exception e) {
+                e.printStackTrace();
+
                 Dialogs.create()
                         .message("Failed to load file: " + e.getMessage())
                         .showInformation();

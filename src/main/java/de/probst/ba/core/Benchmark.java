@@ -1,5 +1,7 @@
 package de.probst.ba.core;
 
+import com.beust.jcommander.JCommander;
+import com.beust.jcommander.Parameter;
 import de.probst.ba.core.diag.CombinedDiagnostic;
 import de.probst.ba.core.diag.Diagnostic;
 import de.probst.ba.core.diag.DiagnosticAdapter;
@@ -31,12 +33,24 @@ import java.util.concurrent.ExecutionException;
 /**
  * Created by chrisprobst on 12.08.14.
  */
-public class App {
+public class Benchmark {
 
-    public static int n = 6;
+    @Parameter(names = {"-v", "-verbose"}, description = "Verbose mode")
+    private Boolean verbose = false;
 
+    @Parameter(names = "-s", description = "Number of seeders", required = true)
+    private Integer seeders = 1;
+
+    @Parameter(names = "-l", description = "Number of leechers", required = true)
+    private Integer leechers = 5;
 
     public static void main(String[] args) throws InterruptedException, ExecutionException, IOException {
+
+        // Parse commands
+        Benchmark benchmark = new Benchmark();
+        JCommander jCommander = new JCommander(benchmark);
+        jCommander.parse(args);
+
         // SETUP LOGGING
         System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "INFO");
         InternalLoggerFactory.setDefaultFactory(new Slf4JLoggerFactory());
@@ -60,7 +74,7 @@ public class App {
 
         EventLoopGroup eventLoopGroup = new DefaultEventLoopGroup();
 
-        CountDownLatch countDownLatch = new CountDownLatch(n - 1);
+        CountDownLatch countDownLatch = new CountDownLatch(benchmark.leechers);
         Diagnostic shutdown = new DiagnosticAdapter() {
             @Override
             public void dataCompleted(Peer peer, DataInfo dataInfo, TransferManager lastTransferManager) {
@@ -73,17 +87,19 @@ public class App {
                 new LoggingDiagnostic(),
                 shutdown);
 
-        // Create both clients
-        peers.add(Peers.localPeer(1000, 1000,
-                new LocalAddress("P-0"),
-                DataBases.fakeDataBase(dataInfo),
-                Brains.intelligentBrain(),
-                combined,
-                Optional.of(eventLoopGroup)));
 
-        for (int i = 1; i <= n - 1; i++) {
+        for (int i = 0; i < benchmark.seeders; i++) {
             peers.add(Peers.localPeer(1000, 1000,
-                    new LocalAddress("P-" + i),
+                    new LocalAddress("S-" + i),
+                    DataBases.fakeDataBase(dataInfo),
+                    Brains.intelligentBrain(),
+                    combined,
+                    Optional.of(eventLoopGroup)));
+        }
+
+        for (int i = 0; i < benchmark.leechers; i++) {
+            peers.add(Peers.localPeer(1000, 1000,
+                    new LocalAddress("L-" + i),
                     DataBases.fakeDataBase(),
                     Brains.intelligentBrain(),
                     combined,
@@ -96,18 +112,20 @@ public class App {
 
         // Connect every peer to every other peer
         Peers.connectGrid(peers);
+        recordDiagnostic.start();
 
         Instant first = Instant.now();
 
         countDownLatch.await();
+        recordDiagnostic.end();
 
         Duration duration = Duration.between(first, Instant.now());
 
-        System.out.println("==>> READY READY READY! It took: " + duration + ", INT expected: " + timePerTransfer * 2 + ", LOG expected: " + (Math.ceil(Math.log(n) / Math.log(2))) * timePerTransfer);
+        System.out.println("==>> READY READY READY! It took: " + duration + ", INT expected: " + timePerTransfer * 2 + ", LOG expected: " + (Math.ceil(Math.log(benchmark.leechers + benchmark.seeders) / Math.log(2))) * timePerTransfer);
 
         // Get records and print
         IOUtil.serialize(new File("/Users/chrisprobst/Desktop/records.dat"),
-                recordDiagnostic.getRecords());
+                recordDiagnostic.sortAndGetRecords());
         System.out.println("Serialized records");
 
         // Wait for close

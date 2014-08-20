@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 public class RecordDiagnostic implements Diagnostic {
 
     public enum RecordType {
+        Start, End,
         Announced, Collected, InterestAdded,
         UploadStarted, UploadRejected, UploadSucceeded,
         DownloadRequested, DownloadRejected, DownloadStarted, DownloadProgressed, DownloadSucceeded, DownloadFailed,
@@ -29,6 +30,14 @@ public class RecordDiagnostic implements Diagnostic {
     }
 
     public final static class Record implements Comparable<Record>, Serializable {
+
+        private static Record start() {
+            return new Record(RecordType.Start, null, null, null, null, null, null, null);
+        }
+
+        private static Record end() {
+            return new Record(RecordType.End, null, null, null, null, null, null, null);
+        }
 
         // DATA INFO
 
@@ -107,7 +116,6 @@ public class RecordDiagnostic implements Diagnostic {
                        DataInfo completedDataInfo,
                        Transfer transfer,
                        Throwable cause) {
-            Objects.requireNonNull(localPeerId);
             Objects.requireNonNull(recordType);
             this.localPeerId = localPeerId;
             this.remotePeerId = remotePeerId != null ?
@@ -178,10 +186,48 @@ public class RecordDiagnostic implements Diagnostic {
         }
     }
 
+    private volatile Record start;
+    private volatile Record end;
     private final Queue<Record> records = new ConcurrentLinkedQueue<>();
 
-    public List<Record> getRecords() {
-        return records.stream().collect(Collectors.toList());
+    public List<Record> sortAndGetRecords() {
+        Record start = getStart();
+        Record end = getEnd();
+
+        if (start != null && end != null &&
+                end.getTimeStamp().compareTo(start.getTimeStamp()) < 0) {
+            throw new IllegalStateException("End record before start record");
+        }
+
+        List<Record> results = records.stream()
+                .filter(r -> start == null || r.getTimeStamp().compareTo(start.getTimeStamp()) >= 0)
+                .filter(r -> end == null || r.getTimeStamp().compareTo(end.getTimeStamp()) <= 0)
+                .collect(Collectors.toList());
+
+        if (start != null) {
+            results.add(0, start);
+        }
+        if (end != null) {
+            results.add(end);
+        }
+
+        return results;
+    }
+
+    public void start() {
+        start = Record.start();
+    }
+
+    public Record getStart() {
+        return start;
+    }
+
+    public void end() {
+        end = Record.end();
+    }
+
+    public Record getEnd() {
+        return end;
     }
 
     ////
