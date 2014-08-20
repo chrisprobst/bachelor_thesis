@@ -30,5 +30,5 @@ build/
 # It changes quite often
 .idea/workspace.xml
 
-# The gradle wrapper can be downloaded with ./gradlew wrapper
-gradle/
+# DOOO allow the wrapper
+!gradle/wrapper/*

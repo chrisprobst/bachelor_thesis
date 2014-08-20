@@ -26,7 +26,7 @@ import java.util.concurrent.ExecutionException;
  */
 public class App {
 
-    public static int n = 11;
+    public static int n = 21;
     public static CountDownLatch countDownLatch = new CountDownLatch(n);
 
     public static void main(String[] args) throws InterruptedException, ExecutionException, IOException {
@@ -36,11 +36,11 @@ public class App {
         // Demo data
         DataInfo dataInfo = new DataInfo(
                 0,
-                80 * 1000,
+                160 * 500,
                 Optional.empty(),
                 Optional.empty(),
                 "Hello world",
-                80,
+                160,
                 String::valueOf)
                 .full();
 
