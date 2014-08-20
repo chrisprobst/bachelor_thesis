@@ -174,6 +174,34 @@ abstract class AbstractNettyPeer extends AbstractPeer {
         return CollectHandler.getRemoteDataInfo(getChannelGroup());
     }
 
+    @Override
+    protected ScheduledExecutorService getScheduler() {
+        return getEventLoopGroup();
+    }
+
+    @Override
+    protected void requestDownload(Transfer transfer) {
+        Objects.requireNonNull(transfer);
+
+        Channel remotePeer = getChannelGroup().find(
+                (ChannelId) transfer.getRemotePeerId().getGuid());
+
+        if (remotePeer == null) {
+            logger.warn("The brain requested to " +
+                    "download from a dead peer");
+        } else {
+            try {
+                // Request the download
+                DownloadHandler.request(
+                        this,
+                        remotePeer,
+                        transfer);
+            } catch (Exception e) {
+                logger.warn("Failed to request download", e);
+            }
+        }
+    }
+
     protected abstract void initServerBootstrap();
 
     protected abstract void initBootstrap();
@@ -226,34 +254,6 @@ abstract class AbstractNettyPeer extends AbstractPeer {
     @Override
     public Future<?> getCloseFuture() {
         return getEventLoopGroup().terminationFuture();
-    }
-
-    @Override
-    public ScheduledExecutorService getScheduler() {
-        return getEventLoopGroup();
-    }
-
-    @Override
-    public void requestDownload(Transfer transfer) {
-        Objects.requireNonNull(transfer);
-
-        Channel remotePeer = getChannelGroup().find(
-                (ChannelId) transfer.getRemotePeerId().getGuid());
-
-        if (remotePeer == null) {
-            logger.warn("The brain requested to " +
-                    "download from a dead peer");
-        } else {
-            try {
-                // Request the download
-                DownloadHandler.request(
-                        this,
-                        remotePeer,
-                        transfer);
-            } catch (Exception e) {
-                logger.warn("Failed to request download", e);
-            }
-        }
     }
 
     @Override

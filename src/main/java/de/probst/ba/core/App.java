@@ -1,9 +1,14 @@
 package de.probst.ba.core;
 
+import de.probst.ba.core.diag.CombinedDiagnostic;
+import de.probst.ba.core.diag.Diagnostic;
+import de.probst.ba.core.diag.DiagnosticAdapter;
+import de.probst.ba.core.diag.LoggingDiagnostic;
 import de.probst.ba.core.diag.RecordDiagnostic;
 import de.probst.ba.core.logic.brains.Brains;
 import de.probst.ba.core.media.DataInfo;
 import de.probst.ba.core.media.databases.DataBases;
+import de.probst.ba.core.net.TransferManager;
 import de.probst.ba.core.net.peer.Peer;
 import de.probst.ba.core.net.peer.peers.Peers;
 import de.probst.ba.core.util.IOUtil;
@@ -29,7 +34,6 @@ import java.util.concurrent.ExecutionException;
 public class App {
 
     public static int n = 6;
-    public static CountDownLatch countDownLatch = new CountDownLatch(n);
 
 
     public static void main(String[] args) throws InterruptedException, ExecutionException, IOException {
@@ -56,14 +60,25 @@ public class App {
 
         EventLoopGroup eventLoopGroup = new DefaultEventLoopGroup();
 
-        RecordDiagnostic diagnostic = new RecordDiagnostic();
+        CountDownLatch countDownLatch = new CountDownLatch(n - 1);
+        Diagnostic shutdown = new DiagnosticAdapter() {
+            @Override
+            public void dataCompleted(Peer peer, DataInfo dataInfo, TransferManager lastTransferManager) {
+                countDownLatch.countDown();
+            }
+        };
+        RecordDiagnostic recordDiagnostic = new RecordDiagnostic();
+        Diagnostic combined = new CombinedDiagnostic(
+                recordDiagnostic,
+                new LoggingDiagnostic(),
+                shutdown);
 
         // Create both clients
         peers.add(Peers.localPeer(1000, 1000,
                 new LocalAddress("P-0"),
                 DataBases.fakeDataBase(dataInfo),
                 Brains.intelligentBrain(),
-                diagnostic,
+                combined,
                 Optional.of(eventLoopGroup)));
 
         for (int i = 1; i <= n - 1; i++) {
@@ -71,7 +86,7 @@ public class App {
                     new LocalAddress("P-" + i),
                     DataBases.fakeDataBase(dataInfo.empty()),
                     Brains.intelligentBrain(),
-                    diagnostic,
+                    combined,
                     Optional.of(eventLoopGroup)));
         }
 
@@ -92,7 +107,7 @@ public class App {
 
         // Get records and print
         IOUtil.serialize(new File("/Users/chrisprobst/Desktop/records.dat"),
-                diagnostic.getRecords());
+                recordDiagnostic.getRecords());
         System.out.println("Serialized records");
 
         // Wait for close

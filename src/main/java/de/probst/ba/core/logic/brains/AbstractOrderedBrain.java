@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 /**
  * Created by chrisprobst on 16.08.14.
  */
-public class AbstractOrderedBrain implements Brain {
+class AbstractOrderedBrain implements Brain {
 
     /**
      * This method returns a map with remote peer ids mapped

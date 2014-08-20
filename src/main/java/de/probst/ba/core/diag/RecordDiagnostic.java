@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 /**
  * Created by chrisprobst on 18.08.14.
  */
-public class RecordDiagnostic extends LoggingDiagnostic {
+public class RecordDiagnostic implements Diagnostic {
 
     public enum RecordType {
         Announced, Collected,
@@ -177,73 +177,61 @@ public class RecordDiagnostic extends LoggingDiagnostic {
 
     @Override
     public void announced(Peer peer, PeerId remotePeerId, Optional<Map<String, DataInfo>> dataInfo) {
-        super.announced(peer, remotePeerId, dataInfo);
         records.add(Record.announced(peer.getNetworkState().getLocalPeerId(), remotePeerId, dataInfo.orElse(null)));
     }
 
     @Override
     public void collected(Peer peer, PeerId remotePeerId, Optional<Map<String, DataInfo>> dataInfo) {
-        super.collected(peer, remotePeerId, dataInfo);
         records.add(Record.collected(peer.getNetworkState().getLocalPeerId(), remotePeerId, dataInfo.orElse(null)));
     }
 
     @Override
     public void uploadRejected(Peer peer, TransferManager transferManager, Throwable cause) {
-        super.uploadRejected(peer, transferManager, cause);
         records.add(Record.uploadRejected(peer.getNetworkState().getLocalPeerId(), transferManager.getTransfer(), cause));
     }
 
     @Override
     public void uploadStarted(Peer peer, TransferManager transferManager) {
-        super.uploadStarted(peer, transferManager);
         records.add(Record.uploadStarted(peer.getNetworkState().getLocalPeerId(), transferManager.getTransfer()));
     }
 
     @Override
     public void uploadSucceeded(Peer peer, TransferManager transferManager) {
-        super.uploadSucceeded(peer, transferManager);
         records.add(Record.uploadSucceeded(peer.getNetworkState().getLocalPeerId(), transferManager.getTransfer()));
     }
 
     @Override
     public void downloadRequested(Peer peer, TransferManager transferManager) {
-        super.downloadRequested(peer, transferManager);
         records.add(Record.downloadRequested(peer.getNetworkState().getLocalPeerId(), transferManager.getTransfer()));
     }
 
     @Override
     public void downloadRejected(Peer peer, TransferManager transferManager, Throwable cause) {
-        super.downloadRejected(peer, transferManager, cause);
         records.add(Record.downloadRejected(peer.getNetworkState().getLocalPeerId(), transferManager.getTransfer(), cause));
     }
 
     @Override
     public void downloadStarted(Peer peer, TransferManager transferManager) {
-        super.downloadStarted(peer, transferManager);
         records.add(Record.downloadStarted(peer.getNetworkState().getLocalPeerId(), transferManager.getTransfer()));
     }
 
     @Override
     public void downloadProgressed(Peer peer, TransferManager transferManager) {
-        super.downloadProgressed(peer, transferManager);
         records.add(Record.downloadProgressed(peer.getNetworkState().getLocalPeerId(), transferManager.getTransfer()));
     }
 
     @Override
     public void downloadSucceeded(Peer peer, TransferManager transferManager) {
-        super.downloadSucceeded(peer, transferManager);
         records.add(Record.downloadSucceeded(peer.getNetworkState().getLocalPeerId(), transferManager.getTransfer()));
     }
 
     @Override
     public void downloadFailed(Peer peer, TransferManager transferManager, Throwable cause) {
-        super.downloadFailed(peer, transferManager, cause);
         records.add(Record.downloadFailed(peer.getNetworkState().getLocalPeerId(), transferManager.getTransfer(), cause));
     }
 
     @Override
     public void dataCompleted(Peer peer, DataInfo dataInfo, TransferManager lastTransferManager) {
-        super.dataCompleted(peer, dataInfo, lastTransferManager);
         records.add(Record.dataCompleted(peer.getNetworkState().getLocalPeerId(), dataInfo, lastTransferManager.getTransfer()));
     }
 }

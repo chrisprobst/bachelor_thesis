@@ -1,6 +1,5 @@
 package de.probst.ba.core.logic.brains;
 
-import de.probst.ba.core.App;
 import de.probst.ba.core.media.DataInfo;
 import de.probst.ba.core.net.NetworkState;
 import de.probst.ba.core.net.Transfer;
@@ -19,12 +18,10 @@ import java.util.stream.Collectors;
 /**
  * Created by chrisprobst on 18.08.14.
  */
-public class IntelligentOrderedBrain extends AbstractOrderedBrain {
+class IntelligentOrderedBrain extends AbstractOrderedBrain {
 
     private static final Logger logger =
             LoggerFactory.getLogger(DefaultTotalOrderedBrain.class);
-
-    private boolean ready = false;
 
     @Override
     public Optional<List<Transfer>> process(NetworkState networkState) {
@@ -35,11 +32,6 @@ public class IntelligentOrderedBrain extends AbstractOrderedBrain {
         // This brain has no missing data info
         if (!lowestId.isPresent()) {
             logger.debug(networkState.getLocalPeerId() + ": Nothing to download right now");
-
-            if (!ready) {
-                ready = true;
-                App.countDownLatch.countDown();
-            }
             return Optional.empty();
         }
 
