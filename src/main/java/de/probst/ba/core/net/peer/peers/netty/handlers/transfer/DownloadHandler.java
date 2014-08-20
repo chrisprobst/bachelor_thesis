@@ -1,5 +1,6 @@
 package de.probst.ba.core.net.peer.peers.netty.handlers.transfer;
 
+import de.probst.ba.core.media.DataInfo;
 import de.probst.ba.core.net.Transfer;
 import de.probst.ba.core.net.TransferManager;
 import de.probst.ba.core.net.peer.Peer;
@@ -12,8 +13,8 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.group.ChannelGroup;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.Objects;
@@ -61,8 +62,8 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
                 downloadHandler);
     }
 
-    private static final InternalLogger logger =
-            InternalLoggerFactory.getInstance(DownloadHandler.class);
+    private static final Logger logger =
+            LoggerFactory.getLogger(DownloadHandler.class);
 
     private final Peer peer;
     private final TransferManager transferManager;
@@ -118,7 +119,7 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
                 });
 
         // DIAGNOSTIC
-        getPeer().getDiagnostic().peerRequestedDownload(
+        getPeer().getDiagnostic().downloadRequested(
                 getPeer(), getTransferManager());
     }
 
@@ -136,7 +137,7 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
             remove(ctx);
 
             // DIAGNOSTIC
-            getPeer().getDiagnostic().peerRejectedDownload(
+            getPeer().getDiagnostic().downloadRejected(
                     getPeer(), getTransferManager(), uploadRejectedMessage.getCause());
         } else if (msg instanceof ByteBuf) {
             ByteBuf buffer = (ByteBuf) msg;
@@ -153,7 +154,7 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
                                 getTransferManager().getTransfer());
 
                         // DIAGNOSTIC
-                        getPeer().getDiagnostic().peerStartedDownload(
+                        getPeer().getDiagnostic().downloadStarted(
                                 getPeer(), getTransferManager());
                     }
 
@@ -164,7 +165,7 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
                             getTransferManager().getTransfer());
 
                     // DIAGNOSTIC
-                    getPeer().getDiagnostic().peerProgressedDownload(
+                    getPeer().getDiagnostic().downloadProgressed(
                             getPeer(), getTransferManager());
 
                     // Simply process the transfer manager
@@ -173,9 +174,22 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
                                 getTransferManager().getTransfer());
 
                         // DIAGNOSTIC
-                        getPeer().getDiagnostic().peerSucceededDownload(
+                        getPeer().getDiagnostic().downloadSucceeded(
                                 getPeer(), getTransferManager());
                     }
+
+                    // Query data base
+                    DataInfo dataInfoStatus = getPeer().getDataBase().get(
+                            getTransferManager().getTransfer().getDataInfo().getHash());
+
+                    if (dataInfoStatus != null && dataInfoStatus.isCompleted()) {
+                        logger.debug("Data completed: " + dataInfoStatus);
+
+                        // DIAGNOSTIC
+                        getPeer().getDiagnostic().dataCompleted(
+                                getPeer(), dataInfoStatus, transferManager);
+                    }
+
                 } catch (Exception e) {
                     completed = true;
 
@@ -184,7 +198,7 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
                             ", cause:" + e);
 
                     // DIAGNOSTIC
-                    getPeer().getDiagnostic().peerFailedDownload(
+                    getPeer().getDiagnostic().downloadFailed(
                             getPeer(), getTransferManager(), e);
                 } finally {
                     if (completed) {

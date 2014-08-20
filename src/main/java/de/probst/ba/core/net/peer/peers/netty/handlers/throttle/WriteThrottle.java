@@ -5,8 +5,8 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
@@ -21,8 +21,8 @@ public final class WriteThrottle extends ChannelHandlerAdapter implements Runnab
 
     private final ExecutorService scheduler = Executors.newSingleThreadExecutor();
 
-    private static final InternalLogger logger =
-            InternalLoggerFactory.getInstance(WriteThrottle.class);
+    private static final Logger logger =
+            LoggerFactory.getLogger(WriteThrottle.class);
 
     private class ThrottledWrite {
         public long timeToWait;

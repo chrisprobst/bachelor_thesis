@@ -1,7 +1,6 @@
 package de.probst.ba.core.net.peer.peers.netty;
 
 import de.probst.ba.core.diag.Diagnostic;
-import de.probst.ba.core.logic.Body;
 import de.probst.ba.core.logic.Brain;
 import de.probst.ba.core.media.DataBase;
 import de.probst.ba.core.media.DataInfo;
@@ -23,8 +22,8 @@ import io.netty.channel.group.ChannelGroup;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.Objects;
@@ -36,11 +35,11 @@ import java.util.concurrent.ScheduledExecutorService;
 /**
  * Created by chrisprobst on 12.08.14.
  */
-abstract class AbstractNettyPeer extends AbstractPeer implements Body {
+abstract class AbstractNettyPeer extends AbstractPeer {
 
 
-    private static final InternalLogger logger =
-            InternalLoggerFactory.getInstance(AbstractNettyPeer.class);
+    private static final Logger logger =
+            LoggerFactory.getLogger(AbstractNettyPeer.class);
 
 //    private static final long NETTY_TRAFFIC_INTERVAL = 10;
 
@@ -58,7 +57,7 @@ abstract class AbstractNettyPeer extends AbstractPeer implements Body {
             new CompletableFuture<>();
 
     private final LoggingHandler logHandler =
-            new LoggingHandler(LogLevel.DEBUG);
+            new LoggingHandler(LogLevel.TRACE);
 
     private final WriteThrottle writeThrottle;
 
@@ -175,11 +174,6 @@ abstract class AbstractNettyPeer extends AbstractPeer implements Body {
         return CollectHandler.getRemoteDataInfo(getChannelGroup());
     }
 
-    @Override
-    protected Body getBody() {
-        return this;
-    }
-
     protected abstract void initServerBootstrap();
 
     protected abstract void initBootstrap();
@@ -260,12 +254,6 @@ abstract class AbstractNettyPeer extends AbstractPeer implements Body {
                 logger.warn("Failed to request download", e);
             }
         }
-    }
-
-    @Override
-    public void brainDead(Exception e) {
-        // Simply close the peer if the brain is dead
-        close();
     }
 
     @Override

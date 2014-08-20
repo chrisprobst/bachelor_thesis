@@ -15,45 +15,49 @@ public interface Diagnostic {
 
     // DATAINFO
 
-    void peerAnnouncedDataInfo(Peer peer,
-                               PeerId remotePeerId,
-                               Optional<Map<String, DataInfo>> dataInfo);
+    void announced(Peer peer,
+                   PeerId remotePeerId,
+                   Optional<Map<String, DataInfo>> dataInfo);
 
-    void peerCollectedDataInfo(Peer peer,
-                               PeerId remotePeerId,
-                               Optional<Map<String, DataInfo>> dataInfo);
+    void collected(Peer peer,
+                   PeerId remotePeerId,
+                   Optional<Map<String, DataInfo>> dataInfo);
 
     // UPLOAD
 
-    void peerRejectedUpload(Peer peer,
-                            TransferManager transferManager,
-                            Throwable cause);
+    void uploadRejected(Peer peer,
+                        TransferManager transferManager,
+                        Throwable cause);
 
-    void peerStartedUpload(Peer peer,
-                           TransferManager transferManager);
+    void uploadStarted(Peer peer,
+                       TransferManager transferManager);
 
-    void peerSucceededUpload(Peer peer,
-                             TransferManager transferManager);
+    void uploadSucceeded(Peer peer,
+                         TransferManager transferManager);
 
     // DOWNLOAD
 
-    void peerRequestedDownload(Peer peer,
-                               TransferManager transferManager);
+    void downloadRequested(Peer peer,
+                           TransferManager transferManager);
 
-    void peerRejectedDownload(Peer peer,
-                              TransferManager transferManager,
-                              Throwable cause);
+    void downloadRejected(Peer peer,
+                          TransferManager transferManager,
+                          Throwable cause);
 
-    void peerStartedDownload(Peer peer,
-                             TransferManager transferManager);
+    void downloadStarted(Peer peer,
+                         TransferManager transferManager);
 
-    void peerProgressedDownload(Peer peer,
-                                TransferManager transferManager);
+    void downloadProgressed(Peer peer,
+                            TransferManager transferManager);
 
-    void peerSucceededDownload(Peer peer,
-                               TransferManager transferManager);
+    void downloadSucceeded(Peer peer,
+                           TransferManager transferManager);
 
-    void peerFailedDownload(Peer peer,
-                            TransferManager transferManager,
-                            Throwable cause);
+    void downloadFailed(Peer peer,
+                        TransferManager transferManager,
+                        Throwable cause);
+
+    void dataCompleted(Peer peer,
+                       DataInfo dataInfo,
+                       TransferManager lastTransferManager);
 }

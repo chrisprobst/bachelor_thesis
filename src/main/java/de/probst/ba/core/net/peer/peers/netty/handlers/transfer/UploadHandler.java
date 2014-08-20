@@ -14,8 +14,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.handler.stream.ChunkedInput;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.Objects;
@@ -27,8 +27,8 @@ import java.util.stream.Collectors;
  */
 public final class UploadHandler extends SimpleChannelInboundHandler<UploadRequestMessage> {
 
-    private static final InternalLogger logger =
-            InternalLoggerFactory.getInstance(UploadHandler.class);
+    private static final Logger logger =
+            LoggerFactory.getLogger(UploadHandler.class);
 
     public static Map<PeerId, Transfer> getUploads(ChannelGroup channelGroup) {
         return channelGroup.stream()
@@ -136,7 +136,7 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
             ctx.writeAndFlush(new UploadRejectedMessage(cause));
 
             // DIAGNOSTIC
-            getPeer().getDiagnostic().peerRejectedUpload(
+            getPeer().getDiagnostic().uploadRejected(
                     getPeer(), null, cause);
         } else {
             TransferManager newTransferManager;
@@ -158,7 +158,7 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
                     ctx.writeAndFlush(new UploadRejectedMessage(cause));
 
                     // DIAGNOSTIC
-                    getPeer().getDiagnostic().peerRejectedUpload(
+                    getPeer().getDiagnostic().uploadRejected(
                             getPeer(), newTransferManager, cause);
                 } else {
                     logger.debug("Starting upload: " + newTransferManager.getTransfer());
@@ -173,13 +173,13 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
                                 ctx.writeAndFlush(new UploadRejectedMessage(fut.cause()));
 
                                 // DIAGNOSTIC
-                                getPeer().getDiagnostic().peerRejectedUpload(
+                                getPeer().getDiagnostic().uploadRejected(
                                         getPeer(), transferManager, fut.cause());
                             } else {
                                 logger.debug("Upload succeeded");
 
                                 // DIAGNOSTIC
-                                getPeer().getDiagnostic().peerSucceededUpload(
+                                getPeer().getDiagnostic().uploadSucceeded(
                                         getPeer(), transferManager);
                             }
                         } finally {
@@ -188,7 +188,7 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
                     });
 
                     // DIAGNOSTIC
-                    getPeer().getDiagnostic().peerStartedUpload(
+                    getPeer().getDiagnostic().uploadStarted(
                             getPeer(), newTransferManager);
                 }
 
@@ -200,7 +200,7 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
                     ctx.writeAndFlush(new UploadRejectedMessage(e));
 
                     // DIAGNOSTIC
-                    getPeer().getDiagnostic().peerRejectedUpload(
+                    getPeer().getDiagnostic().uploadRejected(
                             getPeer(), transferManager, e);
                 } finally {
                     restore(ctx, wasIncremented);

@@ -10,6 +10,8 @@ import de.probst.ba.core.util.IOUtil;
 import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalAddress;
+import io.netty.util.internal.logging.InternalLoggerFactory;
+import io.netty.util.internal.logging.Slf4JLoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -26,21 +28,26 @@ import java.util.concurrent.ExecutionException;
  */
 public class App {
 
-    public static int n = 21;
+    public static int n = 6;
     public static CountDownLatch countDownLatch = new CountDownLatch(n);
 
-    public static void main(String[] args) throws InterruptedException, ExecutionException, IOException {
 
-        int timePerTransfer = 80;
+    public static void main(String[] args) throws InterruptedException, ExecutionException, IOException {
+        // SETUP LOGGING
+        System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "INFO");
+        InternalLoggerFactory.setDefaultFactory(new Slf4JLoggerFactory());
+
+
+        int timePerTransfer = 20;
 
         // Demo data
         DataInfo dataInfo = new DataInfo(
                 0,
-                160 * 500,
+                40 * 500,
                 Optional.empty(),
                 Optional.empty(),
                 "Hello world",
-                160,
+                40,
                 String::valueOf)
                 .full();
 

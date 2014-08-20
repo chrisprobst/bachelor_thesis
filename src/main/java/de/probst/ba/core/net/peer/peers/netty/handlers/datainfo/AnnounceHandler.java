@@ -8,8 +8,8 @@ import de.probst.ba.core.net.peer.peers.netty.NettyPeerId;
 import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.messages.DataInfoMessage;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.Objects;
@@ -27,8 +27,8 @@ import java.util.concurrent.ScheduledFuture;
  */
 public final class AnnounceHandler extends ChannelHandlerAdapter implements Runnable {
 
-    private static final InternalLogger logger =
-            InternalLoggerFactory.getInstance(AnnounceHandler.class);
+    private static final Logger logger =
+            LoggerFactory.getLogger(AnnounceHandler.class);
 
     private final Peer peer;
     private ChannelHandlerContext ctx;
@@ -117,7 +117,7 @@ public final class AnnounceHandler extends ChannelHandlerAdapter implements Runn
                     }
                 });
 
-        getPeer().getDiagnostic().peerAnnouncedDataInfo(
+        getPeer().getDiagnostic().announced(
                 getPeer(), peerId, dataInfoMessage.getDataInfo());
     }
 }

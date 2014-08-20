@@ -58,7 +58,7 @@ public final class CollectHandler extends SimpleChannelInboundHandler<DataInfoMe
                     Collections.unmodifiableMap(new HashMap<>(msg.getDataInfo().get()))));
         }
 
-        getPeer().getDiagnostic().peerCollectedDataInfo(
+        getPeer().getDiagnostic().collected(
                 getPeer(), peerId, getRemoteDataInfo().map(Tuple2::second));
     }
 

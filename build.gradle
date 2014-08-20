@@ -18,6 +18,8 @@ repositories {
 
 dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.11'
+
+    compile group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.7'
     compile group: 'io.netty', name: 'netty-all', version: '5.0.0.Alpha2-SNAPSHOT'
     compile group: 'org.controlsfx', name: 'controlsfx', version: '8.0.6'
 }

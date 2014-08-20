@@ -7,8 +7,8 @@ import de.probst.ba.core.net.Transfer;
 import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.util.Tuple;
 import de.probst.ba.core.util.Tuple2;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,8 +21,8 @@ import java.util.stream.Collectors;
  */
 public class IntelligentOrderedBrain extends AbstractOrderedBrain {
 
-    private static final InternalLogger logger =
-            InternalLoggerFactory.getInstance(DefaultTotalOrderedBrain.class);
+    private static final Logger logger =
+            LoggerFactory.getLogger(DefaultTotalOrderedBrain.class);
 
     private boolean ready = false;
 
