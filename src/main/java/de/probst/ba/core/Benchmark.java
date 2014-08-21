@@ -57,7 +57,7 @@ public class Benchmark {
         }
     }
 
-    public static class UploadRateValidator implements IValueValidator<Integer> {
+    public static class TransferRateValidator implements IValueValidator<Integer> {
 
         public static final int MIN = 50;
         public static final int MAX = 1000 * 1000;
@@ -155,9 +155,17 @@ public class Benchmark {
 
     @Parameter(
             names = {"-u", "--upload-rate"},
-            description = "The upload rate in bytes per second (" + UploadRateValidator.MSG + ")",
-            validateValueWith = UploadRateValidator.class)
+            description = "The upload rate in bytes per second, " +
+                    "must be less-equal than the download rate (" + TransferRateValidator.MSG + ")",
+            validateValueWith = TransferRateValidator.class)
     private Integer uploadRate = 1000;
+
+    @Parameter(
+            names = {"-d", "--download-rate"},
+            description = "The download rate in bytes per second, " +
+                    "must greater-equal than the upload rate (" + TransferRateValidator.MSG + ")",
+            validateValueWith = TransferRateValidator.class)
+    private Integer downloadRate = 1000;
 
     @Parameter(
             names = {"-s", "--seeders"},
@@ -176,6 +184,13 @@ public class Benchmark {
             return false;
         }
 
+        if (uploadRate > downloadRate) {
+            System.out.println("The upload rate is greater than the download rate");
+            System.out.println();
+            jCommander.usage();
+            return false;
+        }
+
         return true;
     }
 
@@ -188,10 +203,17 @@ public class Benchmark {
 
         // Setup status flags
         double timePerTransfer = totalSize / uploadRate;
-        double intelligentBrainTime = timePerTransfer * 1.7 / seeders;
+
+
+        double intelligentBrainTime = timePerTransfer / seeders * 1.1;
 
         // log(n) - log(s) = log(n / s) = log((s + l) / s) = log(1 + l/s)
         double logarithmicBrainTime = timePerTransfer * Math.ceil(Math.log(1 + leechers / (double) seeders) / Math.log(2));
+
+        // A small info for all waiters
+        logger.info("[== One transfer needs approx.: " + timePerTransfer + " seconds ==]");
+        logger.info("[== A logarithmic brain needs approx.: " + logarithmicBrainTime + " seconds ==]");
+        logger.info("[== An intelligent brain needs approx.: " + intelligentBrainTime + " seconds ==]");
 
         // Benchmark data
         DataInfo dataInfo = new DataInfo(
@@ -275,8 +297,6 @@ public class Benchmark {
 
         // Print result
         logger.info("[== COMPLETED ==]");
-        logger.info("[== A logarithmic brain needs approx.: " + logarithmicBrainTime + " seconds ==]");
-        logger.info("[== An intelligent brain needs approx.: " + intelligentBrainTime + " seconds ==]");
         logger.info("[== THIS SIMULATION NEEDED: " + (duration.toMillis() / 1000.0) + " seconds ==]");
 
         // Get records and print

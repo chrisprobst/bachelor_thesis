@@ -265,19 +265,19 @@ public class RecordViewer extends Application {
         gc.setFont(timeFont);
         gc.setStroke(Color.BLACK);
         gc.setLineWidth(1);
-        gc.strokeText(record.getRecordType().toString(), 30, 30);
+        gc.strokeText("Type: " + record.getRecordType().toString(), 30, 110);
 
         gc.setStroke(Color.BLUE);
-        gc.strokeText("Record time: " + record.getTimeStamp().toString(), 200, 50);
+        gc.strokeText("Record time: " + record.getTimeStamp().toString(), 30, 50);
 
         // Render the start/end
         if (start != null) {
             gc.setStroke(Color.DARKGREEN);
-            gc.strokeText(" Start time: " + start.getTimeStamp().toString(), 200, 30);
+            gc.strokeText(" Start time: " + start.getTimeStamp().toString(), 30, 30);
         }
         if (end != null) {
             gc.setStroke(Color.ORANGERED);
-            gc.strokeText("   End time: " + end.getTimeStamp().toString(), 200, 70);
+            gc.strokeText("   End time: " + end.getTimeStamp().toString(), 30, 70);
         }
 
 
@@ -392,7 +392,9 @@ public class RecordViewer extends Application {
             slider.setValue(0);
             slider.setShowTickLabels(true);
             slider.setShowTickMarks(true);
-            slider.setMajorTickUnit((filteredRecords.size() - 1) / 2.0);
+            if (filteredRecords.size() > 1) {
+                slider.setMajorTickUnit((filteredRecords.size() - 1) / 2.0);
+            }
             slider.setBlockIncrement(1);
 
             renderPeerRecord(0);
