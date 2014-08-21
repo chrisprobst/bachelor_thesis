@@ -38,7 +38,7 @@ import java.util.concurrent.ScheduledExecutorService;
 abstract class AbstractNettyPeer extends AbstractPeer {
 
 
-    private static final Logger logger =
+    private final Logger logger =
             LoggerFactory.getLogger(AbstractNettyPeer.class);
 
 //    private static final long NETTY_TRAFFIC_INTERVAL = 10;

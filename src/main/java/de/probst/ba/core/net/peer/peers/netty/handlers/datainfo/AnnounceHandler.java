@@ -27,7 +27,7 @@ import java.util.concurrent.ScheduledFuture;
  */
 public final class AnnounceHandler extends ChannelHandlerAdapter implements Runnable {
 
-    private static final Logger logger =
+    private final Logger logger =
             LoggerFactory.getLogger(AnnounceHandler.class);
 
     private final Peer peer;

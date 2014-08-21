@@ -62,7 +62,7 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
                 downloadHandler);
     }
 
-    private static final Logger logger =
+    private final Logger logger =
             LoggerFactory.getLogger(DownloadHandler.class);
 
     private final Peer peer;

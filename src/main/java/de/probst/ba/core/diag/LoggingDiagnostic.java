@@ -15,7 +15,7 @@ import java.util.Optional;
  */
 public final class LoggingDiagnostic implements Diagnostic {
 
-    private static final Logger logger =
+    private final Logger logger =
             LoggerFactory.getLogger(LoggingDiagnostic.class);
 
     @Override

@@ -26,7 +26,7 @@ import java.util.Optional;
  */
 class DefaultTotalOrderedBrain implements Brain {
 
-    private static final Logger logger =
+    private final Logger logger =
             LoggerFactory.getLogger(DefaultTotalOrderedBrain.class);
 
     @Override

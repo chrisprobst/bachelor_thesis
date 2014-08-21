@@ -9,8 +9,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
@@ -19,9 +17,9 @@ import java.util.concurrent.LinkedBlockingQueue;
 @ChannelHandler.Sharable
 public final class WriteThrottle extends ChannelHandlerAdapter implements Runnable {
 
-    private final ExecutorService scheduler = Executors.newSingleThreadExecutor();
+    private final Thread thread = new Thread(this);
 
-    private static final Logger logger =
+    private final Logger logger =
             LoggerFactory.getLogger(WriteThrottle.class);
 
     private class ThrottledWrite {
@@ -47,7 +45,8 @@ public final class WriteThrottle extends ChannelHandlerAdapter implements Runnab
 
     public WriteThrottle(long uploadRate) {
         this.uploadRate = uploadRate;
-        scheduler.execute(this);
+        thread.setDaemon(true);
+        thread.start();
     }
 
     @Override
@@ -58,8 +57,8 @@ public final class WriteThrottle extends ChannelHandlerAdapter implements Runnab
                 Thread.sleep(throttledWrite.timeToWait);
                 throttledWrite.write();
             } catch (InterruptedException e) {
-                e.printStackTrace();
-                System.exit(-77);
+                logger.error("Write throttle crashed, shutting app down", e);
+                System.exit(-100);
             }
         }
     }

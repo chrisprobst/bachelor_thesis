@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
  */
 public final class UploadHandler extends SimpleChannelInboundHandler<UploadRequestMessage> {
 
-    private static final Logger logger =
+    private final Logger logger =
             LoggerFactory.getLogger(UploadHandler.class);
 
     public static Map<PeerId, Transfer> getUploads(ChannelGroup channelGroup) {
