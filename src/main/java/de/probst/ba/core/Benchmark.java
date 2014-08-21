@@ -188,8 +188,10 @@ public class Benchmark {
 
         // Setup status flags
         double timePerTransfer = totalSize / uploadRate;
-        double intelligentBrainTime = timePerTransfer * 2;
-        double logarithmicBrainTime = timePerTransfer * (Math.ceil(Math.log(leechers + seeders) / Math.log(2)));
+        double intelligentBrainTime = timePerTransfer * 1.7 / seeders;
+
+        // log(n) - log(s) = log(n / s) = log((s + l) / s) = log(1 + l/s)
+        double logarithmicBrainTime = timePerTransfer * Math.ceil(Math.log(1 + leechers / (double) seeders) / Math.log(2));
 
         // Benchmark data
         DataInfo dataInfo = new DataInfo(
