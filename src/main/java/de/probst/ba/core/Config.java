@@ -10,6 +10,10 @@ public final class Config {
     private Config() {
     }
 
+    public static int getDefaultCVSElementWidth() {
+        return 20;
+    }
+
     private static final TimeUnit DEFAULT_TIME_UNIT = TimeUnit.MILLISECONDS;
 
     public static long getDataInfoAnnounceDelay() {

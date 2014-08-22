@@ -9,6 +9,7 @@ import de.probst.ba.core.diag.CombinedDiagnostic;
 import de.probst.ba.core.diag.Diagnostic;
 import de.probst.ba.core.diag.DiagnosticAdapter;
 import de.probst.ba.core.diag.LoggingDiagnostic;
+import de.probst.ba.core.diag.PeerChunkCVSDiagnostic;
 import de.probst.ba.core.diag.RecordDiagnostic;
 import de.probst.ba.core.logic.Brain;
 import de.probst.ba.core.logic.brains.Brains;
@@ -28,11 +29,12 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Optional;
+import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Supplier;
@@ -135,11 +137,17 @@ public class Benchmark {
     private Boolean verbose = false;
 
     @Parameter(
-            names = {"-f", "--file"},
-            description = "The path to save the records",
+            names = {"-r", "--record"},
+            description = "Record the simulation",
+            arity = 1)
+    private Boolean record = true;
+
+    @Parameter(
+            names = {"-dir", "--directory"},
+            description = "The directory to save the records",
             converter = FileConverter.class,
-            required = true)
-    private File recordsFile;
+            required = false)
+    private File recordsDirectory = new File(".");
 
     @Parameter(
             names = {"-c", "--chunk-count"},
@@ -191,6 +199,21 @@ public class Benchmark {
             return false;
         }
 
+        if (!recordsDirectory.exists()) {
+            System.out.println("The directory path does not exist");
+            System.out.println();
+            jCommander.usage();
+            return false;
+        }
+
+        if (!recordsDirectory.isDirectory()) {
+            System.out.println("The directory path must point to a directory");
+            System.out.println();
+            jCommander.usage();
+            return false;
+        }
+
+
         return true;
     }
 
@@ -204,14 +227,18 @@ public class Benchmark {
         // Setup status flags
         double timePerTransfer = totalSize / uploadRate;
 
+        // Server/Client like
+        double dumbBrainTime = timePerTransfer / seeders * leechers;
 
-        double intelligentBrainTime = timePerTransfer / seeders * 1.1;
+        // ~ who knows ?!
+        double intelligentBrainTime = timePerTransfer / seeders * 1.3;
 
         // log(n) - log(s) = log(n / s) = log((s + l) / s) = log(1 + l/s)
         double logarithmicBrainTime = timePerTransfer * Math.ceil(Math.log(1 + leechers / (double) seeders) / Math.log(2));
 
         // A small info for all waiters
         logger.info("[== One transfer needs approx.: " + timePerTransfer + " seconds ==]");
+        logger.info("[== A dumb brain needs approx.: " + dumbBrainTime + " seconds ==]");
         logger.info("[== A logarithmic brain needs approx.: " + logarithmicBrainTime + " seconds ==]");
         logger.info("[== An intelligent brain needs approx.: " + intelligentBrainTime + " seconds ==]");
 
@@ -227,7 +254,7 @@ public class Benchmark {
                 .full();
 
         // List of peers
-        List<Peer> peers = new LinkedList<>();
+        Queue<Peer> peers = new LinkedList<>();
 
         // The event loop group shared by all peers
         EventLoopGroup eventLoopGroup = new DefaultEventLoopGroup();
@@ -240,11 +267,29 @@ public class Benchmark {
                 countDownLatch.countDown();
             }
         };
-        RecordDiagnostic recordDiagnostic = new RecordDiagnostic();
-        Diagnostic combined = new CombinedDiagnostic(
-                recordDiagnostic,
-                new LoggingDiagnostic(),
-                shutdown);
+
+        // Setup diagnostic
+        Diagnostic combined;
+        RecordDiagnostic recordDiagnostic = null;
+        PeerChunkCVSDiagnostic peerChunkCVSDiagnostic = null;
+        PeerChunkCVSDiagnostic totalChunkCVSDiagnostic = null;
+
+        // If we have to record the data
+        if (record) {
+            recordDiagnostic = new RecordDiagnostic();
+            peerChunkCVSDiagnostic = new PeerChunkCVSDiagnostic();
+            totalChunkCVSDiagnostic = new PeerChunkCVSDiagnostic();
+            combined = new CombinedDiagnostic(
+                    recordDiagnostic,
+                    peerChunkCVSDiagnostic,
+                    totalChunkCVSDiagnostic,
+                    new LoggingDiagnostic(),
+                    shutdown);
+        } else {
+            combined = new CombinedDiagnostic(
+                    new LoggingDiagnostic(),
+                    shutdown);
+        }
 
         // Create the brain factory
         Supplier<Brain> brainFactory = () -> brainType.equals(BrainValidator.LOGARITHMIC) ?
@@ -280,8 +325,22 @@ public class Benchmark {
         // Connect every peer to every other peer
         Peers.connectGrid(peers);
 
-        // Run diagnostic now
-        recordDiagnostic.start();
+        if (record) {
+            // Run diagnostic now
+            recordDiagnostic.start();
+
+            // Setup cvs diagnostic
+            peerChunkCVSDiagnostic.setTotal(false);
+            peerChunkCVSDiagnostic.setDataInfoHash(dataInfo.getHash());
+            peerChunkCVSDiagnostic.setPeers(peers);
+            peerChunkCVSDiagnostic.writeStatus();
+
+            // Setup cvs diagnostic
+            totalChunkCVSDiagnostic.setTotal(true);
+            totalChunkCVSDiagnostic.setDataInfoHash(dataInfo.getHash());
+            totalChunkCVSDiagnostic.setPeers(peers);
+            totalChunkCVSDiagnostic.writeStatus();
+        }
 
         // Stop the time
         Instant first = Instant.now();
@@ -289,8 +348,23 @@ public class Benchmark {
         // Await the count down latch to finish
         countDownLatch.await();
 
-        // Stop dianostic
-        recordDiagnostic.end();
+        if (record) {
+            // Stop diagnostic
+            recordDiagnostic.end();
+
+            // Get records and print
+            IOUtil.serialize(new File(recordsDirectory, "records.dat"), recordDiagnostic.sortAndGetRecords());
+
+            // Save peer chunks
+            Files.write(new File(recordsDirectory, "peerChunks.csv").toPath(),
+                    peerChunkCVSDiagnostic.getCVSString().getBytes());
+
+            // Save total chunks
+            Files.write(new File(recordsDirectory, "totalChunks.csv").toPath(),
+                    totalChunkCVSDiagnostic.getCVSString().getBytes());
+
+            logger.info("[== SERIALIZED RECORDS ==]");
+        }
 
         // Calculate the duration
         Duration duration = Duration.between(first, Instant.now());
@@ -298,10 +372,6 @@ public class Benchmark {
         // Print result
         logger.info("[== COMPLETED ==]");
         logger.info("[== THIS SIMULATION NEEDED: " + (duration.toMillis() / 1000.0) + " seconds ==]");
-
-        // Get records and print
-        IOUtil.serialize(recordsFile, recordDiagnostic.sortAndGetRecords());
-        logger.info("[== SERIALIZED RECORDS ==]");
 
         // Wait for close
         Peers.closeAndWait(peers);

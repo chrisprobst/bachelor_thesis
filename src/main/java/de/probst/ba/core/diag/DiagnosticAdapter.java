@@ -11,7 +11,7 @@ import java.util.Optional;
 /**
  * Created by chrisprobst on 20.08.14.
  */
-public abstract class DiagnosticAdapter implements Diagnostic {
+public class DiagnosticAdapter implements Diagnostic {
     @Override
     public void announced(Peer peer, PeerId remotePeerId, Optional<Map<String, DataInfo>> dataInfo) {
 

@@ -9,7 +9,7 @@ import de.probst.ba.core.net.peer.peers.netty.LocalNettyPeer;
 import io.netty.channel.EventLoopGroup;
 
 import java.net.SocketAddress;
-import java.util.List;
+import java.util.Collection;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
@@ -32,14 +32,14 @@ public final class Peers {
         return new LocalNettyPeer(uploadRate, downloadRate, new PeerId(localAddress), dataBase, brain, diagnostic, eventLoopGroup);
     }
 
-    public static void waitForInit(List<Peer> peers) throws ExecutionException, InterruptedException {
+    public static void waitForInit(Collection<Peer> peers) throws ExecutionException, InterruptedException {
         Objects.requireNonNull(peers);
         for (Peer peer : peers) {
             peer.getInitFuture().get();
         }
     }
 
-    public static void closeAndWait(List<Peer> peers) throws ExecutionException, InterruptedException {
+    public static void closeAndWait(Collection<Peer> peers) throws ExecutionException, InterruptedException {
         Objects.requireNonNull(peers);
         for (Peer peer : peers) {
             peer.close();
@@ -50,14 +50,14 @@ public final class Peers {
         }
     }
 
-    public static void waitForClose(List<Peer> peers) throws ExecutionException, InterruptedException {
+    public static void waitForClose(Collection<Peer> peers) throws ExecutionException, InterruptedException {
         Objects.requireNonNull(peers);
         for (Peer peer : peers) {
             peer.getCloseFuture().get();
         }
     }
 
-    public static void connectGrid(List<Peer> peers) {
+    public static void connectGrid(Collection<Peer> peers) {
         Objects.requireNonNull(peers);
         for (Peer client : peers) {
             for (Peer server : peers) {
