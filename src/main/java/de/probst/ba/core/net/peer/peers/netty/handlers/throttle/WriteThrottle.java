@@ -54,7 +54,8 @@ public final class WriteThrottle extends ChannelHandlerAdapter implements Runnab
         while (true) {
             try {
                 ThrottledWrite throttledWrite = writes.take();
-                Thread.sleep(throttledWrite.timeToWait);
+                if (throttledWrite.timeToWait > 10 && throttledWrite.timeToWait < 10000)
+                    Thread.sleep(throttledWrite.timeToWait);
                 throttledWrite.write();
             } catch (InterruptedException e) {
                 logger.error("Write throttle crashed, shutting app down", e);

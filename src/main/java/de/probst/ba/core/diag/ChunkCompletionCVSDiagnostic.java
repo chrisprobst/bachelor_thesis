@@ -12,7 +12,7 @@ import java.util.Objects;
 /**
  * Created by chrisprobst on 22.08.14.
  */
-public final class PeerChunkCVSDiagnostic extends AbstractTimeCVSDiagnostic {
+public final class ChunkCompletionCVSDiagnostic extends AbstractTimeCVSDiagnostic {
 
     private boolean total;
     private Collection<Peer> peers;

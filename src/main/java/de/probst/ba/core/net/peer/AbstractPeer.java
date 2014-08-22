@@ -32,7 +32,7 @@ public abstract class AbstractPeer implements Peer {
         public void schedule() {
             getScheduler().schedule(this,
                     Config.getBrainDelay(),
-                    Config.getBrainTimeUnit());
+                    Config.getDefaultTimeUnit());
         }
 
         public void execute() {

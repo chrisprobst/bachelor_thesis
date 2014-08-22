@@ -5,12 +5,13 @@ import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParameterException;
 import com.beust.jcommander.converters.FileConverter;
+import de.probst.ba.core.diag.ChunkCompletionCVSDiagnostic;
 import de.probst.ba.core.diag.CombinedDiagnostic;
 import de.probst.ba.core.diag.Diagnostic;
 import de.probst.ba.core.diag.DiagnosticAdapter;
 import de.probst.ba.core.diag.LoggingDiagnostic;
-import de.probst.ba.core.diag.PeerChunkCVSDiagnostic;
 import de.probst.ba.core.diag.RecordDiagnostic;
+import de.probst.ba.core.diag.UploadCVSDiagnostic;
 import de.probst.ba.core.logic.Brain;
 import de.probst.ba.core.logic.brains.Brains;
 import de.probst.ba.core.media.DataInfo;
@@ -74,6 +75,21 @@ public class Benchmark {
         }
     }
 
+    public static class DelayValidator implements IValueValidator<Long> {
+
+        public static final long MIN = 10;
+        public static final long MAX = 100 * 1000;
+        public static final String MSG = "Must be between " + MIN + " and " + MAX;
+
+        @Override
+        public void validate(String name, Long value) throws ParameterException {
+            if (value < MIN || value > MAX) {
+                throw new ParameterException("Parameter " + name + ": "
+                        + MSG + " (found: " + value + ")");
+            }
+        }
+    }
+
     public static class TotalSizeValidator implements IValueValidator<Integer> {
 
         public static final int MIN = 1000;
@@ -119,6 +135,17 @@ public class Benchmark {
         }
     }
 
+    @Parameter(
+            names = {"-ad", "--announce-delay"},
+            description = "The announce delay in millis (" + DelayValidator.MSG + ")",
+            validateValueWith = DelayValidator.class)
+    private Long announceDelay = Config.getAnnounceDelay();
+
+    @Parameter(
+            names = {"-bd", "--brain-delay"},
+            description = "The brain delay in millis (" + DelayValidator.MSG + ")",
+            validateValueWith = DelayValidator.class)
+    private Long brainDelay = Config.getBrainDelay();
 
     @Parameter(
             names = {"-b", "--brain"},
@@ -137,10 +164,14 @@ public class Benchmark {
     private Boolean verbose = false;
 
     @Parameter(
-            names = {"-r", "--record"},
-            description = "Record the simulation",
-            arity = 1)
-    private Boolean record = true;
+            names = {"-re", "--record-events"},
+            description = "Record the events and serialize them")
+    private Boolean recordEvents = false;
+
+    @Parameter(
+            names = {"-rs", "--record-statistics"},
+            description = "Record statistics and save them in cvs form")
+    private Boolean recordStats = false;
 
     @Parameter(
             names = {"-dir", "--directory"},
@@ -219,6 +250,10 @@ public class Benchmark {
 
     private void start() throws ExecutionException, InterruptedException, IOException {
 
+        // Setup config
+        Config.setAnnounceDelay(announceDelay);
+        Config.setBrainDelay(brainDelay);
+
         // Setup logging
         System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", verbose ? "info" : "warn");
         InternalLoggerFactory.setDefaultFactory(new Slf4JLoggerFactory());
@@ -268,28 +303,48 @@ public class Benchmark {
             }
         };
 
-        // Setup diagnostic
-        Diagnostic combined;
-        RecordDiagnostic recordDiagnostic = null;
-        PeerChunkCVSDiagnostic peerChunkCVSDiagnostic = null;
-        PeerChunkCVSDiagnostic totalChunkCVSDiagnostic = null;
+        // Event recording
+        CombinedDiagnostic combinedEvents;
+        RecordDiagnostic eventRecordDiagnostic = null;
 
-        // If we have to record the data
-        if (record) {
-            recordDiagnostic = new RecordDiagnostic();
-            peerChunkCVSDiagnostic = new PeerChunkCVSDiagnostic();
-            totalChunkCVSDiagnostic = new PeerChunkCVSDiagnostic();
-            combined = new CombinedDiagnostic(
-                    recordDiagnostic,
-                    peerChunkCVSDiagnostic,
-                    totalChunkCVSDiagnostic,
-                    new LoggingDiagnostic(),
-                    shutdown);
+        // Stats recording
+        CombinedDiagnostic combinedStats;
+        ChunkCompletionCVSDiagnostic peerChunkCompletionCVSDiagnostic = null;
+        ChunkCompletionCVSDiagnostic totalChunkCompletionCVSDiagnostic = null;
+        UploadCVSDiagnostic peerUploadCVSDiagnostic = null;
+        UploadCVSDiagnostic totalUploadCVSDiagnostic = null;
+
+        // Setup events
+        if (recordEvents) {
+            eventRecordDiagnostic = new RecordDiagnostic();
+            combinedEvents = new CombinedDiagnostic(eventRecordDiagnostic);
         } else {
-            combined = new CombinedDiagnostic(
-                    new LoggingDiagnostic(),
-                    shutdown);
+            combinedEvents = new CombinedDiagnostic();
         }
+
+        // Setup stats
+        if (recordStats) {
+
+            // Setup stats recording
+            peerChunkCompletionCVSDiagnostic = new ChunkCompletionCVSDiagnostic();
+            totalChunkCompletionCVSDiagnostic = new ChunkCompletionCVSDiagnostic();
+            peerUploadCVSDiagnostic = new UploadCVSDiagnostic();
+            totalUploadCVSDiagnostic = new UploadCVSDiagnostic();
+            combinedStats = new CombinedDiagnostic(
+                    peerChunkCompletionCVSDiagnostic,
+                    totalChunkCompletionCVSDiagnostic,
+                    peerUploadCVSDiagnostic,
+                    totalUploadCVSDiagnostic);
+        } else {
+            combinedStats = new CombinedDiagnostic();
+        }
+
+        // Create the combined diagnostic
+        Diagnostic combined = new CombinedDiagnostic(
+                combinedEvents,
+                combinedStats,
+                new LoggingDiagnostic(),
+                shutdown);
 
         // Create the brain factory
         Supplier<Brain> brainFactory = () -> brainType.equals(BrainValidator.LOGARITHMIC) ?
@@ -319,59 +374,100 @@ public class Benchmark {
                     Optional.of(eventLoopGroup)));
         }
 
+        // Initialize stats
+        if (recordStats) {
+            // Setup peer chunk completion cvs diagnostic
+            peerChunkCompletionCVSDiagnostic.setTotal(false);
+            peerChunkCompletionCVSDiagnostic.setDataInfoHash(dataInfo.getHash());
+            peerChunkCompletionCVSDiagnostic.setPeers(peers);
+
+            // Setup total chunk completion cvs diagnostic
+            totalChunkCompletionCVSDiagnostic.setTotal(true);
+            totalChunkCompletionCVSDiagnostic.setDataInfoHash(dataInfo.getHash());
+            totalChunkCompletionCVSDiagnostic.setPeers(peers);
+
+            // Setup total upload cvs diagnostic
+            peerUploadCVSDiagnostic.setTotal(false);
+            peerUploadCVSDiagnostic.setPeers(peers);
+
+            // Setup total upload cvs diagnostic
+            totalUploadCVSDiagnostic.setTotal(true);
+            totalUploadCVSDiagnostic.setPeers(peers);
+        }
+
         // Wait for init
         Peers.waitForInit(peers);
 
         // Connect every peer to every other peer
         Peers.connectGrid(peers);
 
-        if (record) {
-            // Run diagnostic now
-            recordDiagnostic.start();
+        // Start events
+        if (recordEvents) {
+            eventRecordDiagnostic.start();
+        }
 
-            // Setup cvs diagnostic
-            peerChunkCVSDiagnostic.setTotal(false);
-            peerChunkCVSDiagnostic.setDataInfoHash(dataInfo.getHash());
-            peerChunkCVSDiagnostic.setPeers(peers);
-            peerChunkCVSDiagnostic.writeStatus();
-
-            // Setup cvs diagnostic
-            totalChunkCVSDiagnostic.setTotal(true);
-            totalChunkCVSDiagnostic.setDataInfoHash(dataInfo.getHash());
-            totalChunkCVSDiagnostic.setPeers(peers);
-            totalChunkCVSDiagnostic.writeStatus();
+        // Start stats
+        if (recordStats) {
+            peerChunkCompletionCVSDiagnostic.writeStatus();
+            totalChunkCompletionCVSDiagnostic.writeStatus();
+            peerUploadCVSDiagnostic.writeStatus();
+            totalUploadCVSDiagnostic.writeStatus();
         }
 
         // Stop the time
-        Instant first = Instant.now();
+        Instant timeStamp = Instant.now();
 
         // Await the count down latch to finish
         countDownLatch.await();
 
-        if (record) {
-            // Stop diagnostic
-            recordDiagnostic.end();
+        // Calculate the duration
+        Duration duration = Duration.between(timeStamp, Instant.now());
 
-            // Get records and print
-            IOUtil.serialize(new File(recordsDirectory, "records.dat"), recordDiagnostic.sortAndGetRecords());
+        // Print result
+        logger.info("[== COMPLETED IN: " + (duration.toMillis() / 1000.0) + " seconds ==]");
+
+        // Stop events
+        if (recordEvents) {
+            eventRecordDiagnostic.end();
+        }
+
+        // Save stats
+        if (recordStats) {
+            // CSV
+            logger.info("[== WRITING STATS ==]");
+            timeStamp = Instant.now();
 
             // Save peer chunks
             Files.write(new File(recordsDirectory, "peerChunks.csv").toPath(),
-                    peerChunkCVSDiagnostic.getCVSString().getBytes());
+                    peerChunkCompletionCVSDiagnostic.getCVSString().getBytes());
 
             // Save total chunks
             Files.write(new File(recordsDirectory, "totalChunks.csv").toPath(),
-                    totalChunkCVSDiagnostic.getCVSString().getBytes());
+                    totalChunkCompletionCVSDiagnostic.getCVSString().getBytes());
 
-            logger.info("[== SERIALIZED RECORDS ==]");
+            // Save peer upload
+            Files.write(new File(recordsDirectory, "peerUploads.csv").toPath(),
+                    peerUploadCVSDiagnostic.getCVSString().getBytes());
+
+            // Save total upload
+            Files.write(new File(recordsDirectory, "totalUploads.csv").toPath(),
+                    totalUploadCVSDiagnostic.getCVSString().getBytes());
+
+            duration = Duration.between(timeStamp, Instant.now());
+            logger.info("[== DONE IN: " + (duration.toMillis() / 1000.0) + " seconds ==]");
         }
 
-        // Calculate the duration
-        Duration duration = Duration.between(first, Instant.now());
+        // Save events
+        if (recordEvents) {
+            eventRecordDiagnostic.end();
 
-        // Print result
-        logger.info("[== COMPLETED ==]");
-        logger.info("[== THIS SIMULATION NEEDED: " + (duration.toMillis() / 1000.0) + " seconds ==]");
+            // Get records and serialize
+            logger.info("[== WRITING EVENTS ==]");
+            timeStamp = Instant.now();
+            IOUtil.serialize(new File(recordsDirectory, "records.dat"), eventRecordDiagnostic.sortAndGetRecords());
+            duration = Duration.between(timeStamp, Instant.now());
+            logger.info("[== DONE IN: " + (duration.toMillis() / 1000.0) + " seconds ==]");
+        }
 
         // Wait for close
         Peers.closeAndWait(peers);

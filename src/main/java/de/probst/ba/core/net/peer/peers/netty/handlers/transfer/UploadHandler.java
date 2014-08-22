@@ -17,6 +17,7 @@ import io.netty.handler.stream.ChunkedInput;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -32,19 +33,34 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
 
     public static Map<PeerId, Transfer> getUploads(ChannelGroup channelGroup) {
         return channelGroup.stream()
-                .map(c -> c.pipeline().get(UploadHandler.class).getTransferManager())
+                .map(c -> Optional.ofNullable(c.pipeline().get(UploadHandler.class)))
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .map(UploadHandler::getTransferManager)
                 .filter(Optional::isPresent)
                 .map(Optional::get)
                 .collect(Collectors.toMap(
                         p -> p.getTransfer().getRemotePeerId(),
-                        p -> p.getTransfer()));
+                        TransferManager::getTransfer));
     }
 
-    private final class ChunkedDataBaseInput implements ChunkedInput<ByteBuf> {
+    private static final class ChunkedDataBaseInput implements ChunkedInput<ByteBuf> {
+
+        private final TransferManager transferManager;
+        private volatile boolean abort = false;
+
+        public ChunkedDataBaseInput(TransferManager transferManager) {
+            Objects.requireNonNull(transferManager);
+            this.transferManager = transferManager;
+        }
+
+        public void abort() {
+            abort = true;
+        }
 
         @Override
         public boolean isEndOfInput() throws Exception {
-            return getTransferManager().get().isCompleted();
+            return transferManager.getTransfer().isCompleted();
         }
 
         @Override
@@ -54,19 +70,22 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
 
         @Override
         public ByteBuf readChunk(ChannelHandlerContext ctx) throws Exception {
+            if (abort) {
+                throw new IOException("Aborted");
+            }
             ByteBuf byteBuf = Unpooled.buffer(500);
-            getTransferManager().get().process(byteBuf);
+            transferManager.process(byteBuf);
             return byteBuf;
         }
 
         @Override
         public long length() {
-            return getTransferManager().get().getTransfer().getSize();
+            return transferManager.getTransfer().getSize();
         }
 
         @Override
         public long progress() {
-            return getTransferManager().get().getTransfer().getCompletedSize();
+            return transferManager.getTransfer().getCompletedSize();
         }
     }
 
@@ -140,6 +159,7 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
                     getPeer(), null, cause);
         } else {
             TransferManager newTransferManager;
+            ChunkedDataBaseInput chunkedDataBaseInput = null;
             boolean wasIncremented = false;
             try {
                 // Create a new transfer manager
@@ -163,8 +183,11 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
                 } else {
                     logger.debug("Starting upload: " + newTransferManager.getTransfer());
 
+                    // Create the message
+                    chunkedDataBaseInput = new ChunkedDataBaseInput(transferManager);
+
                     // Upload chunked input
-                    ctx.writeAndFlush(new ChunkedDataBaseInput()).addListener(fut -> {
+                    ctx.writeAndFlush(chunkedDataBaseInput).addListener(fut -> {
                         try {
                             if (!fut.isSuccess()) {
                                 logger.warn("Upload failed", fut.cause());
@@ -195,6 +218,11 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
             } catch (Exception e) {
                 try {
                     logger.warn("Upload failed", e);
+
+                    // Abort upload
+                    if (chunkedDataBaseInput != null) {
+                        chunkedDataBaseInput.abort();
+                    }
 
                     // If the creation failed, reject!
                     ctx.writeAndFlush(new UploadRejectedMessage(e));

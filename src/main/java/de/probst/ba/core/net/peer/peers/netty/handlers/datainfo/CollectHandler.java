@@ -26,12 +26,20 @@ public final class CollectHandler extends SimpleChannelInboundHandler<DataInfoMe
 
     public static Map<PeerId, Map<String, DataInfo>> getRemoteDataInfo(ChannelGroup channelGroup) {
         return channelGroup.stream()
-                .map(c -> c.pipeline().get(CollectHandler.class).getRemoteDataInfo())
+                .map(c -> Optional.ofNullable(c.pipeline().get(CollectHandler.class)))
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .map(CollectHandler::getRemoteDataInfo)
                 .filter(Optional::isPresent)
                 .map(Optional::get)
                 .collect(Collectors.toMap(
                         Tuple::first,
-                        Tuple::second));
+                        t -> t.second().entrySet().stream()
+                                .filter(p -> !p.getValue().isEmpty())
+                                .collect(Collectors.toMap(
+                                        Map.Entry::getKey,
+                                        Map.Entry::getValue
+                                ))));
     }
 
     private final Peer peer;
@@ -39,6 +47,10 @@ public final class CollectHandler extends SimpleChannelInboundHandler<DataInfoMe
     // All remote data info are stored here
     private volatile Optional<Tuple2<PeerId, Map<String, DataInfo>>> remoteDataInfo =
             Optional.empty();
+
+    private Optional<Tuple2<PeerId, Map<String, DataInfo>>> getRemoteDataInfo() {
+        return remoteDataInfo;
+    }
 
     private void updateInterests() {
         if (remoteDataInfo.isPresent()) {
@@ -50,15 +62,15 @@ public final class CollectHandler extends SimpleChannelInboundHandler<DataInfoMe
                     .map(DataInfo::empty)
                     .collect(Collectors.toList());
 
-            List<Boolean> succeeded = getPeer().getDataBase().addInterestsIf(
-                    dataInfoList, y -> getPeer().getBrain().addInterest(remotePeerId, y));
+            List<Boolean> succeeded = peer.getDataBase().addInterestsIf(
+                    dataInfoList, y -> peer.getBrain().addInterest(remotePeerId, y));
 
             for (int i = 0; i < succeeded.size(); i++) {
                 if (succeeded.get(i)) {
 
                     // DIAGNOSTIC
-                    getPeer().getDiagnostic().interestAdded(
-                            getPeer(), remotePeerId, dataInfoList.get(i));
+                    peer.getDiagnostic().interestAdded(
+                            peer, remotePeerId, dataInfoList.get(i));
                 }
             }
         }
@@ -86,8 +98,8 @@ public final class CollectHandler extends SimpleChannelInboundHandler<DataInfoMe
         }
 
         // DIAGNOSTIC
-        getPeer().getDiagnostic().collected(
-                getPeer(), peerId, getRemoteDataInfo().map(Tuple2::second));
+        peer.getDiagnostic().collected(
+                peer, peerId, getRemoteDataInfo().map(Tuple2::second));
 
         if (update) {
             updateInterests();
@@ -97,13 +109,5 @@ public final class CollectHandler extends SimpleChannelInboundHandler<DataInfoMe
     public CollectHandler(Peer peer) {
         Objects.requireNonNull(peer);
         this.peer = peer;
-    }
-
-    public Peer getPeer() {
-        return peer;
-    }
-
-    public Optional<Tuple2<PeerId, Map<String, DataInfo>>> getRemoteDataInfo() {
-        return remoteDataInfo;
     }
 }

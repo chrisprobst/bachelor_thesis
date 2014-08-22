@@ -41,8 +41,8 @@ public final class AnnounceHandler extends ChannelHandlerAdapter implements Runn
     private void schedule() {
         timer = ctx.channel().eventLoop().schedule(
                 this,
-                Config.getDataInfoAnnounceDelay(),
-                Config.getDataInfoAnnounceTimeUnit());
+                Config.getAnnounceDelay(),
+                Config.getDefaultTimeUnit());
     }
 
     /**

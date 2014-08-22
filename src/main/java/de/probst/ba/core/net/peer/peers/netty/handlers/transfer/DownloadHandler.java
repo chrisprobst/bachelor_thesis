@@ -17,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -70,7 +71,11 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
     private boolean receivedBuffer = false;
 
     private void remove(ChannelHandlerContext ctx) {
-        ctx.pipeline().remove(this);
+        try {
+            ctx.pipeline().remove(this);
+        } catch (NoSuchElementException e) {
+            e.printStackTrace();
+        }
     }
 
     private DownloadHandler(Peer peer,
@@ -145,7 +150,6 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
             // Consume the whole buffer
             while (buffer.readableBytes() > 0) {
 
-                boolean completed = false;
                 try {
                     // First buffer ? -> Download started!
                     if (!receivedBuffer) {
@@ -159,7 +163,14 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
                     }
 
                     // Process the buffer and check for completion
-                    completed = !getTransferManager().process(buffer);
+                    boolean completed = !getTransferManager().process(buffer);
+
+                    if (completed) {
+                        // We are ready when there
+                        // are no further chunks to
+                        // download
+                        remove(ctx);
+                    }
 
                     logger.debug("Download processed: " +
                             getTransferManager().getTransfer());
@@ -191,23 +202,17 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
                     }
 
                 } catch (Exception e) {
-                    completed = true;
+
+                    // Shutdown connection
+                    ctx.close();
 
                     logger.debug("Download failed: " +
                             getTransferManager().getTransfer() +
-                            ", cause:" + e);
+                            ", connection closed. Cause:" + e);
 
                     // DIAGNOSTIC
                     getPeer().getDiagnostic().downloadFailed(
                             getPeer(), getTransferManager(), e);
-                } finally {
-                    if (completed) {
-
-                        // We are ready when there
-                        // are no further chunks to
-                        // download
-                        remove(ctx);
-                    }
                 }
             }
         } else {

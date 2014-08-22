@@ -10,25 +10,32 @@ public final class Config {
     private Config() {
     }
 
+    private static volatile long announceDelay = 1000;
+    private static volatile long brainDelay = 500;
+
     public static int getDefaultCVSElementWidth() {
         return 20;
     }
 
     private static final TimeUnit DEFAULT_TIME_UNIT = TimeUnit.MILLISECONDS;
 
-    public static long getDataInfoAnnounceDelay() {
-        return 500;
+    public static TimeUnit getDefaultTimeUnit() {
+        return DEFAULT_TIME_UNIT;
     }
 
-    public static TimeUnit getDataInfoAnnounceTimeUnit() {
-        return DEFAULT_TIME_UNIT;
+    public static long getAnnounceDelay() {
+        return announceDelay;
+    }
+
+    public static void setAnnounceDelay(long announceDelay) {
+        Config.announceDelay = announceDelay;
     }
 
     public static long getBrainDelay() {
-        return 50;
+        return brainDelay;
     }
 
-    public static TimeUnit getBrainTimeUnit() {
-        return DEFAULT_TIME_UNIT;
+    public static void setBrainDelay(long brainDelay) {
+        Config.brainDelay = brainDelay;
     }
 }
