@@ -17,9 +17,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -29,89 +29,72 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
 
     public static Map<PeerId, Transfer> getDownloads(ChannelGroup channelGroup) {
         return channelGroup.stream()
-                .map(c -> Optional.ofNullable(c.pipeline().get(DownloadHandler.class)))
+                .map(c -> get(c).getTransferManager())
                 .filter(Optional::isPresent)
                 .map(Optional::get)
+                .map(TransferManager::getTransfer)
                 .collect(Collectors.toMap(
-                        p -> p.getTransferManager().getTransfer().getRemotePeerId(),
-                        p -> p.getTransferManager().getTransfer()));
+                        Transfer::getRemotePeerId,
+                        Function.<Transfer>identity()));
     }
 
-    public static void request(Peer peer,
-                               Channel remotePeer,
-                               Transfer transfer) {
-        Objects.requireNonNull(peer);
-        Objects.requireNonNull(remotePeer);
-        Objects.requireNonNull(transfer);
-
-        if (transfer.isUpload()) {
-            throw new IllegalArgumentException("transfer.isUpload()");
-        }
-
-        if (!transfer.getRemotePeerId().equals(new NettyPeerId(remotePeer))) {
-            throw new IllegalArgumentException(
-                    "!transfer.getRemotePeerId().equals(remotePeer.id())");
-        }
-
-        // Create a new download handler
-        DownloadHandler downloadHandler = new DownloadHandler(peer,
-                peer.getDataBase().createTransferManager(transfer));
-
-        // Add to pipeline
-        remotePeer.pipeline().addLast(
-                downloadHandler.getClass().getName(),
-                downloadHandler);
+    public static DownloadHandler get(Channel remotePeer) {
+        return remotePeer.pipeline().get(DownloadHandler.class);
     }
 
     private final Logger logger =
             LoggerFactory.getLogger(DownloadHandler.class);
 
     private final Peer peer;
-    private final TransferManager transferManager;
-    private boolean receivedBuffer = false;
+    private volatile ChannelHandlerContext ctx;
 
-    private void remove(ChannelHandlerContext ctx) {
-        try {
-            ctx.pipeline().remove(this);
-        } catch (NoSuchElementException e) {
-            e.printStackTrace();
-        }
-    }
+    private volatile TransferManager transferManager;
+    private volatile boolean receivedBuffer = false;
 
-    private DownloadHandler(Peer peer,
-                            TransferManager transferManager) {
+    public DownloadHandler(Peer peer) {
         Objects.requireNonNull(peer);
-        Objects.requireNonNull(transferManager);
+        this.peer = peer;
+    }
 
+    @Override
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        this.ctx = ctx;
+        super.channelActive(ctx);
+    }
 
-        if (transferManager.getTransfer().isUpload()) {
-            throw new IllegalArgumentException(
-                    "transferManager.getTransfer().isUpload()");
+    public synchronized void download(Transfer transfer) {
+        if (this.transferManager != null) {
+            throw new IllegalStateException("this.transferManager != null");
         }
 
-        this.peer = peer;
-        this.transferManager = transferManager;
-    }
+        // Try to get ctx
+        ChannelHandlerContext ctx = this.ctx;
+        if (ctx == null) {
+            throw new IllegalStateException("ctx == null");
+        }
 
-    public Peer getPeer() {
-        return peer;
-    }
+        // Check that the ids are the same
+        if (!transfer.getRemotePeerId().equals(new NettyPeerId(ctx.channel()))) {
+            throw new IllegalArgumentException(
+                    "!transfer.getRemotePeerId().equals(new NettyPeerId(ctx.channel()))");
+        }
 
-    public TransferManager getTransferManager() {
-        return transferManager;
-    }
+        // Create a new transfer manager
+        TransferManager newTransferManager = transferManager =
+                peer.getDataBase().createTransferManager(transfer);
 
-    @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        ctx.close();
-        super.exceptionCaught(ctx, cause);
-    }
+        // Make sure it is a download transfer
+        if (newTransferManager.getTransfer().isUpload()) {
+            throw new IllegalArgumentException(
+                    "newTransferManager.getTransfer().isUpload()");
+        }
 
-    @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        Transfer transfer = getTransferManager().getTransfer();
-        logger.debug("Request upload transfer: " + transfer);
-        ctx.writeAndFlush(new UploadRequestMessage(transfer.getDataInfo()))
+        // Set vars
+        receivedBuffer = false;
+
+        // Write the download request
+        logger.debug("Request upload transfer: " + newTransferManager.getTransfer());
+        ctx.writeAndFlush(new UploadRequestMessage(newTransferManager.getTransfer().getDataInfo()))
                 .addListener(fut -> {
                     if (!fut.isSuccess()) {
                         logger.warn("Failed to send upload request",
@@ -125,80 +108,88 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
 
         // DIAGNOSTIC
         getPeer().getDiagnostic().downloadRequested(
-                getPeer(), getTransferManager());
+                peer, newTransferManager);
+    }
+
+    public Peer getPeer() {
+        return peer;
+    }
+
+    public Optional<TransferManager> getTransferManager() {
+        return Optional.ofNullable(transferManager);
+    }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        ctx.close();
+        super.exceptionCaught(ctx, cause);
     }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof UploadRejectedMessage) {
-            UploadRejectedMessage uploadRejectedMessage =
-                    (UploadRejectedMessage) msg;
+            try {
+                UploadRejectedMessage uploadRejectedMessage =
+                        (UploadRejectedMessage) msg;
 
-            logger.debug("Upload rejected: " +
-                    uploadRejectedMessage.getCause().getMessage());
+                logger.debug("Upload rejected: " +
+                        uploadRejectedMessage.getCause().getMessage());
 
-            // Upload rejected, lets just
-            // remove this download
-            remove(ctx);
-
-            // DIAGNOSTIC
-            getPeer().getDiagnostic().downloadRejected(
-                    getPeer(), getTransferManager(), uploadRejectedMessage.getCause());
+                // DIAGNOSTIC
+                getPeer().getDiagnostic().downloadRejected(
+                        peer, transferManager, uploadRejectedMessage.getCause());
+            } finally {
+                // We are not downloading anymore
+                transferManager = null;
+            }
         } else if (msg instanceof ByteBuf) {
             ByteBuf buffer = (ByteBuf) msg;
 
             // Consume the whole buffer
             while (buffer.readableBytes() > 0) {
-
+                boolean completed = false;
                 try {
                     // First buffer ? -> Download started!
                     if (!receivedBuffer) {
                         receivedBuffer = true;
                         logger.debug("Download started: " +
-                                getTransferManager().getTransfer());
+                                transferManager.getTransfer());
 
                         // DIAGNOSTIC
                         getPeer().getDiagnostic().downloadStarted(
-                                getPeer(), getTransferManager());
+                                peer, transferManager);
                     }
 
                     // Process the buffer and check for completion
-                    boolean completed = !getTransferManager().process(buffer);
-
-                    if (completed) {
-                        // We are ready when there
-                        // are no further chunks to
-                        // download
-                        remove(ctx);
-                    }
+                    completed = !transferManager.process(buffer);
 
                     logger.debug("Download processed: " +
-                            getTransferManager().getTransfer());
+                            transferManager.getTransfer());
 
                     // DIAGNOSTIC
                     getPeer().getDiagnostic().downloadProgressed(
-                            getPeer(), getTransferManager());
+                            peer, transferManager);
 
                     // Simply process the transfer manager
                     if (completed) {
                         logger.debug("Download completed: " +
-                                getTransferManager().getTransfer());
+                                transferManager.getTransfer());
 
                         // DIAGNOSTIC
                         getPeer().getDiagnostic().downloadSucceeded(
-                                getPeer(), getTransferManager());
+                                peer, transferManager);
                     }
 
                     // Query data base
-                    DataInfo dataInfoStatus = getPeer().getDataBase().get(
-                            getTransferManager().getTransfer().getDataInfo().getHash());
+                    DataInfo dataInfoStatus = peer.getDataBase().get(
+                            transferManager.getTransfer().getDataInfo().getHash());
 
                     if (dataInfoStatus != null && dataInfoStatus.isCompleted()) {
                         logger.debug("Data completed: " + dataInfoStatus);
 
                         // DIAGNOSTIC
-                        getPeer().getDiagnostic().dataCompleted(
-                                getPeer(), dataInfoStatus, transferManager);
+                        peer.getDiagnostic().dataCompleted(
+                                peer, dataInfoStatus, transferManager);
                     }
 
                 } catch (Exception e) {
@@ -207,12 +198,16 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
                     ctx.close();
 
                     logger.debug("Download failed: " +
-                            getTransferManager().getTransfer() +
+                            transferManager.getTransfer() +
                             ", connection closed. Cause:" + e);
 
                     // DIAGNOSTIC
                     getPeer().getDiagnostic().downloadFailed(
-                            getPeer(), getTransferManager(), e);
+                            peer, transferManager, e);
+                } finally {
+                    if (completed) {
+                        transferManager = null;
+                    }
                 }
             }
         } else {

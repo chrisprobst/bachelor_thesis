@@ -105,6 +105,7 @@ abstract class AbstractNettyPeer extends AbstractPeer {
 
                     logHandler,
                     channelGroupHandler,
+                    new DownloadHandler(AbstractNettyPeer.this),
                     new CollectHandler(AbstractNettyPeer.this)
             );
 
@@ -191,11 +192,7 @@ abstract class AbstractNettyPeer extends AbstractPeer {
                     "download from a dead peer");
         } else {
             try {
-                // Request the download
-                DownloadHandler.request(
-                        this,
-                        remotePeer,
-                        transfer);
+                DownloadHandler.get(remotePeer).download(transfer);
             } catch (Exception e) {
                 logger.warn("Failed to request download", e);
             }
