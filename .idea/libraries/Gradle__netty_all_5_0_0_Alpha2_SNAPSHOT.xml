@@ -1,11 +1,11 @@
 <component name="libraryTable">
   <library name="Gradle: netty-all-5.0.0.Alpha2-SNAPSHOT">
     <CLASSES>
-      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/io.netty/netty-all/5.0.0.Alpha2-SNAPSHOT/6f6be6343b4db62b792dc74cf144c5eb895f069a/netty-all-5.0.0.Alpha2-SNAPSHOT.jar!/" />
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/io.netty/netty-all/5.0.0.Alpha2-SNAPSHOT/9e866407ad450dcbe15fb80d3ad670cb9edfe916/netty-all-5.0.0.Alpha2-SNAPSHOT.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES>
-      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/io.netty/netty-all/5.0.0.Alpha2-SNAPSHOT/cb830bf804bf90335d5ef05cf73d3180708ef318/netty-all-5.0.0.Alpha2-SNAPSHOT-sources.jar!/" />
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/io.netty/netty-all/5.0.0.Alpha2-SNAPSHOT/96e83be83cb79fa35845a82c5ba1ca594d1f92c2/netty-all-5.0.0.Alpha2-SNAPSHOT-sources.jar!/" />
     </SOURCES>
   </library>
 </component>

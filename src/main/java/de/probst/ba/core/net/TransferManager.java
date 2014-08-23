@@ -95,7 +95,7 @@ public final class TransferManager {
      * otherwise false.
      * @throws IOException
      */
-    public boolean process(ByteBuf byteBuf) throws IOException {
+    public synchronized boolean process(ByteBuf byteBuf) throws IOException {
         // The transfer is already finished
         if (isCompleted()) {
             return false;
