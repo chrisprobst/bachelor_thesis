@@ -73,10 +73,6 @@ public final class AnnounceHandler extends ChannelHandlerAdapter implements Runn
         super.channelInactive(ctx);
     }
 
-    public Peer getPeer() {
-        return peer;
-    }
-
     @Override
     public void run() {
         // Create the netty peer id
@@ -84,8 +80,8 @@ public final class AnnounceHandler extends ChannelHandlerAdapter implements Runn
 
         // Transform the data info using the brain
         Optional<Map<String, DataInfo>> transformedDataInfo =
-                getPeer().getBrain().transformUploadDataInfo(
-                        getPeer().getNetworkState(),
+                peer.getBrain().transformUploadDataInfo(
+                        peer.getNetworkState(),
                         peerId);
 
         // This is actually a bug in the brain
@@ -117,7 +113,8 @@ public final class AnnounceHandler extends ChannelHandlerAdapter implements Runn
                     }
                 });
 
-        getPeer().getDiagnostic().announced(
-                getPeer(), peerId, dataInfoMessage.getDataInfo());
+        // DIAGNOSTIC
+        peer.getDiagnostic().announced(
+                peer, peerId, dataInfoMessage.getDataInfo());
     }
 }

@@ -63,7 +63,6 @@ public class RecordViewer extends Application {
     private CheckBox downloadProgressedCheckBox = new CheckBox("Progressed downloads");
     private CheckBox downloadStartedCheckBox = new CheckBox("Started downloads");
     private CheckBox downloadSucceededCheckBox = new CheckBox("Succeeded downloads");
-    private CheckBox downloadFailedCheckBox = new CheckBox("Failed downloads");
     private CheckBox clearCheckBox = new CheckBox("Clear canvas");
 
     private void initPeers(File file) throws IOException, ClassNotFoundException {
@@ -115,8 +114,7 @@ public class RecordViewer extends Application {
                 (record.getRecordType() == RecordDiagnostic.RecordType.DownloadRequested && downloadRequestedCheckBox.isSelected()) ||
                 (record.getRecordType() == RecordDiagnostic.RecordType.DownloadProgressed && downloadProgressedCheckBox.isSelected()) ||
                 (record.getRecordType() == RecordDiagnostic.RecordType.DownloadStarted && downloadStartedCheckBox.isSelected()) ||
-                (record.getRecordType() == RecordDiagnostic.RecordType.DownloadSucceeded && downloadSucceededCheckBox.isSelected()) ||
-                (record.getRecordType() == RecordDiagnostic.RecordType.DownloadFailed && downloadFailedCheckBox.isSelected());
+                (record.getRecordType() == RecordDiagnostic.RecordType.DownloadSucceeded && downloadSucceededCheckBox.isSelected());
     }
 
     private void renderArrow(GraphicsContext gc, Point2D a, Point2D b, double offset, double backOff) {
@@ -432,7 +430,6 @@ public class RecordViewer extends Application {
         menuBar.getChildren().add(downloadProgressedCheckBox);
         menuBar.getChildren().add(downloadStartedCheckBox);
         menuBar.getChildren().add(downloadSucceededCheckBox);
-        menuBar.getChildren().add(downloadFailedCheckBox);
         menuBar.getChildren().add(clearCheckBox);
         clearCheckBox.setSelected(true);
 
@@ -461,9 +458,6 @@ public class RecordViewer extends Application {
 
         downloadSucceededCheckBox.selectedProperty().addListener(guiSetupListener);
         downloadSucceededCheckBox.setPadding(new Insets(5, 5, 5, 5));
-
-        downloadFailedCheckBox.selectedProperty().addListener(guiSetupListener);
-        downloadFailedCheckBox.setPadding(new Insets(5, 5, 5, 5));
 
         clearCheckBox.setPadding(new Insets(5, 5, 5, 5));
         clearCheckBox.selectedProperty().addListener(clearListener);

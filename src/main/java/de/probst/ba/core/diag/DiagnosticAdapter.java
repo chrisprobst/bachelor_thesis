@@ -68,11 +68,6 @@ public class DiagnosticAdapter implements Diagnostic {
     }
 
     @Override
-    public void downloadFailed(Peer peer, TransferManager transferManager, Throwable cause) {
-
-    }
-
-    @Override
     public void dataCompleted(Peer peer, DataInfo dataInfo, TransferManager lastTransferManager) {
 
     }

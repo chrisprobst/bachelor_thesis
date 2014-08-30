@@ -18,7 +18,6 @@ import io.netty.handler.stream.ChunkedInput;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -47,15 +46,10 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
     private static final class ChunkedDataBaseInput implements ChunkedInput<ByteBuf> {
 
         private final TransferManager transferManager;
-        private volatile boolean abort = false;
 
         public ChunkedDataBaseInput(TransferManager transferManager) {
             Objects.requireNonNull(transferManager);
             this.transferManager = transferManager;
-        }
-
-        public void abort() {
-            abort = true;
         }
 
         @Override
@@ -70,9 +64,6 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
 
         @Override
         public ByteBuf readChunk(ChannelHandlerContext ctx) throws Exception {
-            if (abort) {
-                throw new IOException("Aborted");
-            }
             ByteBuf byteBuf = Unpooled.buffer(500);
             transferManager.process(byteBuf);
             return byteBuf;
@@ -106,12 +97,10 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
         return false;
     }
 
-    private void restore(ChannelHandlerContext ctx, boolean decrement) {
+    private void reset(ChannelHandlerContext ctx) {
         transferManager = null;
         ctx.channel().config().setAutoRead(true);
-        if (decrement) {
-            parallelUploads.tryDecrement();
-        }
+        parallelUploads.tryDecrement();
     }
 
     public UploadHandler(Peer peer, AtomicCounter parallelUploads) {
@@ -158,80 +147,50 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
             peer.getDiagnostic().uploadRejected(
                     peer, null, cause);
         } else {
-            ChunkedDataBaseInput chunkedDataBaseInput = null;
-            boolean wasIncremented = false;
-            try {
-                // Create a new transfer manager
-                TransferManager newTransferManager = peer.getDataBase()
-                        .createTransferManager(Transfer.upload(
-                                new NettyPeerId(ctx.channel()),
-                                msg.getDataInfo()));
 
-                // If the upload is not allowed, reject it!
-                if (!(wasIncremented = setup(ctx, newTransferManager))) {
-                    Exception cause = new IllegalStateException(
-                            "The brain rejected the upload, because it " +
-                                    "reached the maximum number of uploads");
+            // Create a new transfer manager
+            TransferManager newTransferManager = peer.getDataBase()
+                    .createTransferManager(Transfer.upload(
+                            new NettyPeerId(ctx.channel()),
+                            msg.getDataInfo()));
 
-                    logger.debug(cause.getMessage());
-                    ctx.writeAndFlush(new UploadRejectedMessage(cause));
+            // If the upload is not allowed, reject it!
+            if (!setup(ctx, newTransferManager)) {
+                Exception cause = new IllegalStateException(
+                        "The brain rejected the upload, because it " +
+                                "reached the maximum number of uploads");
 
-                    // DIAGNOSTIC
-                    peer.getDiagnostic().uploadRejected(
-                            peer, newTransferManager, cause);
-                } else {
-                    logger.debug("Starting upload: " + newTransferManager.getTransfer());
+                logger.debug(cause.getMessage());
+                ctx.writeAndFlush(new UploadRejectedMessage(cause));
 
-                    // Create the message
-                    chunkedDataBaseInput = new ChunkedDataBaseInput(newTransferManager);
+                // DIAGNOSTIC
+                peer.getDiagnostic().uploadRejected(
+                        peer, newTransferManager, cause);
+            } else {
+                logger.debug("Starting upload: " + newTransferManager.getTransfer());
 
-                    // Upload chunked input
-                    ctx.writeAndFlush(chunkedDataBaseInput).addListener(fut -> {
-                        try {
-                            if (!fut.isSuccess()) {
-                                logger.warn("Upload failed", fut.cause());
+                // Upload chunked input
+                ctx.writeAndFlush(new ChunkedDataBaseInput(newTransferManager)).addListener(fut -> {
+                    if (!fut.isSuccess()) {
+                        logger.warn("Upload failed", fut.cause());
 
-                                // Upload failed, notify!
-                                ctx.writeAndFlush(new UploadRejectedMessage(fut.cause()));
+                        // No success means network or chunked input exception
+                        ctx.close();
+                    } else {
+                        logger.debug("Upload succeeded");
 
-                                // DIAGNOSTIC
-                                peer.getDiagnostic().uploadRejected(
-                                        peer, transferManager, fut.cause());
-                            } else {
-                                logger.debug("Upload succeeded");
+                        // DIAGNOSTIC
+                        peer.getDiagnostic().uploadSucceeded(
+                                peer, transferManager);
 
-                                // DIAGNOSTIC
-                                peer.getDiagnostic().uploadSucceeded(
-                                        peer, transferManager);
-                            }
-                        } finally {
-                            restore(ctx, true);
-                        }
-                    });
-
-                    // DIAGNOSTIC
-                    peer.getDiagnostic().uploadStarted(
-                            peer, newTransferManager);
-                }
-
-            } catch (Exception e) {
-                try {
-                    logger.warn("Upload failed", e);
-
-                    // Abort upload
-                    if (chunkedDataBaseInput != null) {
-                        chunkedDataBaseInput.abort();
+                        // Restore
+                        reset(ctx);
                     }
+                });
 
-                    // If the creation failed, reject!
-                    ctx.writeAndFlush(new UploadRejectedMessage(e));
-
-                    // DIAGNOSTIC
-                    peer.getDiagnostic().uploadRejected(
-                            peer, transferManager, e);
-                } finally {
-                    restore(ctx, wasIncremented);
-                }
+                // DIAGNOSTIC
+                peer.getDiagnostic().uploadStarted(
+                        peer, newTransferManager);
             }
         }
     }

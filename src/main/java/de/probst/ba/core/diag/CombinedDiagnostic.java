@@ -79,11 +79,6 @@ public final class CombinedDiagnostic implements Diagnostic {
     }
 
     @Override
-    public void downloadFailed(Peer peer, TransferManager transferManager, Throwable cause) {
-        diagnosticList.forEach(d -> d.downloadFailed(peer, transferManager, cause));
-    }
-
-    @Override
     public void dataCompleted(Peer peer, DataInfo dataInfo, TransferManager lastTransferManager) {
         diagnosticList.forEach(d -> d.dataCompleted(peer, dataInfo, lastTransferManager));
     }

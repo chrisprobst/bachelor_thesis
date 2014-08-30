@@ -57,10 +57,6 @@ public interface Diagnostic {
     void downloadSucceeded(Peer peer,
                            TransferManager transferManager);
 
-    void downloadFailed(Peer peer,
-                        TransferManager transferManager,
-                        Throwable cause);
-
     void dataCompleted(Peer peer,
                        DataInfo dataInfo,
                        TransferManager lastTransferManager);

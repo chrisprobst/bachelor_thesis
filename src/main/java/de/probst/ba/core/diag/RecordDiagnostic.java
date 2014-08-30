@@ -25,7 +25,7 @@ public class RecordDiagnostic implements Diagnostic {
         Start, End,
         Announced, Collected, InterestAdded,
         UploadStarted, UploadRejected, UploadSucceeded,
-        DownloadRequested, DownloadRejected, DownloadStarted, DownloadProgressed, DownloadSucceeded, DownloadFailed,
+        DownloadRequested, DownloadRejected, DownloadStarted, DownloadProgressed, DownloadSucceeded,
         DataCompleted
     }
 
@@ -88,10 +88,6 @@ public class RecordDiagnostic implements Diagnostic {
 
         public static Record downloadSucceeded(PeerId peerId, Transfer transfer) {
             return new Record(RecordType.DownloadSucceeded, peerId, null, null, null, null, transfer, null);
-        }
-
-        public static Record downloadFailed(PeerId peerId, Transfer transfer, Throwable cause) {
-            return new Record(RecordType.DownloadFailed, peerId, null, null, null, null, transfer, cause);
         }
 
         public static Record dataCompleted(PeerId peerId, DataInfo completedDataInfo, Transfer lastTransfer) {
@@ -287,11 +283,6 @@ public class RecordDiagnostic implements Diagnostic {
     @Override
     public void downloadSucceeded(Peer peer, TransferManager transferManager) {
         records.add(Record.downloadSucceeded(peer.getNetworkState().getLocalPeerId(), transferManager.getTransfer()));
-    }
-
-    @Override
-    public void downloadFailed(Peer peer, TransferManager transferManager, Throwable cause) {
-        records.add(Record.downloadFailed(peer.getNetworkState().getLocalPeerId(), transferManager.getTransfer(), cause));
     }
 
     @Override

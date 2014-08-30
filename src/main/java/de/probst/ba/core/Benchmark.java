@@ -39,6 +39,7 @@ import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Supplier;
+import java.util.stream.IntStream;
 
 /**
  * Created by chrisprobst on 12.08.14.
@@ -120,6 +121,21 @@ public class Benchmark {
         }
     }
 
+    public static class PartsValidator implements IValueValidator<Integer> {
+
+        public static final int MIN = 1;
+        public static final int MAX = 1000;
+        public static final String MSG = "Must be between " + MIN + " and " + MAX;
+
+        @Override
+        public void validate(String name, Integer value) throws ParameterException {
+            if (value < MIN || value > MAX) {
+                throw new ParameterException("Parameter " + name + ": "
+                        + MSG + " (found: " + value + ")");
+            }
+        }
+    }
+
     public static class BrainValidator implements IValueValidator<String> {
 
         public static final String INTELLIGENT = "intelligent";
@@ -179,6 +195,12 @@ public class Benchmark {
             converter = FileConverter.class,
             required = false)
     private File recordsDirectory = new File(".");
+
+    @Parameter(
+            names = {"-p", "--parts"},
+            description = "The number of parts (" + PartsValidator.MSG + ")",
+            validateValueWith = PartsValidator.class)
+    private Integer parts = 1;
 
     @Parameter(
             names = {"-c", "--chunk-count"},
@@ -278,15 +300,17 @@ public class Benchmark {
         logger.info("[== An intelligent brain needs approx.: " + intelligentBrainTime + " seconds ==]");
 
         // Benchmark data
-        DataInfo dataInfo = new DataInfo(
-                0,
-                totalSize,
-                Optional.empty(),
-                Optional.empty(),
-                "Benchmark hash",
-                chunkCount,
-                String::valueOf)
-                .full();
+        DataInfo[] dataInfo = IntStream.range(0, parts)
+                .mapToObj(i -> new DataInfo(
+                        i,
+                        totalSize,
+                        Optional.empty(),
+                        Optional.empty(),
+                        "Benchmark hash, part: " + i,
+                        chunkCount,
+                        String::valueOf)
+                        .full())
+                .toArray(DataInfo[]::new);
 
         // List of peers
         Queue<Peer> peers = new LinkedList<>();
@@ -295,7 +319,7 @@ public class Benchmark {
         EventLoopGroup eventLoopGroup = new DefaultEventLoopGroup();
 
         // Setup diagnostic
-        CountDownLatch countDownLatch = new CountDownLatch(leechers);
+        CountDownLatch countDownLatch = new CountDownLatch(leechers * parts);
         Diagnostic shutdown = new DiagnosticAdapter() {
             @Override
             public void dataCompleted(Peer peer, DataInfo dataInfo, TransferManager lastTransferManager) {
@@ -378,12 +402,12 @@ public class Benchmark {
         if (recordStats) {
             // Setup peer chunk completion cvs diagnostic
             peerChunkCompletionCVSDiagnostic.setTotal(false);
-            peerChunkCompletionCVSDiagnostic.setDataInfoHash(dataInfo.getHash());
+            peerChunkCompletionCVSDiagnostic.setDataInfoHash(dataInfo[0].getHash());
             peerChunkCompletionCVSDiagnostic.setPeers(peers);
 
             // Setup total chunk completion cvs diagnostic
             totalChunkCompletionCVSDiagnostic.setTotal(true);
-            totalChunkCompletionCVSDiagnostic.setDataInfoHash(dataInfo.getHash());
+            totalChunkCompletionCVSDiagnostic.setDataInfoHash(dataInfo[0].getHash());
             totalChunkCompletionCVSDiagnostic.setPeers(peers);
 
             // Setup total upload cvs diagnostic

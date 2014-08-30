@@ -192,7 +192,7 @@ abstract class AbstractNettyPeer extends AbstractPeer {
                     "download from a dead peer");
         } else {
             try {
-                DownloadHandler.get(remotePeer).download(transfer);
+                DownloadHandler.download(remotePeer, transfer);
             } catch (Exception e) {
                 logger.warn("Failed to request download", e);
             }

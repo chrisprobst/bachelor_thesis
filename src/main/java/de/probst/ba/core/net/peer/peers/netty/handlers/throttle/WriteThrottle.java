@@ -9,7 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.LinkedTransferQueue;
 
 /**
  * Created by chrisprobst on 16.08.14.
@@ -40,7 +40,7 @@ public final class WriteThrottle extends ChannelHandlerAdapter implements Runnab
         }
     }
 
-    private final BlockingQueue<ThrottledWrite> writes = new LinkedBlockingQueue<>();
+    private final BlockingQueue<ThrottledWrite> writes = new LinkedTransferQueue<>();
     private final long uploadRate;
 
     public WriteThrottle(long uploadRate) {
@@ -54,8 +54,9 @@ public final class WriteThrottle extends ChannelHandlerAdapter implements Runnab
         while (true) {
             try {
                 ThrottledWrite throttledWrite = writes.take();
-                if (throttledWrite.timeToWait > 10 && throttledWrite.timeToWait < 10000)
+                if (throttledWrite.timeToWait > 10) {
                     Thread.sleep(throttledWrite.timeToWait);
+                }
                 throttledWrite.write();
             } catch (InterruptedException e) {
                 logger.error("Write throttle crashed, shutting app down", e);

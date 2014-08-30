@@ -14,9 +14,6 @@ import java.util.stream.Collectors;
  */
 public final class FakeDataBase extends AbstractDataBase {
 
-    public FakeDataBase() {
-    }
-
     public FakeDataBase(DataInfo... dataInfo) {
         this(Arrays.stream(dataInfo)
                 .collect(Collectors.toMap(

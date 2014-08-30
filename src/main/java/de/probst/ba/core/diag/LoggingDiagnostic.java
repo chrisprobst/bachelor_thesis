@@ -75,11 +75,6 @@ public final class LoggingDiagnostic implements Diagnostic {
     }
 
     @Override
-    public void downloadFailed(Peer peer, TransferManager transferManager, Throwable cause) {
-        logger.info("Peer " + peer.getNetworkState().getLocalPeerId() + " failed download " + transferManager + ", cause: " + cause);
-    }
-
-    @Override
     public void dataCompleted(Peer peer, DataInfo dataInfo, TransferManager lastTransferManager) {
         logger.info("Peer " + peer.getNetworkState().getLocalPeerId() + " completed the data " + dataInfo + " with " + lastTransferManager);
     }
