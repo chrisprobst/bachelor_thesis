@@ -438,19 +438,19 @@ public class Benchmark {
             timeStamp = Instant.now();
 
             // Save peer chunks
-            Files.write(new File(recordsDirectory, "peerChunks.csv").toPath(),
+            Files.write(new File(recordsDirectory, brainType + "PeerChunks.csv").toPath(),
                     peerChunkCompletionCVSDiagnostic.getCVSString().getBytes());
 
             // Save total chunks
-            Files.write(new File(recordsDirectory, "totalChunks.csv").toPath(),
+            Files.write(new File(recordsDirectory, brainType + "TotalChunks.csv").toPath(),
                     totalChunkCompletionCVSDiagnostic.getCVSString().getBytes());
 
             // Save peer upload
-            Files.write(new File(recordsDirectory, "peerUploads.csv").toPath(),
+            Files.write(new File(recordsDirectory, brainType + "PeerUploads.csv").toPath(),
                     peerUploadCVSDiagnostic.getCVSString().getBytes());
 
             // Save total upload
-            Files.write(new File(recordsDirectory, "totalUploads.csv").toPath(),
+            Files.write(new File(recordsDirectory, brainType + "TotalUploads.csv").toPath(),
                     totalUploadCVSDiagnostic.getCVSString().getBytes());
 
             duration = Duration.between(timeStamp, Instant.now());
@@ -464,7 +464,7 @@ public class Benchmark {
             // Get records and serialize
             logger.info("[== WRITING EVENTS ==]");
             timeStamp = Instant.now();
-            IOUtil.serialize(new File(recordsDirectory, "records.dat"), eventRecordDiagnostic.sortAndGetRecords());
+            IOUtil.serialize(new File(recordsDirectory, brainType + "Records.dat"), eventRecordDiagnostic.sortAndGetRecords());
             duration = Duration.between(timeStamp, Instant.now());
             logger.info("[== DONE IN: " + (duration.toMillis() / 1000.0) + " seconds ==]");
         }
