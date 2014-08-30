@@ -10,6 +10,7 @@ import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.messages.UploadR
 import de.probst.ba.core.util.concurrent.AtomicCounter;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.group.ChannelGroup;
@@ -28,20 +29,19 @@ import java.util.stream.Collectors;
  */
 public final class UploadHandler extends SimpleChannelInboundHandler<UploadRequestMessage> {
 
-    private final Logger logger =
-            LoggerFactory.getLogger(UploadHandler.class);
-
     public static Map<PeerId, Transfer> getUploads(ChannelGroup channelGroup) {
         return channelGroup.stream()
-                .map(c -> Optional.ofNullable(c.pipeline().get(UploadHandler.class)))
-                .filter(Optional::isPresent)
-                .map(Optional::get)
+                .map(UploadHandler::get)
                 .map(UploadHandler::getTransferManager)
                 .filter(Optional::isPresent)
                 .map(Optional::get)
                 .collect(Collectors.toMap(
                         p -> p.getTransfer().getRemotePeerId(),
                         TransferManager::getTransfer));
+    }
+
+    public static UploadHandler get(Channel remotePeer) {
+        return remotePeer.pipeline().get(UploadHandler.class);
     }
 
     private static final class ChunkedDataBaseInput implements ChunkedInput<ByteBuf> {
@@ -89,12 +89,16 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
         }
     }
 
+
+    private final Logger logger =
+            LoggerFactory.getLogger(UploadHandler.class);
+
     private final Peer peer;
     private final AtomicCounter parallelUploads;
     private volatile TransferManager transferManager;
 
     private boolean setup(ChannelHandlerContext ctx, TransferManager transferManager) {
-        if (parallelUploads.tryIncrement(getPeer().getBrain().getMaxParallelUploads())) {
+        if (parallelUploads.tryIncrement(peer.getBrain().getMaxParallelUploads())) {
             this.transferManager = transferManager;
             ctx.channel().config().setAutoRead(false);
             return true;
@@ -115,10 +119,6 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
         Objects.requireNonNull(parallelUploads);
         this.parallelUploads = parallelUploads;
         this.peer = peer;
-    }
-
-    public Peer getPeer() {
-        return peer;
     }
 
     public Optional<TransferManager> getTransferManager() {
@@ -155,15 +155,14 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
             ctx.writeAndFlush(new UploadRejectedMessage(cause));
 
             // DIAGNOSTIC
-            getPeer().getDiagnostic().uploadRejected(
-                    getPeer(), null, cause);
+            peer.getDiagnostic().uploadRejected(
+                    peer, null, cause);
         } else {
-            TransferManager newTransferManager;
             ChunkedDataBaseInput chunkedDataBaseInput = null;
             boolean wasIncremented = false;
             try {
                 // Create a new transfer manager
-                newTransferManager = getPeer().getDataBase()
+                TransferManager newTransferManager = peer.getDataBase()
                         .createTransferManager(Transfer.upload(
                                 new NettyPeerId(ctx.channel()),
                                 msg.getDataInfo()));
@@ -178,13 +177,13 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
                     ctx.writeAndFlush(new UploadRejectedMessage(cause));
 
                     // DIAGNOSTIC
-                    getPeer().getDiagnostic().uploadRejected(
-                            getPeer(), newTransferManager, cause);
+                    peer.getDiagnostic().uploadRejected(
+                            peer, newTransferManager, cause);
                 } else {
                     logger.debug("Starting upload: " + newTransferManager.getTransfer());
 
                     // Create the message
-                    chunkedDataBaseInput = new ChunkedDataBaseInput(transferManager);
+                    chunkedDataBaseInput = new ChunkedDataBaseInput(newTransferManager);
 
                     // Upload chunked input
                     ctx.writeAndFlush(chunkedDataBaseInput).addListener(fut -> {
@@ -196,14 +195,14 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
                                 ctx.writeAndFlush(new UploadRejectedMessage(fut.cause()));
 
                                 // DIAGNOSTIC
-                                getPeer().getDiagnostic().uploadRejected(
-                                        getPeer(), transferManager, fut.cause());
+                                peer.getDiagnostic().uploadRejected(
+                                        peer, transferManager, fut.cause());
                             } else {
                                 logger.debug("Upload succeeded");
 
                                 // DIAGNOSTIC
-                                getPeer().getDiagnostic().uploadSucceeded(
-                                        getPeer(), transferManager);
+                                peer.getDiagnostic().uploadSucceeded(
+                                        peer, transferManager);
                             }
                         } finally {
                             restore(ctx, true);
@@ -211,8 +210,8 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
                     });
 
                     // DIAGNOSTIC
-                    getPeer().getDiagnostic().uploadStarted(
-                            getPeer(), newTransferManager);
+                    peer.getDiagnostic().uploadStarted(
+                            peer, newTransferManager);
                 }
 
             } catch (Exception e) {
@@ -228,8 +227,8 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
                     ctx.writeAndFlush(new UploadRejectedMessage(e));
 
                     // DIAGNOSTIC
-                    getPeer().getDiagnostic().uploadRejected(
-                            getPeer(), transferManager, e);
+                    peer.getDiagnostic().uploadRejected(
+                            peer, transferManager, e);
                 } finally {
                     restore(ctx, wasIncremented);
                 }
