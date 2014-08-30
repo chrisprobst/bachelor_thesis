@@ -367,7 +367,7 @@ public class Benchmark {
         Diagnostic combined = new CombinedDiagnostic(
                 combinedEvents,
                 combinedStats,
-                new LoggingDiagnostic(),
+                new LoggingDiagnostic(leechers * chunkCount),
                 shutdown);
 
         // Create the brain factory

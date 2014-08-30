@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by chrisprobst on 18.08.14.
@@ -17,6 +18,13 @@ public final class LoggingDiagnostic implements Diagnostic {
 
     private final Logger logger =
             LoggerFactory.getLogger(LoggingDiagnostic.class);
+
+    private final int totalDownloads;
+    private final AtomicInteger currentDownloads = new AtomicInteger();
+
+    public LoggingDiagnostic(int totalDownloads) {
+        this.totalDownloads = totalDownloads;
+    }
 
     @Override
     public void announced(Peer peer, PeerId remotePeerId, Optional<Map<String, DataInfo>> dataInfo) {
@@ -72,6 +80,11 @@ public final class LoggingDiagnostic implements Diagnostic {
     @Override
     public void downloadSucceeded(Peer peer, TransferManager transferManager) {
         logger.debug("Peer " + peer.getNetworkState().getLocalPeerId() + " succeeded download " + transferManager);
+
+        int remainingDownloads = totalDownloads - currentDownloads.incrementAndGet();
+        if (remainingDownloads % 10 == 0) {
+            logger.info(remainingDownloads + " chunks missing");
+        }
     }
 
     @Override

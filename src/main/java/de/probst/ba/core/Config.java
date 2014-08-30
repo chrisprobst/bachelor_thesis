@@ -14,7 +14,7 @@ public final class Config {
     private static volatile long brainDelay = 500;
 
     public static int getDefaultCVSElementWidth() {
-        return 20;
+        return 30;
     }
 
     private static final TimeUnit DEFAULT_TIME_UNIT = TimeUnit.MILLISECONDS;
