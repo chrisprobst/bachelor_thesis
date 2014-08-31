@@ -24,6 +24,23 @@ public final class Peers {
     private Peers() {
     }
 
+    public enum PeerType {
+        Local, TCP
+    }
+
+    public static Peer peer(PeerType peerType,
+                            long uploadRate,
+                            long downloadRate,
+                            SocketAddress localAddress,
+                            DataBase dataBase,
+                            Brain brain,
+                            Diagnostic diagnostic,
+                            Optional<EventLoopGroup> eventLoopGroup) {
+        return peerType == PeerType.TCP ?
+                tcpPeer(uploadRate, downloadRate, localAddress, dataBase, brain, diagnostic, eventLoopGroup) :
+                localPeer(uploadRate, downloadRate, localAddress, dataBase, brain, diagnostic, eventLoopGroup);
+    }
+
     public static Peer tcpPeer(long uploadRate,
                                long downloadRate,
                                SocketAddress localAddress,

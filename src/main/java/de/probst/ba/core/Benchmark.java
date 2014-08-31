@@ -20,8 +20,8 @@ import de.probst.ba.core.net.TransferManager;
 import de.probst.ba.core.net.peer.Peer;
 import de.probst.ba.core.net.peer.peers.Peers;
 import de.probst.ba.core.util.IOUtil;
-import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.local.LocalAddress;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import io.netty.util.internal.logging.Slf4JLoggerFactory;
@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.nio.file.Files;
 import java.time.Duration;
 import java.time.Instant;
@@ -39,6 +40,7 @@ import java.util.Optional;
 import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.function.IntFunction;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
 
@@ -137,6 +139,21 @@ public class Benchmark {
         }
     }
 
+    public static class PeerTypeValidator implements IValueValidator<String> {
+
+        public static final String LOCAL = "Local";
+        public static final String TCP = "TCP";
+        public static final String MSG = "Must be '" + LOCAL + "' or '" + TCP + "'";
+
+        @Override
+        public void validate(String name, String value) throws ParameterException {
+            if (!value.equals(LOCAL) && !value.equals(TCP)) {
+                throw new ParameterException("Parameter " + name + ": "
+                        + MSG + " (found: " + value + ")");
+            }
+        }
+    }
+
     public static class BrainValidator implements IValueValidator<String> {
 
         public static final String INTELLIGENT = "intelligent";
@@ -163,6 +180,12 @@ public class Benchmark {
             description = "The brain delay in millis (" + DelayValidator.MSG + ")",
             validateValueWith = DelayValidator.class)
     private Long brainDelay = Config.getBrainDelay();
+
+    @Parameter(
+            names = {"-pt", "--peer-type"},
+            description = "Peer type (" + PeerTypeValidator.MSG + ")",
+            validateValueWith = PeerTypeValidator.class)
+    private String peerTypeString = PeerTypeValidator.LOCAL;
 
     @Parameter(
             names = {"-b", "--brain"},
@@ -375,13 +398,32 @@ public class Benchmark {
         Supplier<Brain> brainFactory = () -> brainType.equals(BrainValidator.LOGARITHMIC) ?
                 Brains.logarithmicBrain() : Brains.intelligentBrain();
 
+        // Get the peer type
+        Peers.PeerType peerType = Peers.PeerType.valueOf(peerTypeString);
+
+        IntFunction<SocketAddress> seederAddress = i -> {
+            if (peerType == Peers.PeerType.TCP) {
+                return new InetSocketAddress(10000 + i);
+            } else {
+                return new LocalAddress("S-" + i);
+            }
+        };
+
+        IntFunction<SocketAddress> leecherAddress = i -> {
+            if (peerType == Peers.PeerType.TCP) {
+                return new InetSocketAddress(20000 + i);
+            } else {
+                return new LocalAddress("L-" + i);
+            }
+        };
+
         // Setup all seeders
         for (int i = 0; i < seeders; i++) {
-            peers.add(Peers.tcpPeer(
+            peers.add(Peers.peer(
+                    peerType,
                     uploadRate,
                     uploadRate,
-                    //new LocalAddress("S-" + i),
-                    new InetSocketAddress("0.0.0.0", 2000 + i),
+                    seederAddress.apply(i),
                     DataBases.fakeDataBase(dataInfo),
                     //DataBases.singleFileDataBase(Paths.get("/Users/chrisprobst/Desktop/data.file"), dataInfo[0]),
                     brainFactory.get(),
@@ -391,11 +433,11 @@ public class Benchmark {
 
         // Setup all leechers
         for (int i = 0; i < leechers; i++) {
-            peers.add(Peers.tcpPeer(
+            peers.add(Peers.peer(
+                    peerType,
                     uploadRate,
                     uploadRate,
-                    //new LocalAddress("L-" + i),
-                    new InetSocketAddress("0.0.0.0", 3000 + i),
+                    leecherAddress.apply(i),
                     DataBases.fakeDataBase(),
                     //DataBases.singleFileDataBase(Paths.get("/Users/chrisprobst/Desktop/data.file" + i), dataInfo[0].empty()),
                     brainFactory.get(),
