@@ -1,6 +1,7 @@
-package de.probst.ba.core.media.databases;
+package de.probst.ba.core.media.databases.fake;
 
 import de.probst.ba.core.media.DataInfo;
+import de.probst.ba.core.media.databases.AbstractDataBase;
 import io.netty.buffer.ByteBuf;
 
 import java.io.IOException;
@@ -12,7 +13,7 @@ import java.util.stream.Collectors;
 /**
  * Created by chrisprobst on 13.08.14.
  */
-final class FakeDataBase extends AbstractDataBase {
+public final class FakeDataBase extends AbstractDataBase {
 
     public FakeDataBase(DataInfo... dataInfo) {
         this(Arrays.stream(dataInfo)

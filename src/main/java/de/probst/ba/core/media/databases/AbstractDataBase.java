@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 /**
  * Created by chrisprobst on 15.08.14.
  */
-abstract class AbstractDataBase implements DataBase {
+public abstract class AbstractDataBase implements DataBase {
 
     protected final Map<String, DataInfo> dataInfo =
             new HashMap<>();

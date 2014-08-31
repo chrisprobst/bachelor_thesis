@@ -1,6 +1,7 @@
-package de.probst.ba.core.media.databases;
+package de.probst.ba.core.media.databases.file;
 
 import de.probst.ba.core.media.DataInfo;
+import de.probst.ba.core.media.databases.AbstractDataBase;
 import io.netty.buffer.ByteBuf;
 
 import java.io.IOException;
@@ -13,7 +14,7 @@ import java.util.Objects;
 /**
  * Created by chrisprobst on 31.08.14.
  */
-final class SingleFileDataBase extends AbstractDataBase {
+public final class SingleFileDataBase extends AbstractDataBase {
 
     private final FileChannel fileChannel;
 

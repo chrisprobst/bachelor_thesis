@@ -1,4 +1,4 @@
-package de.probst.ba.core.logic.brains;
+package de.probst.ba.core.logic.brains.intelligent;
 
 import de.probst.ba.core.logic.Brain;
 import de.probst.ba.core.logic.Transform;
@@ -20,10 +20,10 @@ import java.util.stream.Collectors;
 /**
  * Created by chrisprobst on 18.08.14.
  */
-final class IntelligentOrderedBrain implements Brain {
+public final class IntelligentOrderedBrain implements Brain {
 
     private final Logger logger =
-            LoggerFactory.getLogger(LogarithmicOrderedBrain.class);
+            LoggerFactory.getLogger(IntelligentOrderedBrain.class);
 
     @Override
     public Optional<List<Transfer>> process(NetworkState networkState) {

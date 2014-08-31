@@ -1,4 +1,4 @@
-package de.probst.ba.core.logic.brains;
+package de.probst.ba.core.logic.brains.logarithmic;
 
 import de.probst.ba.core.logic.Brain;
 import de.probst.ba.core.logic.Transform;
@@ -24,7 +24,7 @@ import java.util.Optional;
  * <p>
  * Created by chrisprobst on 16.08.14.
  */
-final class LogarithmicOrderedBrain implements Brain {
+public final class LogarithmicOrderedBrain implements Brain {
 
     private final Logger logger =
             LoggerFactory.getLogger(LogarithmicOrderedBrain.class);
