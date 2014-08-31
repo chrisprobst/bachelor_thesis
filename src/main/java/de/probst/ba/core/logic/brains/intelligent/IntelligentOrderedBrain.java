@@ -6,16 +6,13 @@ import de.probst.ba.core.media.DataInfo;
 import de.probst.ba.core.net.NetworkState;
 import de.probst.ba.core.net.Transfer;
 import de.probst.ba.core.net.peer.PeerId;
-import de.probst.ba.core.util.Tuple;
 import de.probst.ba.core.util.Tuple2;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 /**
  * Created by chrisprobst on 18.08.14.
@@ -38,20 +35,14 @@ public final class IntelligentOrderedBrain implements Brain {
         }
 
         // We are only interested in the first data info
-        Map<PeerId, DataInfo> nextOrderedDataInfo = Transform.firstOrderedById(
+        List<Tuple2<PeerId, DataInfo>> remoteDataInfo = Transform.findFirstByIdAndSort(
                 networkState.getEstimatedMissingRemoteDataInfo(),
                 lowestId.get());
 
-        if (nextOrderedDataInfo.isEmpty()) {
+        if (remoteDataInfo.isEmpty()) {
             logger.debug(networkState.getLocalPeerId() + ": Pending, check later again.");
             return Optional.empty();
         }
-
-        // As list
-        List<Tuple2<PeerId, DataInfo>> remoteDataInfo =
-                nextOrderedDataInfo.entrySet().stream()
-                        .map(p -> Tuple.of(p.getKey(), p.getValue()))
-                        .collect(Collectors.toList());
 
         // We will generate a few downloads now
         List<Transfer> transfers = new ArrayList<>();
@@ -66,7 +57,7 @@ public final class IntelligentOrderedBrain implements Brain {
             remoteDataInfo.remove(0);
 
             // Delete the next remote data info
-            remoteDataInfo = Transform.removeFromAll(remoteDataInfo, nextDataInfo);
+            remoteDataInfo = Transform.removeFromAllAndSort(remoteDataInfo, nextDataInfo);
 
             // Add the transfer
             transfers.add(Transfer.download(next.first(), nextDataInfo));

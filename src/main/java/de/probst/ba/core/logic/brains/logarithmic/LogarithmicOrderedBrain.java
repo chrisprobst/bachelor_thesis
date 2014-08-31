@@ -6,10 +6,10 @@ import de.probst.ba.core.media.DataInfo;
 import de.probst.ba.core.net.NetworkState;
 import de.probst.ba.core.net.Transfer;
 import de.probst.ba.core.net.peer.PeerId;
+import de.probst.ba.core.util.Tuple2;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -47,23 +47,19 @@ public final class LogarithmicOrderedBrain implements Brain {
         }
 
         // We are only interested in the first data info
-        Map<PeerId, DataInfo> nextOrderedDataInfo = Transform.firstOrderedById(
+        List<Tuple2<PeerId, DataInfo>> remoteDataInfo = Transform.findFirstByIdAndSort(
                 networkState.getEstimatedMissingRemoteDataInfo(),
                 lowestId.get());
 
-        if (nextOrderedDataInfo.isEmpty()) {
+        if (remoteDataInfo.isEmpty()) {
             logger.debug(networkState.getLocalPeerId() + ": Pending, check later again.");
             return Optional.empty();
         }
 
-        // As list
-        List<Map.Entry<PeerId, DataInfo>> list =
-                new ArrayList<>(nextOrderedDataInfo.entrySet());
-
         // Get the last entry (most chunks!)
-        Map.Entry<PeerId, DataInfo> lastEntry = list.get(list.size() - 1);
+        Tuple2<PeerId, DataInfo> lastEntry = remoteDataInfo.get(remoteDataInfo.size() - 1);
 
-        if (!lastEntry.getValue().isCompleted()) {
+        if (!lastEntry.second().isCompleted()) {
             logger.debug(networkState.getLocalPeerId() +
                     ": This brain does not download incomplete data info");
             return Optional.empty();
@@ -73,7 +69,7 @@ public final class LogarithmicOrderedBrain implements Brain {
 
         // Request this as download
         return Optional.of(Arrays.asList(
-                Transfer.download(lastEntry.getKey(), lastEntry.getValue())
+                Transfer.download(lastEntry.first(), lastEntry.second())
         ));
     }
 
