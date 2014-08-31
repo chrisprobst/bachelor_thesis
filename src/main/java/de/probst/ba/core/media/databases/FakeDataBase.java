@@ -12,7 +12,7 @@ import java.util.stream.Collectors;
 /**
  * Created by chrisprobst on 13.08.14.
  */
-public final class FakeDataBase extends AbstractDataBase {
+final class FakeDataBase extends AbstractDataBase {
 
     public FakeDataBase(DataInfo... dataInfo) {
         this(Arrays.stream(dataInfo)
@@ -38,13 +38,6 @@ public final class FakeDataBase extends AbstractDataBase {
         } else {
             byteBuf.writeByte((byte) chunkIndex);
             byteBuf.writerIndex(byteBuf.writerIndex() + length - 1);
-        }
-    }
-
-    @Override
-    protected void doComplete(DataInfo dataInfo, int chunkIndex, boolean download) throws IOException {
-        if (download) {
-            this.dataInfo.computeIfPresent(dataInfo.getHash(), (k, v) -> v.withChunk(chunkIndex));
         }
     }
 

@@ -413,6 +413,16 @@ public final class DataInfo implements Serializable {
     }
 
     /**
+     * @param chunkIndex
+     * @return The offset according to the chunk index.
+     */
+    public long getOffset(int chunkIndex) {
+        return IntStream.range(0, chunkIndex)
+                .mapToLong(this::getChunkSize)
+                .sum();
+    }
+
+    /**
      * @return The percentage of this data info.
      */
     public double getPercentage() {

@@ -63,6 +63,11 @@ public class DataInfoTest {
     }
 
     @Test
+    public void offset() {
+        assertEquals(5 * 9, dataInfo.getOffset(5));
+    }
+
+    @Test
     public void substract() {
         DataInfo a = dataInfo
                 .withChunk(2)

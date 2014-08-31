@@ -8,6 +8,7 @@ import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.peers.netty.LocalNettyPeer;
 import io.netty.channel.EventLoopGroup;
 
+import java.io.IOException;
 import java.net.SocketAddress;
 import java.util.Collection;
 import java.util.Objects;
@@ -39,7 +40,7 @@ public final class Peers {
         }
     }
 
-    public static void closeAndWait(Collection<Peer> peers) throws ExecutionException, InterruptedException {
+    public static void closeAndWait(Collection<Peer> peers) throws ExecutionException, InterruptedException, IOException {
         Objects.requireNonNull(peers);
         for (Peer peer : peers) {
             peer.close();

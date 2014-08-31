@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 /**
  * Created by chrisprobst on 15.08.14.
  */
-public abstract class AbstractDataBase implements DataBase {
+abstract class AbstractDataBase implements DataBase {
 
     protected final Map<String, DataInfo> dataInfo =
             new HashMap<>();
@@ -28,9 +28,13 @@ public abstract class AbstractDataBase implements DataBase {
                                             int length,
                                             boolean download) throws IOException;
 
-    protected abstract void doComplete(DataInfo dataInfo,
-                                       int chunkIndex,
-                                       boolean download) throws IOException;
+    protected void doComplete(DataInfo dataInfo,
+                              int chunkIndex,
+                              boolean download) throws IOException {
+        if (download) {
+            this.dataInfo.computeIfPresent(dataInfo.getHash(), (k, v) -> v.withChunk(chunkIndex));
+        }
+    }
 
     @Override
     public synchronized Map<String, DataInfo> getDataInfo() {

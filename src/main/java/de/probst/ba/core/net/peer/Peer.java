@@ -5,6 +5,7 @@ import de.probst.ba.core.logic.Brain;
 import de.probst.ba.core.media.DataBase;
 import de.probst.ba.core.net.NetworkState;
 
+import java.io.Closeable;
 import java.net.SocketAddress;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
@@ -12,7 +13,7 @@ import java.util.concurrent.Future;
 /**
  * Created by chrisprobst on 15.08.14.
  */
-public interface Peer extends AutoCloseable {
+public interface Peer extends Closeable {
 
     CompletableFuture<?> getInitFuture();
 
@@ -27,7 +28,4 @@ public interface Peer extends AutoCloseable {
     Diagnostic getDiagnostic();
 
     Brain getBrain();
-
-    @Override
-    void close();
 }

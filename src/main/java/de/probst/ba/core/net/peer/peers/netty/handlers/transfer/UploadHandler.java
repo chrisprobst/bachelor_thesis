@@ -67,7 +67,11 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
         @Override
         public ByteBuf readChunk(ChannelHandlerContext ctx) throws Exception {
             ByteBuf byteBuf = Unpooled.buffer(500);
-            transferManager.process(byteBuf);
+            try {
+                transferManager.process(byteBuf);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
             return byteBuf;
         }
 
@@ -142,7 +146,7 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
             Exception cause = new IllegalArgumentException(
                     "Upload request message null or empty");
 
-            logger.warn(cause.getMessage());
+            logger.debug(cause.getMessage());
             ctx.writeAndFlush(new UploadRejectedMessage(cause));
 
             // DIAGNOSTIC

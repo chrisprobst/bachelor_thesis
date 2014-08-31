@@ -43,7 +43,7 @@ public final class LoggingDiagnostic implements Diagnostic {
 
     @Override
     public void uploadRejected(Peer peer, TransferManager transferManager, Throwable cause) {
-        logger.info("Peer " + peer.getNetworkState().getLocalPeerId() + " rejected upload " + transferManager + ", cause: " + cause);
+        logger.debug("Peer " + peer.getNetworkState().getLocalPeerId() + " rejected upload " + transferManager + ", cause: " + cause);
     }
 
     @Override

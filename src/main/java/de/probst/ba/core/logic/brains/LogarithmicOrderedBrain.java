@@ -24,10 +24,10 @@ import java.util.Optional;
  * <p>
  * Created by chrisprobst on 16.08.14.
  */
-class DefaultTotalOrderedBrain implements Brain {
+final class LogarithmicOrderedBrain implements Brain {
 
     private final Logger logger =
-            LoggerFactory.getLogger(DefaultTotalOrderedBrain.class);
+            LoggerFactory.getLogger(LogarithmicOrderedBrain.class);
 
     @Override
     public Optional<List<Transfer>> process(NetworkState networkState) {

@@ -63,7 +63,7 @@ public class Benchmark {
 
     public static class TransferRateValidator implements IValueValidator<Integer> {
 
-        public static final int MIN = 50;
+        public static final int MIN = 1;
         public static final int MAX = 1000 * 1000;
         public static final String MSG = "Must be between " + MIN + " and " + MAX;
 
@@ -93,7 +93,7 @@ public class Benchmark {
 
     public static class TotalSizeValidator implements IValueValidator<Integer> {
 
-        public static final int MIN = 1000;
+        public static final int MIN = 1;
         public static final int MAX = 10 * 1000 * 1000;
         public static final String MSG = "Must be between " + MIN + " and " + MAX;
 
@@ -381,6 +381,7 @@ public class Benchmark {
                     uploadRate,
                     new LocalAddress("S-" + i),
                     DataBases.fakeDataBase(dataInfo),
+                    //DataBases.singleFileDataBase(Paths.get("/Users/chrisprobst/Desktop/data.file"), dataInfo[0]),
                     brainFactory.get(),
                     combined,
                     Optional.of(eventLoopGroup)));
@@ -393,6 +394,7 @@ public class Benchmark {
                     uploadRate,
                     new LocalAddress("L-" + i),
                     DataBases.fakeDataBase(),
+                    //DataBases.singleFileDataBase(Paths.get("/Users/chrisprobst/Desktop/data.file" + i), dataInfo[0].empty()),
                     brainFactory.get(),
                     combined,
                     Optional.of(eventLoopGroup)));

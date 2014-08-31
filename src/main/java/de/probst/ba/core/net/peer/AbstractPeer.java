@@ -11,6 +11,7 @@ import de.probst.ba.core.util.concurrent.AtomicCounter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -24,10 +25,10 @@ import java.util.stream.Collectors;
  */
 public abstract class AbstractPeer implements Peer {
 
-    private final class BrainWorker implements Runnable {
+    private final Logger logger =
+            LoggerFactory.getLogger(AbstractPeer.class);
 
-        private final Logger logger =
-                LoggerFactory.getLogger(BrainWorker.class);
+    private final class BrainWorker implements Runnable {
 
         public void schedule() {
             getScheduler().schedule(this,
@@ -92,7 +93,7 @@ public abstract class AbstractPeer implements Peer {
                 schedule();
             } catch (Exception e) {
                 logger.error("The brain is dead, shutting peer down", e);
-                close();
+                silentClose();
             }
         }
     }
@@ -120,6 +121,14 @@ public abstract class AbstractPeer implements Peer {
 
     protected PeerId getLocalPeerId() {
         return localPeerId;
+    }
+
+    protected void silentClose() {
+        try {
+            close();
+        } catch (IOException e) {
+            logger.error("The brain is dead, shutting peer down", e);
+        }
     }
 
     protected abstract void requestDownload(Transfer transfer);
@@ -175,14 +184,32 @@ public abstract class AbstractPeer implements Peer {
 
     @Override
     public NetworkState getNetworkState() {
+        // IMPORTANT:
+        // Collect downloads first, so that
+        // there is no interleaving with the local data info
+        // collected by the data base.
+        //
+        // It does not matter if there is a chunk which is completed
+        // and also being downloaded.
+        //
+        // Otherwise this would be a race condition because
+        // chunks could be totally lost:
+        // -> Not in local data info AND not in downloads -> download same chunk twice -> error!
+        Map<PeerId, Transfer> downloads = getDownloads();
+
         return new NetworkState(
                 getLocalPeerId(),
                 getDataBase().getDataInfo(),
                 getRemoteDataInfo(),
                 getUploads(),
-                getDownloads(),
+                downloads,
                 getUploadRate(),
                 getDownloadRate());
+    }
+
+    @Override
+    public void close() throws IOException {
+        getDataBase().close();
     }
 
     @Override

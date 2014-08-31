@@ -25,6 +25,7 @@ import io.netty.handler.stream.ChunkedWriteHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -249,7 +250,8 @@ abstract class AbstractNettyPeer extends AbstractPeer {
     }
 
     @Override
-    public void close() {
+    public void close() throws IOException {
         getEventLoopGroup().shutdownGracefully();
+        super.close();
     }
 }

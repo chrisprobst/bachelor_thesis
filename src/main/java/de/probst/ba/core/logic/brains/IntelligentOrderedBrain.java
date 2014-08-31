@@ -20,10 +20,10 @@ import java.util.stream.Collectors;
 /**
  * Created by chrisprobst on 18.08.14.
  */
-class IntelligentOrderedBrain implements Brain {
+final class IntelligentOrderedBrain implements Brain {
 
     private final Logger logger =
-            LoggerFactory.getLogger(DefaultTotalOrderedBrain.class);
+            LoggerFactory.getLogger(LogarithmicOrderedBrain.class);
 
     @Override
     public Optional<List<Transfer>> process(NetworkState networkState) {
