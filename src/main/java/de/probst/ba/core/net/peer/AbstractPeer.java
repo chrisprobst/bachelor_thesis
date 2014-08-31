@@ -66,6 +66,8 @@ public abstract class AbstractPeer implements Peer {
                 }
 
                 // Check that there are no duplicates
+                // Note: Not necessary, race condition was fixed
+                /*
                 transfers.get().stream()
                         .map(Transfer::getDataInfo)
                         .collect(Collectors.groupingBy(DataInfo::getHash)).values().stream()
@@ -77,7 +79,7 @@ public abstract class AbstractPeer implements Peer {
                                 throw new IllegalStateException(
                                         "Brain requested the same chunk from different peers: " + transfers.get());
                             }
-                        });
+                        });*/
 
                 // Create a list of transfers with distinct remote peer ids
                 // and request them to download
@@ -117,10 +119,6 @@ public abstract class AbstractPeer implements Peer {
 
     protected AtomicCounter getParallelUploads() {
         return parallelUploads;
-    }
-
-    protected PeerId getLocalPeerId() {
-        return localPeerId;
     }
 
     protected void silentClose() {
@@ -166,6 +164,11 @@ public abstract class AbstractPeer implements Peer {
     }
 
     // ************ INTERFACE METHODS
+
+    @Override
+    public PeerId getLocalPeerId() {
+        return localPeerId;
+    }
 
     @Override
     public CompletableFuture<?> getInitFuture() {

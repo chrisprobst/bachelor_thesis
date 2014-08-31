@@ -15,6 +15,8 @@ import java.util.concurrent.Future;
  */
 public interface Peer extends Closeable {
 
+    PeerId getLocalPeerId();
+
     CompletableFuture<?> getInitFuture();
 
     Future<?> getCloseFuture();

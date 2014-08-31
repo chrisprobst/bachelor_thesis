@@ -6,6 +6,7 @@ import de.probst.ba.core.media.DataBase;
 import de.probst.ba.core.net.peer.Peer;
 import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.peers.netty.LocalNettyPeer;
+import de.probst.ba.core.net.peer.peers.netty.TcpNettyPeer;
 import io.netty.channel.EventLoopGroup;
 
 import java.io.IOException;
@@ -21,6 +22,16 @@ import java.util.concurrent.ExecutionException;
 public final class Peers {
 
     private Peers() {
+    }
+
+    public static Peer tcpPeer(long uploadRate,
+                               long downloadRate,
+                               SocketAddress localAddress,
+                               DataBase dataBase,
+                               Brain brain,
+                               Diagnostic diagnostic,
+                               Optional<EventLoopGroup> eventLoopGroup) {
+        return new TcpNettyPeer(uploadRate, downloadRate, new PeerId(localAddress), dataBase, brain, diagnostic, eventLoopGroup);
     }
 
     public static Peer localPeer(long uploadRate,
@@ -63,7 +74,7 @@ public final class Peers {
         for (Peer client : peers) {
             for (Peer server : peers) {
                 if (server != client) {
-                    client.connect(server.getNetworkState().getLocalPeerId().getAddress());
+                    client.connect(server.getLocalPeerId().getAddress());
                 }
             }
         }

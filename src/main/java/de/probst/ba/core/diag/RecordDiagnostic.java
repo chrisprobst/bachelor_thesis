@@ -232,61 +232,61 @@ public class RecordDiagnostic implements Diagnostic {
 
     @Override
     public void announced(Peer peer, PeerId remotePeerId, Optional<Map<String, DataInfo>> dataInfo) {
-        records.add(Record.announced(peer.getNetworkState().getLocalPeerId(), remotePeerId, dataInfo.orElse(null)));
+        records.add(Record.announced(peer.getLocalPeerId(), remotePeerId, dataInfo.orElse(null)));
     }
 
     @Override
     public void collected(Peer peer, PeerId remotePeerId, Optional<Map<String, DataInfo>> dataInfo) {
-        records.add(Record.collected(peer.getNetworkState().getLocalPeerId(), remotePeerId, dataInfo.orElse(null)));
+        records.add(Record.collected(peer.getLocalPeerId(), remotePeerId, dataInfo.orElse(null)));
     }
 
     @Override
     public void interestAdded(Peer peer, PeerId remotePeerId, DataInfo addedDataInfo) {
-        records.add(Record.interestAdded(peer.getNetworkState().getLocalPeerId(), remotePeerId, addedDataInfo));
+        records.add(Record.interestAdded(peer.getLocalPeerId(), remotePeerId, addedDataInfo));
     }
 
     @Override
     public void uploadRejected(Peer peer, TransferManager transferManager, Throwable cause) {
-        records.add(Record.uploadRejected(peer.getNetworkState().getLocalPeerId(), transferManager.getTransfer(), cause));
+        records.add(Record.uploadRejected(peer.getLocalPeerId(), transferManager.getTransfer(), cause));
     }
 
     @Override
     public void uploadStarted(Peer peer, TransferManager transferManager) {
-        records.add(Record.uploadStarted(peer.getNetworkState().getLocalPeerId(), transferManager.getTransfer()));
+        records.add(Record.uploadStarted(peer.getLocalPeerId(), transferManager.getTransfer()));
     }
 
     @Override
     public void uploadSucceeded(Peer peer, TransferManager transferManager) {
-        records.add(Record.uploadSucceeded(peer.getNetworkState().getLocalPeerId(), transferManager.getTransfer()));
+        records.add(Record.uploadSucceeded(peer.getLocalPeerId(), transferManager.getTransfer()));
     }
 
     @Override
     public void downloadRequested(Peer peer, TransferManager transferManager) {
-        records.add(Record.downloadRequested(peer.getNetworkState().getLocalPeerId(), transferManager.getTransfer()));
+        records.add(Record.downloadRequested(peer.getLocalPeerId(), transferManager.getTransfer()));
     }
 
     @Override
     public void downloadRejected(Peer peer, TransferManager transferManager, Throwable cause) {
-        records.add(Record.downloadRejected(peer.getNetworkState().getLocalPeerId(), transferManager.getTransfer(), cause));
+        records.add(Record.downloadRejected(peer.getLocalPeerId(), transferManager.getTransfer(), cause));
     }
 
     @Override
     public void downloadStarted(Peer peer, TransferManager transferManager) {
-        records.add(Record.downloadStarted(peer.getNetworkState().getLocalPeerId(), transferManager.getTransfer()));
+        records.add(Record.downloadStarted(peer.getLocalPeerId(), transferManager.getTransfer()));
     }
 
     @Override
     public void downloadProgressed(Peer peer, TransferManager transferManager) {
-        records.add(Record.downloadProgressed(peer.getNetworkState().getLocalPeerId(), transferManager.getTransfer()));
+        records.add(Record.downloadProgressed(peer.getLocalPeerId(), transferManager.getTransfer()));
     }
 
     @Override
     public void downloadSucceeded(Peer peer, TransferManager transferManager) {
-        records.add(Record.downloadSucceeded(peer.getNetworkState().getLocalPeerId(), transferManager.getTransfer()));
+        records.add(Record.downloadSucceeded(peer.getLocalPeerId(), transferManager.getTransfer()));
     }
 
     @Override
     public void dataCompleted(Peer peer, DataInfo dataInfo, TransferManager lastTransferManager) {
-        records.add(Record.dataCompleted(peer.getNetworkState().getLocalPeerId(), dataInfo, lastTransferManager.getTransfer()));
+        records.add(Record.dataCompleted(peer.getLocalPeerId(), dataInfo, lastTransferManager.getTransfer()));
     }
 }

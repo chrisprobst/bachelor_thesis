@@ -128,8 +128,7 @@ public final class NetworkState implements Serializable {
         this.remoteDataInfo = Collections.unmodifiableMap(remoteDataInfo.entrySet().stream()
                 .collect(Collectors.toMap(
                         Map.Entry::getKey,
-                        p -> Collections.unmodifiableMap(
-                                new HashMap<>(p.getValue())))));
+                        p -> Collections.unmodifiableMap(new HashMap<>(p.getValue())))));
         this.uploadRate = uploadRate;
         this.downloadRate = downloadRate;
 
@@ -201,7 +200,6 @@ public final class NetworkState implements Serializable {
     public Map<PeerId, Map<String, DataInfo>> getRemoteDataInfo() {
         return remoteDataInfo;
     }
-
 
     /**
      * @return The upload rate.

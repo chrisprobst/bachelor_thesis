@@ -12,14 +12,14 @@ import java.util.Optional;
  */
 public final class DataInfoMessage implements Serializable {
 
-    private final Optional<Map<String, DataInfo>> dataInfo;
+    private final Map<String, DataInfo> dataInfo;
 
     public DataInfoMessage(Optional<Map<String, DataInfo>> dataInfo) {
         Objects.requireNonNull(dataInfo);
-        this.dataInfo = dataInfo;
+        this.dataInfo = dataInfo.orElseGet(() -> null);
     }
 
     public Optional<Map<String, DataInfo>> getDataInfo() {
-        return dataInfo;
+        return Optional.ofNullable(dataInfo);
     }
 }

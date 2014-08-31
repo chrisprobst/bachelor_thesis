@@ -27,7 +27,7 @@ public final class UploadCVSDiagnostic extends AbstractTimeCVSDiagnostic {
         } else {
             for (Peer peer : peers) {
                 writeElement(
-                        peer.getNetworkState().getLocalPeerId().getAddress(),
+                        peer.getLocalPeerId().getAddress(),
                         Config.getDefaultCVSElementWidth());
             }
         }

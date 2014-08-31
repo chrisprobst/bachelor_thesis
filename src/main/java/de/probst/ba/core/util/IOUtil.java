@@ -1,5 +1,7 @@
 package de.probst.ba.core.util;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -14,6 +16,23 @@ public class IOUtil {
 
     private IOUtil() {
 
+    }
+
+    public static byte[] serialize(Object object) throws IOException {
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        try (ObjectOutputStream objectOutputStream =
+                     new ObjectOutputStream(byteArrayOutputStream)) {
+            objectOutputStream.writeObject(object);
+        }
+        return byteArrayOutputStream.toByteArray();
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T> T deserialize(byte[] array) throws IOException, ClassNotFoundException {
+        try (ObjectInputStream objectInputStream =
+                     new ObjectInputStream(new ByteArrayInputStream(array))) {
+            return (T) objectInputStream.readObject();
+        }
     }
 
     public static void serialize(File file, Object object) throws IOException {

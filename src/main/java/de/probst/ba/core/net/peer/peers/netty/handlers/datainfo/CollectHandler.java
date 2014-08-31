@@ -26,8 +26,6 @@ public final class CollectHandler extends SimpleChannelInboundHandler<DataInfoMe
     public static Map<PeerId, Map<String, DataInfo>> getRemoteDataInfo(ChannelGroup channelGroup) {
         return channelGroup.stream()
                 .map(CollectHandler::get)
-                .filter(Optional::isPresent)
-                .map(Optional::get)
                 .map(CollectHandler::getRemoteDataInfo)
                 .filter(Optional::isPresent)
                 .map(Optional::get)
@@ -36,8 +34,8 @@ public final class CollectHandler extends SimpleChannelInboundHandler<DataInfoMe
                         Tuple::second));
     }
 
-    public static Optional<CollectHandler> get(Channel remotePeer) {
-        return Optional.ofNullable(remotePeer.pipeline().get(CollectHandler.class));
+    public static CollectHandler get(Channel remotePeer) {
+        return remotePeer.pipeline().get(CollectHandler.class);
     }
 
     private final Peer peer;

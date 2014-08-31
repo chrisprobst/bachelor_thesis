@@ -7,6 +7,7 @@ import de.probst.ba.core.media.DataInfo;
 import de.probst.ba.core.net.Transfer;
 import de.probst.ba.core.net.peer.AbstractPeer;
 import de.probst.ba.core.net.peer.PeerId;
+import de.probst.ba.core.net.peer.peers.netty.handlers.codecs.SimpleCodec;
 import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.AnnounceHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.CollectHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.group.ChannelGroupHandler;
@@ -19,6 +20,8 @@ import io.netty.channel.ChannelId;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.group.ChannelGroup;
+import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
+import io.netty.handler.codec.LengthFieldPrepender;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
@@ -29,7 +32,6 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -54,9 +56,6 @@ abstract class AbstractNettyPeer extends AbstractPeer {
 
     private final ChannelGroupHandler channelGroupHandler;
 
-    private final CompletableFuture<?> initFuture =
-            new CompletableFuture<>();
-
     private final LoggingHandler logHandler =
             new LoggingHandler(LogLevel.TRACE);
 
@@ -66,6 +65,11 @@ abstract class AbstractNettyPeer extends AbstractPeer {
         @Override
         public void initChannel(Channel ch) {
             ch.pipeline().addLast(
+
+                    // Codec stuff
+                    new LengthFieldBasedFrameDecoder(1024 * 1024, 0, 4, 0, 4),
+                    new LengthFieldPrepender(4),
+                    new SimpleCodec(),
 
                    /* new ChannelTrafficShapingHandler(
                             getUploadRate(),
@@ -97,6 +101,12 @@ abstract class AbstractNettyPeer extends AbstractPeer {
         @Override
         public void initChannel(Channel ch) {
             ch.pipeline().addLast(
+
+                    // Codec stuff
+                    new LengthFieldBasedFrameDecoder(1024 * 1024, 0, 4, 0, 4),
+                    new LengthFieldPrepender(4),
+                    new SimpleCodec(),
+
 /*
                     new ChannelTrafficShapingHandler(
                             getUploadRate(),

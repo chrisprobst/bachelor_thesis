@@ -22,7 +22,7 @@ import de.probst.ba.core.net.peer.peers.Peers;
 import de.probst.ba.core.util.IOUtil;
 import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.local.LocalAddress;
+import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import io.netty.util.internal.logging.Slf4JLoggerFactory;
 import org.slf4j.Logger;
@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.time.Duration;
 import java.time.Instant;
@@ -198,7 +199,7 @@ public class Benchmark {
 
     @Parameter(
             names = {"-p", "--parts"},
-            description = "The number of parts (" + PartsValidator.MSG + ")",
+            description = "(Experimental) The number of parts (" + PartsValidator.MSG + ")",
             validateValueWith = PartsValidator.class)
     private Integer parts = 1;
 
@@ -316,7 +317,7 @@ public class Benchmark {
         Queue<Peer> peers = new LinkedList<>();
 
         // The event loop group shared by all peers
-        EventLoopGroup eventLoopGroup = new DefaultEventLoopGroup();
+        EventLoopGroup eventLoopGroup = new NioEventLoopGroup();
 
         // Setup diagnostic
         CountDownLatch countDownLatch = new CountDownLatch(leechers * parts);
@@ -376,10 +377,11 @@ public class Benchmark {
 
         // Setup all seeders
         for (int i = 0; i < seeders; i++) {
-            peers.add(Peers.localPeer(
+            peers.add(Peers.tcpPeer(
                     uploadRate,
                     uploadRate,
-                    new LocalAddress("S-" + i),
+                    //new LocalAddress("S-" + i),
+                    new InetSocketAddress("0.0.0.0", 2000 + i),
                     DataBases.fakeDataBase(dataInfo),
                     //DataBases.singleFileDataBase(Paths.get("/Users/chrisprobst/Desktop/data.file"), dataInfo[0]),
                     brainFactory.get(),
@@ -389,10 +391,11 @@ public class Benchmark {
 
         // Setup all leechers
         for (int i = 0; i < leechers; i++) {
-            peers.add(Peers.localPeer(
+            peers.add(Peers.tcpPeer(
                     uploadRate,
                     uploadRate,
-                    new LocalAddress("L-" + i),
+                    //new LocalAddress("L-" + i),
+                    new InetSocketAddress("0.0.0.0", 3000 + i),
                     DataBases.fakeDataBase(),
                     //DataBases.singleFileDataBase(Paths.get("/Users/chrisprobst/Desktop/data.file" + i), dataInfo[0].empty()),
                     brainFactory.get(),
