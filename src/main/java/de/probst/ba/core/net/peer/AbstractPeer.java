@@ -64,6 +64,20 @@ public abstract class AbstractPeer implements Peer {
                     return;
                 }
 
+                // Check that there are no duplicates
+                transfers.get().stream()
+                        .map(Transfer::getDataInfo)
+                        .collect(Collectors.groupingBy(DataInfo::getHash)).values().stream()
+                        .filter(l -> l.size() > 1) // There cannot be an overlapping
+                        .map(l -> l.stream().reduce(DataInfo::intersection))
+                        .map(Optional::get)
+                        .forEach(dataInfo -> {
+                            if (!dataInfo.isEmpty()) {
+                                throw new IllegalStateException(
+                                        "Brain requested the same chunk from different peers: " + transfers.get());
+                            }
+                        });
+
                 // Create a list of transfers with distinct remote peer ids
                 // and request them to download
                 transfers.get().stream()
@@ -116,8 +130,6 @@ public abstract class AbstractPeer implements Peer {
 
     protected abstract Map<PeerId, Transfer> getDownloads();
 
-    protected abstract Map<String, DataInfo> getDataInfo();
-
     protected abstract Map<PeerId, Map<String, DataInfo>> getRemoteDataInfo();
 
     protected abstract long getUploadRate();
@@ -165,7 +177,7 @@ public abstract class AbstractPeer implements Peer {
     public NetworkState getNetworkState() {
         return new NetworkState(
                 getLocalPeerId(),
-                getDataInfo(),
+                getDataBase().getDataInfo(),
                 getRemoteDataInfo(),
                 getUploads(),
                 getDownloads(),

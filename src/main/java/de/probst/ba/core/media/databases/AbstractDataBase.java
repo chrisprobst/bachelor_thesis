@@ -33,7 +33,7 @@ public abstract class AbstractDataBase implements DataBase {
                                        boolean download) throws IOException;
 
     @Override
-    public Map<String, DataInfo> getDataInfo() {
+    public synchronized Map<String, DataInfo> getDataInfo() {
         return new HashMap<>(dataInfo);
     }
 

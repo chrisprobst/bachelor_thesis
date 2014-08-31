@@ -31,6 +31,8 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
     public static Map<PeerId, Transfer> getUploads(ChannelGroup channelGroup) {
         return channelGroup.stream()
                 .map(UploadHandler::get)
+                .filter(Optional::isPresent)
+                .map(Optional::get)
                 .map(UploadHandler::getTransferManager)
                 .filter(Optional::isPresent)
                 .map(Optional::get)
@@ -39,8 +41,8 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
                         TransferManager::getTransfer));
     }
 
-    public static UploadHandler get(Channel remotePeer) {
-        return remotePeer.pipeline().get(UploadHandler.class);
+    public static Optional<UploadHandler> get(Channel remotePeer) {
+        return Optional.ofNullable(remotePeer.pipeline().get(UploadHandler.class));
     }
 
     private static final class ChunkedDataBaseInput implements ChunkedInput<ByteBuf> {

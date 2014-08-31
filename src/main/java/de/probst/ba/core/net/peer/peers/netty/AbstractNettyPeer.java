@@ -166,11 +166,6 @@ abstract class AbstractNettyPeer extends AbstractPeer {
     }
 
     @Override
-    protected Map<String, DataInfo> getDataInfo() {
-        return getDataBase().getDataInfo();
-    }
-
-    @Override
     protected Map<PeerId, Map<String, DataInfo>> getRemoteDataInfo() {
         return CollectHandler.getRemoteDataInfo(getChannelGroup());
     }

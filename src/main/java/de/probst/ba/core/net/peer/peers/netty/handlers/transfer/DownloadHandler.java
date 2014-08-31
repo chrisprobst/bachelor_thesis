@@ -30,7 +30,10 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
 
     public static Map<PeerId, Transfer> getDownloads(ChannelGroup channelGroup) {
         return channelGroup.stream()
-                .map(c -> get(c).getTransfer())
+                .map(DownloadHandler::get)
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .map(DownloadHandler::getTransfer)
                 .filter(Optional::isPresent)
                 .map(Optional::get)
                 .collect(Collectors.toMap(
@@ -38,8 +41,8 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
                         Function.<Transfer>identity()));
     }
 
-    public static DownloadHandler get(Channel remotePeer) {
-        return remotePeer.pipeline().get(DownloadHandler.class);
+    public static Optional<DownloadHandler> get(Channel remotePeer) {
+        return Optional.ofNullable(remotePeer.pipeline().get(DownloadHandler.class));
     }
 
     public static void download(Channel remoteChannel, Transfer transfer) {
@@ -57,7 +60,7 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
         }
 
         // Mark as downloading
-        get(remoteChannel).download(transfer);
+        get(remoteChannel).get().download(transfer);
 
         // Request the transfer
         remoteChannel.pipeline().fireUserEventTriggered(transfer);
