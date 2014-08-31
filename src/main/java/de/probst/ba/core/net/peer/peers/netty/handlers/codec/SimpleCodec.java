@@ -1,4 +1,4 @@
-package de.probst.ba.core.net.peer.peers.netty.handlers.codecs;
+package de.probst.ba.core.net.peer.peers.netty.handlers.codec;
 
 import de.probst.ba.core.util.IOUtil;
 import io.netty.buffer.ByteBuf;
@@ -10,6 +10,11 @@ import java.io.Serializable;
 import java.util.List;
 
 /**
+ * A simple ByteBuf/Serializable Codec.
+ * <p>
+ * Raw bytes are going straight through,
+ * objects are serialized.
+ * <p>
  * Created by chrisprobst on 31.08.14.
  */
 public class SimpleCodec extends MessageToMessageCodec<ByteBuf, Object> {
@@ -17,17 +22,11 @@ public class SimpleCodec extends MessageToMessageCodec<ByteBuf, Object> {
     @Override
     protected void encode(ChannelHandlerContext ctx, Object msg, List<Object> out) throws Exception {
         if (msg instanceof Serializable) {
-            byte[] buffer = IOUtil.serialize(msg);
-            ByteBuf combined = Unpooled.buffer(1 + buffer.length);
-            combined.writeByte(0);
-            combined.writeBytes(buffer);
-            out.add(combined);
+            out.add(Unpooled.wrappedBuffer(Unpooled.buffer(1).writeByte(0),
+                    Unpooled.wrappedBuffer(IOUtil.serialize(msg))));
         } else {
-            ByteBuf old = (ByteBuf) msg;
-            ByteBuf combined = Unpooled.buffer(1 + old.readableBytes());
-            combined.writeByte(1);
-            combined.writeBytes(old);
-            out.add(combined);
+            out.add(Unpooled.wrappedBuffer(Unpooled.buffer(1).writeByte(1),
+                    ((ByteBuf) msg).retain()));
         }
     }
 

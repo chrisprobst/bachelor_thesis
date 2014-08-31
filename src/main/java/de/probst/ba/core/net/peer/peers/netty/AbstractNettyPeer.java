@@ -7,7 +7,7 @@ import de.probst.ba.core.media.DataInfo;
 import de.probst.ba.core.net.Transfer;
 import de.probst.ba.core.net.peer.AbstractPeer;
 import de.probst.ba.core.net.peer.PeerId;
-import de.probst.ba.core.net.peer.peers.netty.handlers.codecs.SimpleCodec;
+import de.probst.ba.core.net.peer.peers.netty.handlers.codec.SimpleCodec;
 import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.AnnounceHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.CollectHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.group.ChannelGroupHandler;
