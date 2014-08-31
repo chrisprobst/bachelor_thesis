@@ -32,3 +32,9 @@ build/
 
 # DOOO allow the wrapper
 !gradle/wrapper/*
+
+# Ignore tmp files
+*~
+
+# Ignore svn folders
+.svn

@@ -1,0 +1,111 @@
+\documentclass[11pt,a4paper,twoside,%
+BCOR12mm,DIV14,%
+headsepline,
+cleardoubleempty,chapterprefix,parskip,%
+liststotoc,bibtotoc]{scrbook}
+
+% \usepackage[english, ngerman]{babel}
+\usepackage[ngerman, english]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{mathptmx}
+\usepackage[scaled=0.92]{helvet}
+\usepackage{courier}
+\usepackage{amsmath}
+\makeatletter
+\def\displaymath{\typeout{*** Do not use DISPLAYMATH. Use \[...\] instead ***}}
+\def\eqnarray{\typeout{*** Do not use EQNARRAY(*). Use align(*)-environment instead ***}}
+\makeatother
+\usepackage{amsfonts}
+\usepackage{amstext}
+\usepackage{subfigure}
+\usepackage{color}
+\usepackage{graphicx}
+\usepackage{ifpdf}
+% \usepackage{makeidx}
+% \usepackage{nomencl}
+\usepackage{setspace}
+
+% first include the hyperref package, then the cite package
+\usepackage[plainpages=false,pdfpagelabels]{hyperref}
+\usepackage{cite}
+
+\input{bachelor-meta}
+
+\usepackage{lscape}
+\usepackage{tabularx}
+
+\ifpdf
+    \definecolor{brown}{cmyk}{0, 0.81, 1, 0.60}
+    \hypersetup{%
+      pdftitle={\thesistitle{}},
+      pdfsubject={Bachelor Thesis},
+      pdfauthor={\thesisauthor{}},
+      pdfkeywords={\thesiskeywords{}},
+      colorlinks=false, urlcolor=blue, citecolor=brown,
+      bookmarksnumbered=true,
+    }
+\else   
+\fi
+
+\listfiles
+
+\begin{document}
+\onehalfspacing
+
+\frontmatter
+
+\pdfbookmark[0]{Title Page}{tit}
+
+\include{bachelor-titlepage}
+
+\cleardoublepage
+
+\input{chapter-abstract}
+
+\cleardoublepage
+
+\input{chapter-acknowledgements}
+
+\cleardoublepage
+
+\pdfbookmark[0]{\contentsname}{content}
+\tableofcontents
+
+\listoffigures
+
+\listoftables
+
+\mainmatter
+
+\cleardoublepage
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%    Beginning of the main document        %%
+%%                                          %%
+%%    Include your tex-files with \input{}  %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\input{chapter-intro}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%    End of the main document              %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\backmatter
+
+\bibliographystyle{alphadin} %% german output
+
+\bibliography{bibtex-references}
+
+% \printindex
+
+\include{bachelor-declaration}
+
+\cleardoublepage
+
+\input{bachelor-cd}
+
+\end{document}
+
