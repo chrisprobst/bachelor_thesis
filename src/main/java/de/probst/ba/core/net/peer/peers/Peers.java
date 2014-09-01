@@ -1,5 +1,14 @@
 package de.probst.ba.core.net.peer.peers;
 
+import de.probst.ba.core.net.peer.Leecher;
+import de.probst.ba.core.net.peer.Peer;
+import de.probst.ba.core.net.peer.Seeder;
+
+import java.io.IOException;
+import java.util.Collection;
+import java.util.Objects;
+import java.util.concurrent.ExecutionException;
+
 /**
  * Created by chrisprobst on 17.08.14.
  */
@@ -8,7 +17,7 @@ public final class Peers {
     private Peers() {
     }
 
-    /*
+
     public static void waitForInit(Collection<Peer> peers) throws ExecutionException, InterruptedException {
         Objects.requireNonNull(peers);
         for (Peer peer : peers) {
@@ -36,12 +45,12 @@ public final class Peers {
 
     public static void connectGrid(Collection<Peer> peers) {
         Objects.requireNonNull(peers);
-        for (Peer client : peers) {
-            for (Peer server : peers) {
-                if (server != client) {
-                    client.connect(server.getLocalPeerId().getAddress());
+        peers.stream().filter(leecher -> leecher instanceof Leecher).forEach(leecher -> {
+            peers.stream().filter(seeder -> seeder instanceof Seeder).forEach(seeder -> {
+                if (leecher != seeder) {
+                    ((Leecher) leecher).connect(seeder.getPeerId().getAddress());
                 }
-            }
-        }
-    }*/
+            });
+        });
+    }
 }
