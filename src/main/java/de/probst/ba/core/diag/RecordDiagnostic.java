@@ -54,20 +54,6 @@ public class RecordDiagnostic implements Diagnostic {
         }
 
 
-        // UPLOAD
-
-        public static Record uploadStarted(PeerId peerId, Transfer transfer) {
-            return new Record(RecordType.UploadStarted, peerId, null, null, null, null, transfer, null);
-        }
-
-        public static Record uploadRejected(PeerId peerId, Transfer transfer, Throwable cause) {
-            return new Record(RecordType.UploadRejected, peerId, null, null, null, null, transfer, cause);
-        }
-
-        public static Record uploadSucceeded(PeerId peerId, Transfer transfer) {
-            return new Record(RecordType.UploadSucceeded, peerId, null, null, null, null, transfer, null);
-        }
-
         // DOWNLOAD
 
         public static Record downloadRequested(PeerId peerId, Transfer transfer) {
@@ -92,6 +78,20 @@ public class RecordDiagnostic implements Diagnostic {
 
         public static Record dataCompleted(PeerId peerId, DataInfo completedDataInfo, Transfer lastTransfer) {
             return new Record(RecordType.DataCompleted, peerId, null, null, null, completedDataInfo, lastTransfer, null);
+        }
+
+        // UPLOAD
+
+        public static Record uploadStarted(PeerId peerId, Transfer transfer) {
+            return new Record(RecordType.UploadStarted, peerId, null, null, null, null, transfer, null);
+        }
+
+        public static Record uploadRejected(PeerId peerId, Transfer transfer, Throwable cause) {
+            return new Record(RecordType.UploadRejected, peerId, null, null, null, null, transfer, cause);
+        }
+
+        public static Record uploadSucceeded(PeerId peerId, Transfer transfer) {
+            return new Record(RecordType.UploadSucceeded, peerId, null, null, null, null, transfer, null);
         }
 
         private final Instant timeStamp = Instant.now();
