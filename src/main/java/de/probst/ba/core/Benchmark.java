@@ -442,6 +442,7 @@ public class Benchmark {
 
         // Setup all leechers
         for (int i = 0; i < leechers; i++) {
+            // Duplex leechers share PeerId and DataBase
             PeerId peerId = new PeerId(leecherAddress.apply(i));
             DataBase dataBase = DataBases.fakeDataBase();
 

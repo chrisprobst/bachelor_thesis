@@ -11,6 +11,7 @@ import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.channels.ClosedChannelException;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -103,13 +104,16 @@ public final class AnnounceHandler extends ChannelHandlerAdapter implements Runn
                         // Success, lets schedule again
                         schedule();
                     } else {
-                        // log the cause
-                        logger.warn(
-                                "Failed to announce data info, closing connection",
-                                fut.cause());
-
                         // Error while writing, lets close the connection
                         ctx.close();
+
+                        if (!(fut.cause() instanceof ClosedChannelException)) {
+
+                            // log the cause
+                            logger.warn(
+                                    "Failed to announce data info, connection closed",
+                                    fut.cause());
+                        }
                     }
                 });
 
