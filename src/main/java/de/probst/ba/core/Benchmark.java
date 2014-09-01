@@ -1,10 +1,58 @@
 package de.probst.ba.core;
 
+import com.beust.jcommander.IValueValidator;
+import com.beust.jcommander.JCommander;
+import com.beust.jcommander.Parameter;
+import com.beust.jcommander.ParameterException;
+import com.beust.jcommander.converters.FileConverter;
+import de.probst.ba.core.diagnostic.ChunkCompletionCVSDiagnostic;
+import de.probst.ba.core.diagnostic.CombinedDiagnostic;
+import de.probst.ba.core.diagnostic.Diagnostic;
+import de.probst.ba.core.diagnostic.DiagnosticAdapter;
+import de.probst.ba.core.diagnostic.LoggingDiagnostic;
+import de.probst.ba.core.diagnostic.RecordDiagnostic;
+import de.probst.ba.core.diagnostic.UploadCVSDiagnostic;
+import de.probst.ba.core.distribution.LeecherDistributionAlgorithm;
+import de.probst.ba.core.distribution.SeederDistributionAlgorithm;
+import de.probst.ba.core.distribution.algorithms.Algorithms;
+import de.probst.ba.core.media.database.DataBase;
+import de.probst.ba.core.media.database.DataInfo;
+import de.probst.ba.core.media.database.databases.DataBases;
+import de.probst.ba.core.media.transfer.TransferManager;
+import de.probst.ba.core.net.peer.Leecher;
+import de.probst.ba.core.net.peer.Peer;
+import de.probst.ba.core.net.peer.PeerId;
+import de.probst.ba.core.net.peer.peers.Peers;
+import de.probst.ba.core.util.IOUtil;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.local.LocalAddress;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.util.internal.logging.InternalLoggerFactory;
+import io.netty.util.internal.logging.Slf4JLoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.nio.file.Files;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.LinkedList;
+import java.util.Optional;
+import java.util.Queue;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.function.IntFunction;
+import java.util.function.Supplier;
+import java.util.stream.IntStream;
+
 /**
  * Created by chrisprobst on 12.08.14.
  */
 public class Benchmark {
-/*
+
     public static class PeerCountValidator implements IValueValidator<Integer> {
 
         public static final int MIN = 1;
@@ -110,15 +158,15 @@ public class Benchmark {
         }
     }
 
-    public static class BrainValidator implements IValueValidator<String> {
+    public static class DistributionAlgorithmTypeValidator implements IValueValidator<String> {
 
-        public static final String INTELLIGENT = "intelligent";
+        public static final String CHUNKEDSWARM = "chunked-swarm";
         public static final String LOGARITHMIC = "logarithmic";
-        public static final String MSG = "Must be '" + INTELLIGENT + "' or '" + LOGARITHMIC + "'";
+        public static final String MSG = "Must be '" + CHUNKEDSWARM + "' or '" + LOGARITHMIC + "'";
 
         @Override
         public void validate(String name, String value) throws ParameterException {
-            if (!value.equals(INTELLIGENT) && !value.equals(LOGARITHMIC)) {
+            if (!value.equals(CHUNKEDSWARM) && !value.equals(LOGARITHMIC)) {
                 throw new ParameterException("Parameter " + name + ": "
                         + MSG + " (found: " + value + ")");
             }
@@ -132,10 +180,10 @@ public class Benchmark {
     private Long announceDelay = Config.getAnnounceDelay();
 
     @Parameter(
-            names = {"-bd", "--brain-delay"},
-            description = "The brain delay in millis (" + DelayValidator.MSG + ")",
+            names = {"-ld", "--leecher-delay"},
+            description = "The leecher distribution algorithm delay in millis (" + DelayValidator.MSG + ")",
             validateValueWith = DelayValidator.class)
-    private Long brainDelay = Config.getBrainDelay();
+    private Long leecherDistributionAlgorithmDelay = Config.getLeecherDistributionAlgorithmDelay();
 
     @Parameter(
             names = {"-pt", "--peer-type"},
@@ -144,10 +192,10 @@ public class Benchmark {
     private String peerTypeString = PeerTypeValidator.LOCAL;
 
     @Parameter(
-            names = {"-b", "--brain"},
-            description = "Brain type (" + BrainValidator.MSG + ")",
-            validateValueWith = BrainValidator.class)
-    private String brainType = BrainValidator.LOGARITHMIC;
+            names = {"-da", "--distribution-algorithm"},
+            description = "Distribution algorithm type (" + DistributionAlgorithmTypeValidator.MSG + ")",
+            validateValueWith = DistributionAlgorithmTypeValidator.class)
+    private String distributionAlgorithmType = DistributionAlgorithmTypeValidator.LOGARITHMIC;
 
     @Parameter(
             names = {"-h", "--help"},
@@ -254,7 +302,7 @@ public class Benchmark {
 
         // Setup config
         Config.setAnnounceDelay(announceDelay);
-        Config.setBrainDelay(brainDelay);
+        Config.setLeecherDistributionAlgorithmDelay(leecherDistributionAlgorithmDelay);
 
         // Setup logging
         System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", verbose ? "info" : "warn");
@@ -302,7 +350,7 @@ public class Benchmark {
         CountDownLatch countDownLatch = new CountDownLatch(leechers * parts);
         Diagnostic shutdown = new DiagnosticAdapter() {
             @Override
-            public void dataCompleted(Peer peer, DataInfo dataInfo, TransferManager lastTransferManager) {
+            public void dataCompleted(Leecher leecher, DataInfo dataInfo, TransferManager lastTransferManager) {
                 countDownLatch.countDown();
             }
         };
@@ -350,9 +398,15 @@ public class Benchmark {
                 new LoggingDiagnostic(leechers * chunkCount * parts),
                 shutdown);
 
-        // Create the brain factory
-        Supplier<Brain> brainFactory = () -> brainType.equals(BrainValidator.LOGARITHMIC) ?
-                Algorithms.logarithmicBrain() : Algorithms.intelligentBrain();
+        // Create the algorithm factories
+        Supplier<SeederDistributionAlgorithm> seederDistributionAlgorithmSupplier = () ->
+                distributionAlgorithmType.equals(DistributionAlgorithmTypeValidator.LOGARITHMIC) ?
+                        Algorithms.limitedSeederDistributionAlgorithm(1) :
+                        Algorithms.defaultSeederDistributionAlgorithm();
+        Supplier<LeecherDistributionAlgorithm> leecherDistributionAlgorithmSupplier = () ->
+                distributionAlgorithmType.equals(DistributionAlgorithmTypeValidator.LOGARITHMIC) ?
+                        Algorithms.orderedLogarithmicLeecherDistributionAlgorithm() :
+                        Algorithms.orderedChunkedSwarmLeecherDistributionAlgorithm();
 
         // Get the peer type
         Peers.PeerType peerType = Peers.PeerType.valueOf(peerTypeString);
@@ -375,28 +429,41 @@ public class Benchmark {
 
         // Setup all seeders
         for (int i = 0; i < seeders; i++) {
-            peers.add(Peers.peer(
+            peers.add(Peers.seeder(
                     peerType,
                     uploadRate,
-                    uploadRate,
-                    seederAddress.apply(i),
+                    new PeerId(seederAddress.apply(i)),
                     DataBases.fakeDataBase(dataInfo),
                     //DataBases.singleFileDataBase(Paths.get("/Users/chrisprobst/Desktop/data.file"), dataInfo[0]),
-                    brainFactory.get(),
+                    seederDistributionAlgorithmSupplier.get(),
                     combined,
                     Optional.of(eventLoopGroup)));
         }
 
         // Setup all leechers
         for (int i = 0; i < leechers; i++) {
-            peers.add(Peers.peer(
+            PeerId peerId = new PeerId(leecherAddress.apply(i));
+            DataBase dataBase = DataBases.fakeDataBase();
+
+            // Add the seeder part
+            peers.add(Peers.seeder(
                     peerType,
                     uploadRate,
-                    uploadRate,
-                    leecherAddress.apply(i),
-                    DataBases.fakeDataBase(),
-                    //DataBases.singleFileDataBase(Paths.get("/Users/chrisprobst/Desktop/data.file" + i), dataInfo[0].empty()),
-                    brainFactory.get(),
+                    peerId,
+                    dataBase,
+                    //DataBases.singleFileDataBase(Paths.get("/Users/chrisprobst/Desktop/data.file"), dataInfo[0]),
+                    seederDistributionAlgorithmSupplier.get(),
+                    combined,
+                    Optional.of(eventLoopGroup)));
+
+            // Add the leecher part
+            peers.add(Peers.leecher(
+                    peerType,
+                    Long.MAX_VALUE,
+                    peerId,
+                    dataBase,
+                    //DataBases.singleFileDataBase(Paths.get("/Users/chrisprobst/Desktop/data.file"), dataInfo[0]),
+                    leecherDistributionAlgorithmSupplier.get(),
                     combined,
                     Optional.of(eventLoopGroup)));
         }
@@ -465,19 +532,19 @@ public class Benchmark {
             timeStamp = Instant.now();
 
             // Save peer chunks
-            Files.write(new File(recordsDirectory, brainType + "PeerChunks.csv").toPath(),
+            Files.write(new File(recordsDirectory, distributionAlgorithmType + "PeerChunks.csv").toPath(),
                     peerChunkCompletionCVSDiagnostic.getCVSString().getBytes());
 
             // Save total chunks
-            Files.write(new File(recordsDirectory, brainType + "TotalChunks.csv").toPath(),
+            Files.write(new File(recordsDirectory, distributionAlgorithmType + "TotalChunks.csv").toPath(),
                     totalChunkCompletionCVSDiagnostic.getCVSString().getBytes());
 
             // Save peer upload
-            Files.write(new File(recordsDirectory, brainType + "PeerUploads.csv").toPath(),
+            Files.write(new File(recordsDirectory, distributionAlgorithmType + "PeerUploads.csv").toPath(),
                     peerUploadCVSDiagnostic.getCVSString().getBytes());
 
             // Save total upload
-            Files.write(new File(recordsDirectory, brainType + "TotalUploads.csv").toPath(),
+            Files.write(new File(recordsDirectory, distributionAlgorithmType + "TotalUploads.csv").toPath(),
                     totalUploadCVSDiagnostic.getCVSString().getBytes());
 
             duration = Duration.between(timeStamp, Instant.now());
@@ -491,7 +558,7 @@ public class Benchmark {
             // Get records and serialize
             logger.info("[== WRITING EVENTS ==]");
             timeStamp = Instant.now();
-            IOUtil.serialize(new File(recordsDirectory, brainType + "Records.dat"), eventRecordDiagnostic.sortAndGetRecords());
+            IOUtil.serialize(new File(recordsDirectory, distributionAlgorithmType + "Records.dat"), eventRecordDiagnostic.sortAndGetRecords());
             duration = Duration.between(timeStamp, Instant.now());
             logger.info("[== DONE IN: " + (duration.toMillis() / 1000.0) + " seconds ==]");
         }
@@ -516,6 +583,6 @@ public class Benchmark {
             jCommander.usage();
             return;
         }
-    }*/
+    }
 }
 

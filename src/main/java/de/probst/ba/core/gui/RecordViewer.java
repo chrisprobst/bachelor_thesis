@@ -35,8 +35,8 @@ import java.util.stream.Collectors;
 /**
  * Created by chrisprobst on 18.08.14.
  */
-public abstract class RecordViewer extends Application {
-/*
+public class RecordViewer extends Application {
+
     public static final int WIDTH = 1300;
     public static final int HEIGHT = 850;
     public static final int SLIDER_HEIGHT = 150;
@@ -87,7 +87,7 @@ public abstract class RecordViewer extends Application {
         }
 
         List<PeerId> peers = rawRecords.stream()
-                .map(RecordDiagnostic.Record::getLocalPeerId)
+                .map(RecordDiagnostic.Record::getPeerId)
                 .distinct()
                 .collect(Collectors.toList());
 
@@ -153,7 +153,7 @@ public abstract class RecordViewer extends Application {
         gc.setLineWidth(1);
 
         Point2D remote = peerPositions.get(record.getRemotePeerId().getAddress());
-        Point2D local = peerPositions.get(record.getLocalPeerId().getAddress());
+        Point2D local = peerPositions.get(record.getPeerId().getAddress());
         renderArrow(gc, remote, local, PEER_RADIUS, PEER_RADIUS);
     }
 
@@ -162,7 +162,7 @@ public abstract class RecordViewer extends Application {
         gc.setStroke(Color.BLUE);
         gc.setLineWidth(3);
 
-        Point2D local = peerPositions.get(record.getLocalPeerId().getAddress());
+        Point2D local = peerPositions.get(record.getPeerId().getAddress());
         Point2D remote = peerPositions.get(record.getTransfer().getRemotePeerId().getAddress());
         renderArrow(gc, local, remote, PEER_RADIUS, PEER_RADIUS);
     }
@@ -172,7 +172,7 @@ public abstract class RecordViewer extends Application {
         gc.setStroke(Color.RED);
         gc.setLineWidth(3);
 
-        Point2D local = peerPositions.get(record.getLocalPeerId().getAddress());
+        Point2D local = peerPositions.get(record.getPeerId().getAddress());
         Point2D remote = peerPositions.get(record.getTransfer().getRemotePeerId().getAddress());
         renderArrow(gc, remote, local, PEER_RADIUS, PEER_RADIUS);
     }
@@ -181,7 +181,7 @@ public abstract class RecordViewer extends Application {
         gc.setStroke(Color.DARKCYAN);
         gc.setLineWidth(3);
 
-        Point2D local = peerPositions.get(record.getLocalPeerId().getAddress());
+        Point2D local = peerPositions.get(record.getPeerId().getAddress());
         Point2D remote = peerPositions.get(record.getTransfer().getRemotePeerId().getAddress());
         renderArrow(gc, remote, local, PEER_RADIUS, PEER_RADIUS);
     }
@@ -190,7 +190,7 @@ public abstract class RecordViewer extends Application {
         gc.setStroke(Color.ORANGE);
         gc.setLineWidth(3);
 
-        Point2D local = peerPositions.get(record.getLocalPeerId().getAddress());
+        Point2D local = peerPositions.get(record.getPeerId().getAddress());
         Point2D remote = peerPositions.get(record.getTransfer().getRemotePeerId().getAddress());
         renderArrow(gc, remote, local, PEER_RADIUS, PEER_RADIUS);
     }
@@ -199,7 +199,7 @@ public abstract class RecordViewer extends Application {
         gc.setStroke(Color.DARKGREEN);
         gc.setLineWidth(6);
 
-        Point2D local = peerPositions.get(record.getLocalPeerId().getAddress());
+        Point2D local = peerPositions.get(record.getPeerId().getAddress());
         Point2D remote = peerPositions.get(record.getTransfer().getRemotePeerId().getAddress());
         renderArrow(gc, remote, local, PEER_RADIUS, PEER_RADIUS + 6);
         double radius = PEER_RADIUS + 3;
@@ -360,14 +360,14 @@ public abstract class RecordViewer extends Application {
 
                 if (last != null) {
                     last = new HashMap<>(last);
-                    last.merge(record.getLocalPeerId().getAddress(),
+                    last.merge(record.getPeerId().getAddress(),
                             record.getTransfer().getCompletedDataInfo(),
                             DataInfo::union);
                     peerDataInfo.add(last);
                 } else {
                     last = new HashMap<>();
                     for (SocketAddress addr : peerPositions.keySet()) {
-                        last.put(addr, record.getLocalPeerId().getAddress().equals(addr) ?
+                        last.put(addr, record.getPeerId().getAddress().equals(addr) ?
                                 record.getTransfer().getCompletedDataInfo() :
                                 record.getTransfer().getDataInfo().empty());
                     }
@@ -501,5 +501,5 @@ public abstract class RecordViewer extends Application {
 
     public static void main(String[] args) {
         launch(args);
-    }*/
+    }
 }
