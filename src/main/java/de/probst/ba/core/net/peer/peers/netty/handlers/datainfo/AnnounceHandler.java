@@ -1,9 +1,9 @@
 package de.probst.ba.core.net.peer.peers.netty.handlers.datainfo;
 
 import de.probst.ba.core.Config;
-import de.probst.ba.core.media.DataInfo;
-import de.probst.ba.core.net.peer.Peer;
+import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.net.peer.PeerId;
+import de.probst.ba.core.net.peer.Seeder;
 import de.probst.ba.core.net.peer.peers.netty.NettyPeerId;
 import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.messages.DataInfoMessage;
 import io.netty.channel.ChannelHandlerAdapter;
@@ -30,12 +30,12 @@ public final class AnnounceHandler extends ChannelHandlerAdapter implements Runn
     private final Logger logger =
             LoggerFactory.getLogger(AnnounceHandler.class);
 
-    private final Peer peer;
+    private final Seeder seeder;
     private ChannelHandlerContext ctx;
     private ScheduledFuture<?> timer;
 
     /**
-     * Registers the announce task with this
+     * Schedule the announce task with this
      * event loop.
      */
     private void schedule() {
@@ -46,18 +46,18 @@ public final class AnnounceHandler extends ChannelHandlerAdapter implements Runn
     }
 
     /**
-     * Unregister the running task,
+     * Cancel the running task,
      * if present.
      */
-    private void unschedule() {
+    private void cancel() {
         if (timer != null) {
             timer.cancel(false);
         }
     }
 
-    public AnnounceHandler(Peer peer) {
-        Objects.requireNonNull(peer);
-        this.peer = peer;
+    public AnnounceHandler(Seeder seeder) {
+        Objects.requireNonNull(seeder);
+        this.seeder = seeder;
     }
 
     @Override
@@ -69,19 +69,19 @@ public final class AnnounceHandler extends ChannelHandlerAdapter implements Runn
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        unschedule();
+        cancel();
         super.channelInactive(ctx);
     }
 
     @Override
     public void run() {
-        // Create the netty peer id
+        // Create the netty seeder id
         PeerId peerId = new NettyPeerId(ctx.channel());
 
         // Transform the data info using the brain
         Optional<Map<String, DataInfo>> transformedDataInfo =
-                peer.getBrain().transformUploadDataInfo(
-                        peer.getNetworkState(),
+                seeder.getDistributionAlgorithm().transformUploadDataInfo(
+                        seeder.getPeerState(),
                         peerId);
 
         // This is actually a bug in the brain
@@ -114,7 +114,7 @@ public final class AnnounceHandler extends ChannelHandlerAdapter implements Runn
                 });
 
         // DIAGNOSTIC
-        peer.getDiagnostic().announced(
-                peer, peerId, dataInfoMessage.getDataInfo());
+        seeder.getPeerHandler().announced(
+                seeder, peerId, dataInfoMessage.getDataInfo());
     }
 }

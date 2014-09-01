@@ -1,7 +1,7 @@
 package de.probst.ba.core.gui;
 
-import de.probst.ba.core.diag.RecordDiagnostic;
-import de.probst.ba.core.media.DataInfo;
+import de.probst.ba.core.diagnostic.RecordDiagnostic;
+import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.util.IOUtil;
 import javafx.application.Application;
@@ -35,8 +35,8 @@ import java.util.stream.Collectors;
 /**
  * Created by chrisprobst on 18.08.14.
  */
-public class RecordViewer extends Application {
-
+public abstract class RecordViewer extends Application {
+/*
     public static final int WIDTH = 1300;
     public static final int HEIGHT = 850;
     public static final int SLIDER_HEIGHT = 150;
@@ -501,5 +501,5 @@ public class RecordViewer extends Application {
 
     public static void main(String[] args) {
         launch(args);
-    }
+    }*/
 }

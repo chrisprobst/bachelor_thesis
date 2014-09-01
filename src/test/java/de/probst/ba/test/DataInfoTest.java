@@ -1,6 +1,6 @@
 package de.probst.ba.test;
 
-import de.probst.ba.core.media.DataInfo;
+import de.probst.ba.core.media.database.DataInfo;
 import org.junit.Before;
 import org.junit.Test;
 

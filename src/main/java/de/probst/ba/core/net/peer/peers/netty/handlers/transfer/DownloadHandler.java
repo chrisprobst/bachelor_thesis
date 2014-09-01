@@ -1,9 +1,9 @@
 package de.probst.ba.core.net.peer.peers.netty.handlers.transfer;
 
-import de.probst.ba.core.media.DataInfo;
-import de.probst.ba.core.net.Transfer;
-import de.probst.ba.core.net.TransferManager;
-import de.probst.ba.core.net.peer.Peer;
+import de.probst.ba.core.media.database.DataInfo;
+import de.probst.ba.core.media.transfer.Transfer;
+import de.probst.ba.core.media.transfer.TransferManager;
+import de.probst.ba.core.net.peer.Leecher;
 import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.peers.netty.NettyPeerId;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.messages.UploadRejectedMessage;
@@ -67,7 +67,7 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
     private final Logger logger =
             LoggerFactory.getLogger(DownloadHandler.class);
 
-    private final Peer peer;
+    private final Leecher leecher;
     private final AtomicReference<Transfer> transfer = new AtomicReference<>();
 
     private TransferManager transferManager;
@@ -82,7 +82,7 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
     }
 
     private void setup() {
-        transferManager = peer.getDataBase().createTransferManager(transfer.get());
+        transferManager = leecher.getDataBase().createTransferManager(transfer.get());
         receivedBuffer = false;
     }
 
@@ -99,9 +99,9 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
         return Optional.ofNullable(transfer.get());
     }
 
-    public DownloadHandler(Peer peer) {
-        Objects.requireNonNull(peer);
-        this.peer = peer;
+    public DownloadHandler(Leecher leecher) {
+        Objects.requireNonNull(leecher);
+        this.leecher = leecher;
     }
 
     @Override
@@ -118,7 +118,7 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
             setup();
 
             // Write the download request
-            logger.debug("Request upload transfer: " + transferManager.getTransfer());
+            logger.debug("Request upload transfer" + transferManager.getTransfer());
             ctx.writeAndFlush(new UploadRequestMessage(transferManager.getTransfer().getDataInfo()))
                     .addListener(fut -> {
                         if (!fut.isSuccess()) {
@@ -132,8 +132,8 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
                     });
 
             // DIAGNOSTIC
-            peer.getDiagnostic().downloadRequested(
-                    peer, transferManager);
+            leecher.getPeerHandler().downloadRequested(
+                    leecher, transferManager);
         }
 
         super.userEventTriggered(ctx, evt);
@@ -145,12 +145,12 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
             UploadRejectedMessage uploadRejectedMessage =
                     (UploadRejectedMessage) msg;
 
-            logger.debug("Upload rejected: " +
+            logger.debug("Upload rejected" +
                     uploadRejectedMessage.getCause().getMessage());
 
             // DIAGNOSTIC
-            peer.getDiagnostic().downloadRejected(
-                    peer, transferManager, uploadRejectedMessage.getCause());
+            leecher.getPeerHandler().downloadRejected(
+                    leecher, transferManager, uploadRejectedMessage.getCause());
 
             reset();
         } else if (msg instanceof ByteBuf) {
@@ -162,44 +162,44 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
                 // First buffer ? -> Download started!
                 if (!receivedBuffer) {
                     receivedBuffer = true;
-                    logger.debug("Download started: " +
+                    logger.debug("Download started" +
                             transferManager.getTransfer());
 
                     // DIAGNOSTIC
-                    peer.getDiagnostic().downloadStarted(
-                            peer, transferManager);
+                    leecher.getPeerHandler().downloadStarted(
+                            leecher, transferManager);
                 }
 
                 // Process the buffer and check for completion
                 boolean completed = !transferManager.process(buffer);
                 update();
 
-                logger.debug("Download processed: " +
+                logger.debug("Download processed" +
                         transferManager.getTransfer());
 
                 // DIAGNOSTIC
-                peer.getDiagnostic().downloadProgressed(
-                        peer, transferManager);
+                leecher.getPeerHandler().downloadProgressed(
+                        leecher, transferManager);
 
                 if (completed) {
-                    logger.debug("Download succeeded: " +
+                    logger.debug("Download succeeded" +
                             transferManager.getTransfer());
 
                     // DIAGNOSTIC
-                    peer.getDiagnostic().downloadSucceeded(
-                            peer, transferManager);
+                    leecher.getPeerHandler().downloadSucceeded(
+                            leecher, transferManager);
                 }
 
                 // Query data base
-                DataInfo dataInfoStatus = peer.getDataBase().get(
+                DataInfo dataInfoStatus = leecher.getDataBase().get(
                         transferManager.getTransfer().getDataInfo().getHash());
 
                 if (dataInfoStatus != null && dataInfoStatus.isCompleted()) {
-                    logger.debug("Data completed: " + dataInfoStatus);
+                    logger.debug("Data completed" + dataInfoStatus);
 
                     // DIAGNOSTIC
-                    peer.getDiagnostic().dataCompleted(
-                            peer, dataInfoStatus, transferManager);
+                    leecher.getPeerHandler().dataCompleted(
+                            leecher, dataInfoStatus, transferManager);
                 }
 
                 // Ready for next download
@@ -208,7 +208,7 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
 
                     // Stop consuming here
                     if (buffer.readableBytes() > 0) {
-                        logger.warn("Uploader sent too much data: " + buffer);
+                        logger.warn("Uploader sent too much data" + buffer);
                         break;
                     }
                 }

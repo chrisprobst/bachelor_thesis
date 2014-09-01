@@ -1,12 +1,9 @@
 package de.probst.ba.core.net.peer;
 
-import de.probst.ba.core.diag.Diagnostic;
-import de.probst.ba.core.logic.Brain;
-import de.probst.ba.core.media.DataBase;
-import de.probst.ba.core.net.NetworkState;
+import de.probst.ba.core.distribution.DistributionAlgorithm;
+import de.probst.ba.core.media.database.DataBase;
 
 import java.io.Closeable;
-import java.net.SocketAddress;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 
@@ -15,19 +12,17 @@ import java.util.concurrent.Future;
  */
 public interface Peer extends Closeable {
 
-    PeerId getLocalPeerId();
+    PeerId getPeerId();
 
     CompletableFuture<?> getInitFuture();
 
     Future<?> getCloseFuture();
 
-    void connect(SocketAddress remoteSocketAddress);
-
-    NetworkState getNetworkState();
+    PeerState getPeerState();
 
     DataBase getDataBase();
 
-    Diagnostic getDiagnostic();
+    PeerHandler getPeerHandler();
 
-    Brain getBrain();
+    DistributionAlgorithm getDistributionAlgorithm();
 }

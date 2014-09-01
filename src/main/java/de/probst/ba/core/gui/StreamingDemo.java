@@ -1,38 +1,12 @@
 package de.probst.ba.core.gui;
 
-import de.probst.ba.core.Config;
-import de.probst.ba.core.diag.CombinedDiagnostic;
-import de.probst.ba.core.diag.Diagnostic;
-import de.probst.ba.core.diag.DiagnosticAdapter;
-import de.probst.ba.core.diag.LoggingDiagnostic;
-import de.probst.ba.core.logic.brains.Brains;
-import de.probst.ba.core.media.DataInfo;
-import de.probst.ba.core.media.databases.DataBases;
-import de.probst.ba.core.net.TransferManager;
-import de.probst.ba.core.net.peer.Peer;
-import de.probst.ba.core.net.peer.peers.Peers;
-import io.netty.channel.DefaultEventLoopGroup;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.local.LocalAddress;
-import io.netty.util.internal.logging.InternalLoggerFactory;
-import io.netty.util.internal.logging.Slf4JLoggerFactory;
 import javafx.application.Application;
-import javafx.scene.Scene;
-import javafx.scene.canvas.Canvas;
-import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.layout.BorderPane;
-import javafx.stage.Stage;
-
-import java.util.LinkedList;
-import java.util.Optional;
-import java.util.Queue;
-import java.util.stream.IntStream;
 
 /**
  * Created by chrisprobst on 31.08.14.
  */
-public class StreamingDemo extends Application {
-
+public abstract class StreamingDemo extends Application {
+/*
     @Override
     public void start(Stage primaryStage) throws Exception {
         int chunkCount = 50;
@@ -91,7 +65,7 @@ public class StreamingDemo extends Application {
                     1000,
                     new LocalAddress("S-" + i),
                     DataBases.fakeDataBase(dataInfo),
-                    Brains.intelligentBrain(),
+                    Algorithms.intelligentBrain(),
                     combined,
                     Optional.of(eventLoopGroup)));
         }
@@ -103,7 +77,7 @@ public class StreamingDemo extends Application {
                     1000,
                     new LocalAddress("L-" + i),
                     DataBases.fakeDataBase(),
-                    Brains.intelligentBrain(),
+                    Algorithms.intelligentBrain(),
                     combined,
                     Optional.of(eventLoopGroup)));
         }
@@ -126,5 +100,5 @@ public class StreamingDemo extends Application {
 
         // Launch the app
         launch(args);
-    }
+    }*/
 }

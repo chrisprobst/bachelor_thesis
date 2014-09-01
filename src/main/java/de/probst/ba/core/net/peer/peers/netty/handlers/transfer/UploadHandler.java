@@ -1,9 +1,9 @@
 package de.probst.ba.core.net.peer.peers.netty.handlers.transfer;
 
-import de.probst.ba.core.net.Transfer;
-import de.probst.ba.core.net.TransferManager;
-import de.probst.ba.core.net.peer.Peer;
+import de.probst.ba.core.media.transfer.Transfer;
+import de.probst.ba.core.media.transfer.TransferManager;
 import de.probst.ba.core.net.peer.PeerId;
+import de.probst.ba.core.net.peer.Seeder;
 import de.probst.ba.core.net.peer.peers.netty.NettyPeerId;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.messages.UploadRejectedMessage;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.messages.UploadRequestMessage;
@@ -88,12 +88,12 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
     private final Logger logger =
             LoggerFactory.getLogger(UploadHandler.class);
 
-    private final Peer peer;
+    private final Seeder seeder;
     private final AtomicCounter parallelUploads;
     private volatile TransferManager transferManager;
 
     private boolean setup(ChannelHandlerContext ctx, TransferManager transferManager) {
-        if (parallelUploads.tryIncrement(peer.getBrain().getMaxParallelUploads())) {
+        if (parallelUploads.tryIncrement(seeder.getDistributionAlgorithm().getMaxParallelUploads())) {
             this.transferManager = transferManager;
             ctx.channel().config().setAutoRead(false);
             return true;
@@ -107,23 +107,17 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
         parallelUploads.tryDecrement();
     }
 
-    public UploadHandler(Peer peer, AtomicCounter parallelUploads) {
-        Objects.requireNonNull(peer);
+    public UploadHandler(Seeder seeder, AtomicCounter parallelUploads) {
+        Objects.requireNonNull(seeder);
         Objects.requireNonNull(parallelUploads);
+        this.seeder = seeder;
         this.parallelUploads = parallelUploads;
-        this.peer = peer;
     }
 
     public Optional<TransferManager> getTransferManager() {
         return Optional.ofNullable(transferManager);
     }
 
-    /**
-     * Checks the message.
-     *
-     * @param uploadRequestMessage
-     * @return
-     */
     private boolean isUploadRequestMessageValid(UploadRequestMessage uploadRequestMessage) {
         return uploadRequestMessage != null &&
                 uploadRequestMessage.getDataInfo() != null &&
@@ -148,12 +142,12 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
             ctx.writeAndFlush(new UploadRejectedMessage(cause));
 
             // DIAGNOSTIC
-            peer.getDiagnostic().uploadRejected(
-                    peer, null, cause);
+            seeder.getPeerHandler().uploadRejected(
+                    seeder, null, cause);
         } else {
 
             // Create a new transfer manager
-            TransferManager newTransferManager = peer.getDataBase()
+            TransferManager newTransferManager = seeder.getDataBase()
                     .createTransferManager(Transfer.upload(
                             new NettyPeerId(ctx.channel()),
                             msg.getDataInfo()));
@@ -168,10 +162,10 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
                 ctx.writeAndFlush(new UploadRejectedMessage(cause));
 
                 // DIAGNOSTIC
-                peer.getDiagnostic().uploadRejected(
-                        peer, newTransferManager, cause);
+                seeder.getPeerHandler().uploadRejected(
+                        seeder, newTransferManager, cause);
             } else {
-                logger.debug("Starting upload: " + newTransferManager.getTransfer());
+                logger.debug("Starting upload" + newTransferManager.getTransfer());
 
                 // Upload chunked input
                 ctx.writeAndFlush(new ChunkedDataBaseInput(newTransferManager)).addListener(fut -> {
@@ -184,8 +178,8 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
                         logger.debug("Upload succeeded");
 
                         // DIAGNOSTIC
-                        peer.getDiagnostic().uploadSucceeded(
-                                peer, transferManager);
+                        seeder.getPeerHandler().uploadSucceeded(
+                                seeder, transferManager);
 
                         // Restore
                         reset(ctx);
@@ -193,8 +187,8 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
                 });
 
                 // DIAGNOSTIC
-                peer.getDiagnostic().uploadStarted(
-                        peer, newTransferManager);
+                seeder.getPeerHandler().uploadStarted(
+                        seeder, newTransferManager);
             }
         }
     }

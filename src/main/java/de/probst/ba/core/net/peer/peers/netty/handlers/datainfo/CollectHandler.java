@@ -1,7 +1,7 @@
 package de.probst.ba.core.net.peer.peers.netty.handlers.datainfo;
 
-import de.probst.ba.core.media.DataInfo;
-import de.probst.ba.core.net.peer.Peer;
+import de.probst.ba.core.media.database.DataInfo;
+import de.probst.ba.core.net.peer.Leecher;
 import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.peers.netty.NettyPeerId;
 import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.messages.DataInfoMessage;
@@ -38,7 +38,7 @@ public final class CollectHandler extends SimpleChannelInboundHandler<DataInfoMe
         return remotePeer.pipeline().get(CollectHandler.class);
     }
 
-    private final Peer peer;
+    private final Leecher leecher;
 
     private volatile Optional<Tuple2<PeerId, Map<String, DataInfo>>> remoteDataInfo =
             Optional.empty();
@@ -56,15 +56,15 @@ public final class CollectHandler extends SimpleChannelInboundHandler<DataInfoMe
                 .collect(Collectors.toList());
 
         // Try to add interest for all data info
-        List<Boolean> succeeded = peer.getDataBase().addInterestsIf(
-                dataInfoList, y -> peer.getBrain().addInterest(remotePeerId, y));
+        List<Boolean> succeeded = leecher.getDataBase().addInterestsIf(
+                dataInfoList, y -> leecher.getDistributionAlgorithm().addInterest(remotePeerId, y));
 
         for (int i = 0; i < succeeded.size(); i++) {
             if (succeeded.get(i)) {
 
                 // DIAGNOSTIC
-                peer.getDiagnostic().interestAdded(
-                        peer, remotePeerId, dataInfoList.get(i));
+                leecher.getPeerHandler().interestAdded(
+                        leecher, remotePeerId, dataInfoList.get(i));
             }
         }
     }
@@ -102,12 +102,12 @@ public final class CollectHandler extends SimpleChannelInboundHandler<DataInfoMe
         }
 
         // DIAGNOSTIC
-        peer.getDiagnostic().collected(
-                peer, peerId, getRemoteDataInfo().map(Tuple2::second));
+        leecher.getPeerHandler().collected(
+                leecher, peerId, getRemoteDataInfo().map(Tuple2::second));
     }
 
-    public CollectHandler(Peer peer) {
-        Objects.requireNonNull(peer);
-        this.peer = peer;
+    public CollectHandler(Leecher leecher) {
+        Objects.requireNonNull(leecher);
+        this.leecher = leecher;
     }
 }
