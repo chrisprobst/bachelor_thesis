@@ -104,10 +104,9 @@ public final class AnnounceHandler extends ChannelHandlerAdapter implements Runn
                         // Success, lets schedule again
                         schedule();
                     } else {
-                        // Error while writing, lets close the connection
-                        ctx.close();
-
+                        // Close if this exception was not expected
                         if (!(fut.cause() instanceof ClosedChannelException)) {
+                            ctx.close();
 
                             // log the cause
                             logger.warn(

@@ -18,6 +18,7 @@ import io.netty.handler.stream.ChunkedInput;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.channels.ClosedChannelException;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -170,10 +171,12 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
                 // Upload chunked input
                 ctx.writeAndFlush(new ChunkedDataBaseInput(newTransferManager)).addListener(fut -> {
                     if (!fut.isSuccess()) {
-                        logger.warn("Upload failed", fut.cause());
+                        // Close if this exception was not expected
+                        if (!(fut.cause() instanceof ClosedChannelException)) {
+                            ctx.close();
 
-                        // No success means network or chunked input exception
-                        ctx.close();
+                            logger.warn("Upload failed, connection closed", fut.cause());
+                        }
                     } else {
                         logger.debug("Upload succeeded");
 

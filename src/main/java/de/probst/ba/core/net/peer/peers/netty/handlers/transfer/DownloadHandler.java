@@ -16,6 +16,7 @@ import io.netty.channel.group.ChannelGroup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.channels.ClosedChannelException;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -122,12 +123,13 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
             ctx.writeAndFlush(new UploadRequestMessage(transferManager.getTransfer().getDataInfo()))
                     .addListener(fut -> {
                         if (!fut.isSuccess()) {
-                            logger.warn("Failed to send upload request",
-                                    fut.cause());
+                            // Close if this exception was not expected
+                            if (!(fut.cause() instanceof ClosedChannelException)) {
+                                ctx.close();
 
-                            // Not able to process upload request,
-                            // we can stop here!
-                            ctx.close();
+                                logger.warn("Failed to send upload request, connection closed",
+                                        fut.cause());
+                            }
                         }
                     });
 
