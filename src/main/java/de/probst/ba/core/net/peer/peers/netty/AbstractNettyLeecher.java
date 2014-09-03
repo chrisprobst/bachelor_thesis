@@ -5,8 +5,8 @@ import de.probst.ba.core.media.database.DataBase;
 import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.media.transfer.Transfer;
 import de.probst.ba.core.net.peer.AbstractLeecher;
-import de.probst.ba.core.net.peer.LeecherHandler;
 import de.probst.ba.core.net.peer.PeerId;
+import de.probst.ba.core.net.peer.handler.LeecherHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.codec.SimpleCodec;
 import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.CollectHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.group.ChannelGroupHandler;
@@ -20,6 +20,7 @@ import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.traffic.GlobalTrafficShapingHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,7 +29,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.Future;
-import java.util.concurrent.ScheduledExecutorService;
 
 /**
  * Created by chrisprobst on 01.09.14.
@@ -38,11 +38,13 @@ public abstract class AbstractNettyLeecher extends AbstractLeecher {
     private final Logger logger =
             LoggerFactory.getLogger(AbstractNettyLeecher.class);
 
-    private final long downloadRate;
+    private final long maxDownloadRate;
 
     private final EventLoopGroup leecherEventLoopGroup;
 
     private final ChannelGroupHandler leecherChannelGroupHandler;
+
+    private final GlobalTrafficShapingHandler globalLeecherTrafficShapingHandler;
 
     private final LoggingHandler leecherLogHandler =
             new LoggingHandler(LogLevel.TRACE);
@@ -50,13 +52,10 @@ public abstract class AbstractNettyLeecher extends AbstractLeecher {
     private final ChannelInitializer<Channel> leecherChannelInitializer = new ChannelInitializer<Channel>() {
         @Override
         public void initChannel(Channel ch) {
-            /*
-            new ChannelTrafficShapingHandler(
-                    getUploadRate(),
-                    getDownloadRate(),
-                    NETTY_TRAFFIC_INTERVAL),*/
-
             ch.pipeline().addLast(
+
+                    // Traffic shaper
+                    globalLeecherTrafficShapingHandler,
 
                     // Codec stuff
                     new LengthFieldBasedFrameDecoder(1024 * 1024, 0, 4, 0, 4),
@@ -95,8 +94,8 @@ public abstract class AbstractNettyLeecher extends AbstractLeecher {
     }
 
     @Override
-    protected long getDownloadRate() {
-        return downloadRate;
+    protected long getMaxDownloadRate() {
+        return maxDownloadRate;
     }
 
     @Override
@@ -107,11 +106,6 @@ public abstract class AbstractNettyLeecher extends AbstractLeecher {
     @Override
     protected Map<PeerId, Map<String, DataInfo>> getRemoteDataInfo() {
         return CollectHandler.getRemoteDataInfo(getLeecherChannelGroup());
-    }
-
-    @Override
-    protected ScheduledExecutorService getScheduler() {
-        return leecherEventLoopGroup;
     }
 
     @Override
@@ -134,27 +128,28 @@ public abstract class AbstractNettyLeecher extends AbstractLeecher {
     }
 
     protected abstract void initLeecherBootstrap();
-
-    protected abstract EventLoopGroup createLeecherEventLoopGroup();
-
+    
     protected AbstractNettyLeecher(
-            long downloadRate,
+            long maxDownloadRate,
             PeerId peerId,
             DataBase dataBase,
-            LeecherDistributionAlgorithm distributionAlgorithm,
-            LeecherHandler peerHandler,
-            Optional<EventLoopGroup> leecherEventLoopGroup) {
+            LeecherDistributionAlgorithm leecherDistributionAlgorithm,
+            Optional<LeecherHandler> leecherHandler,
+            EventLoopGroup leecherEventLoopGroup) {
 
-        super(peerId, dataBase, distributionAlgorithm, peerHandler);
+        super(peerId, dataBase, leecherDistributionAlgorithm,
+                leecherHandler, leecherEventLoopGroup.next());
 
         Objects.requireNonNull(leecherEventLoopGroup);
 
         // Save args
-        this.downloadRate = downloadRate;
-        this.leecherEventLoopGroup = leecherEventLoopGroup.orElseGet(
-                this::createLeecherEventLoopGroup);
+        this.maxDownloadRate = maxDownloadRate;
+        this.leecherEventLoopGroup = leecherEventLoopGroup;
 
         // Create internal vars
+        globalLeecherTrafficShapingHandler =
+                new GlobalTrafficShapingHandler(
+                        this.leecherEventLoopGroup, 0, getMaxDownloadRate(), 0);
         leecherChannelGroupHandler = new ChannelGroupHandler(
                 this.leecherEventLoopGroup.next());
 
@@ -173,6 +168,7 @@ public abstract class AbstractNettyLeecher extends AbstractLeecher {
     @Override
     public void close() throws IOException {
         leecherEventLoopGroup.shutdownGracefully();
+        globalLeecherTrafficShapingHandler.release();
         super.close();
     }
 }

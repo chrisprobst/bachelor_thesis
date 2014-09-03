@@ -1,7 +1,9 @@
-package de.probst.ba.core.net.peer;
+package de.probst.ba.core.net.peer.state;
 
 import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.media.transfer.Transfer;
+import de.probst.ba.core.net.peer.PeerId;
+import de.probst.ba.core.net.peer.Seeder;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -11,25 +13,20 @@ import java.util.Objects;
 /**
  * Created by chrisprobst on 01.09.14.
  */
-public final class SeederState extends PeerState {
+public final class SeederState extends DataInfoState {
 
     // All pending uploads
     private final Map<PeerId, Transfer> uploads;
 
-    // The upload rate
-    private final long uploadRate;
-
-    public SeederState(PeerId peerId,
+    public SeederState(Seeder seeder,
                        Map<String, DataInfo> dataInfo,
-                       Map<PeerId, Transfer> uploads,
-                       long uploadRate) {
+                       Map<PeerId, Transfer> uploads) {
 
-        super(peerId, dataInfo);
+        super(seeder, dataInfo);
 
         Objects.requireNonNull(uploads);
 
         this.uploads = Collections.unmodifiableMap(new HashMap<>(uploads));
-        this.uploadRate = uploadRate;
     }
 
     /**
@@ -39,10 +36,8 @@ public final class SeederState extends PeerState {
         return uploads;
     }
 
-    /**
-     * @return The upload rate.
-     */
-    public long getUploadRate() {
-        return uploadRate;
+    @Override
+    public Seeder getPeer() {
+        return (Seeder) super.getPeer();
     }
 }

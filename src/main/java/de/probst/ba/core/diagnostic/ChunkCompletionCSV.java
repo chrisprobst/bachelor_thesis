@@ -2,24 +2,20 @@ package de.probst.ba.core.diagnostic;
 
 import de.probst.ba.core.Config;
 import de.probst.ba.core.media.database.DataInfo;
-import de.probst.ba.core.media.transfer.TransferManager;
-import de.probst.ba.core.net.peer.Leecher;
 import de.probst.ba.core.net.peer.Peer;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Objects;
 
 /**
  * Created by chrisprobst on 22.08.14.
  */
-public final class ChunkCompletionCVSDiagnostic extends AbstractTimeCVSDiagnostic {
+public final class ChunkCompletionCSV extends CSV {
 
-    private boolean total;
-    private Collection<Peer> peers;
-    private String dataInfoHash;
+    private final boolean total;
+    private final String dataInfoHash;
 
-    private void writeHeader() {
+    private void writeHeader(Collection<Peer> peers) {
         writeElement("Time", Config.getDefaultCVSElementWidth());
 
         if (total) {
@@ -37,7 +33,7 @@ public final class ChunkCompletionCVSDiagnostic extends AbstractTimeCVSDiagnosti
         writeLine();
     }
 
-    private void writeTotalStatus() {
+    private void writeTotalStatus(Collection<Peer> peers) {
         double totalPercentage = 0;
         int cnt = 0;
         for (Peer peer : peers) {
@@ -52,7 +48,7 @@ public final class ChunkCompletionCVSDiagnostic extends AbstractTimeCVSDiagnosti
                 Config.getDefaultCVSElementWidth());
     }
 
-    private void writeIndividualStatus() {
+    private void writeIndividualStatus(Collection<Peer> peers) {
         for (Peer peer : peers) {
             DataInfo dataInfo = peer.getDataBase().get(dataInfoHash);
             if (dataInfo != null) {
@@ -65,63 +61,32 @@ public final class ChunkCompletionCVSDiagnostic extends AbstractTimeCVSDiagnosti
         }
     }
 
-    public synchronized void writeStatus() {
-        if (peers == null) {
-            throw new IllegalStateException("peers == null");
-        }
-        if (dataInfoHash == null) {
-            throw new IllegalStateException("dataInfoHash == null");
-        }
+    public ChunkCompletionCSV(boolean total, String dataInfoHash) {
+        Objects.requireNonNull(dataInfoHash);
+        this.total = total;
+        this.dataInfoHash = dataInfoHash;
+    }
 
-        if (getTimeStamp() == null) {
-            setTimeStamp();
-            writeHeader();
+    public synchronized void writeStatus(Collection<Peer> peers) {
+        Objects.requireNonNull(peers);
+
+        if (isFirstElement()) {
+            writeHeader(peers);
         }
 
         writeDuration(Config.getDefaultCVSElementWidth());
 
         if (total) {
-            writeTotalStatus();
+            writeTotalStatus(peers);
         } else {
-            writeIndividualStatus();
+            writeIndividualStatus(peers);
         }
 
         writeLine();
     }
 
-    public synchronized boolean isTotal() {
-        return total;
-    }
-
-    public synchronized void setTotal(boolean total) {
-        this.total = total;
-    }
-
-    public synchronized Collection<Peer> getPeers() {
-        return peers;
-    }
-
-    public synchronized void setPeers(Collection<Peer> peers) {
-        Objects.requireNonNull(peers);
-        this.peers = new ArrayList<>(peers);
-    }
-
-    public synchronized String getDataInfoHash() {
-        return dataInfoHash;
-    }
-
-    public synchronized void setDataInfoHash(String dataInfoHash) {
-        Objects.requireNonNull(dataInfoHash);
-        this.dataInfoHash = dataInfoHash;
-    }
-
     @Override
-    public synchronized String getCVSString() {
-        return super.getCVSString();
-    }
-
-    @Override
-    public void downloadSucceeded(Leecher leecher, TransferManager transferManager) {
-        writeStatus();
+    public synchronized String toString() {
+        return super.toString();
     }
 }

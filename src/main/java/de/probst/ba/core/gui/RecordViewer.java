@@ -1,6 +1,6 @@
 package de.probst.ba.core.gui;
 
-import de.probst.ba.core.diagnostic.RecordDiagnostic;
+import de.probst.ba.core.net.peer.handler.RecordHandler;
 import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.util.IOUtil;
@@ -44,13 +44,13 @@ public class RecordViewer extends Application {
     public static final double PEER_RADIUS = 46;
 
     // Initialized once
-    private List<RecordDiagnostic.Record> rawRecords;
-    private RecordDiagnostic.Record start;
-    private RecordDiagnostic.Record end;
+    private List<RecordHandler.Record> rawRecords;
+    private RecordHandler.Record start;
+    private RecordHandler.Record end;
     private Map<SocketAddress, Point2D> peerPositions = new HashMap<>();
 
     // Dynamically created
-    private List<RecordDiagnostic.Record> filteredRecords;
+    private List<RecordHandler.Record> filteredRecords;
     private List<Map<SocketAddress, DataInfo>> peerDataInfo;
 
     // Gui stuff
@@ -70,8 +70,8 @@ public class RecordViewer extends Application {
 
         if (rawRecords.size() > 0) {
             int index = 0;
-            RecordDiagnostic.Record tmp = rawRecords.get(index);
-            if (tmp.getRecordType() == RecordDiagnostic.RecordType.Start) {
+            RecordHandler.Record tmp = rawRecords.get(index);
+            if (tmp.getRecordType() == RecordHandler.RecordType.Start) {
                 start = tmp;
                 rawRecords.remove(index);
             }
@@ -79,15 +79,15 @@ public class RecordViewer extends Application {
 
         if (rawRecords.size() > 0) {
             int index = rawRecords.size() - 1;
-            RecordDiagnostic.Record tmp = rawRecords.get(index);
-            if (tmp.getRecordType() == RecordDiagnostic.RecordType.End) {
+            RecordHandler.Record tmp = rawRecords.get(index);
+            if (tmp.getRecordType() == RecordHandler.RecordType.End) {
                 end = tmp;
                 rawRecords.remove(index);
             }
         }
 
         List<PeerId> peers = rawRecords.stream()
-                .map(RecordDiagnostic.Record::getPeerId)
+                .map(RecordHandler.Record::getPeerId)
                 .distinct()
                 .collect(Collectors.toList());
 
@@ -108,13 +108,13 @@ public class RecordViewer extends Application {
         }
     }
 
-    private boolean isValidRecord(RecordDiagnostic.Record record) {
-        return (record.getRecordType() == RecordDiagnostic.RecordType.Collected && collectedCheckBox.isSelected()) ||
-                (record.getRecordType() == RecordDiagnostic.RecordType.DownloadRejected && downloadRejectedCheckBox.isSelected()) ||
-                (record.getRecordType() == RecordDiagnostic.RecordType.DownloadRequested && downloadRequestedCheckBox.isSelected()) ||
-                (record.getRecordType() == RecordDiagnostic.RecordType.DownloadProgressed && downloadProgressedCheckBox.isSelected()) ||
-                (record.getRecordType() == RecordDiagnostic.RecordType.DownloadStarted && downloadStartedCheckBox.isSelected()) ||
-                (record.getRecordType() == RecordDiagnostic.RecordType.DownloadSucceeded && downloadSucceededCheckBox.isSelected());
+    private boolean isValidRecord(RecordHandler.Record record) {
+        return (record.getRecordType() == RecordHandler.RecordType.Collected && collectedCheckBox.isSelected()) ||
+                (record.getRecordType() == RecordHandler.RecordType.DownloadRejected && downloadRejectedCheckBox.isSelected()) ||
+                (record.getRecordType() == RecordHandler.RecordType.DownloadRequested && downloadRequestedCheckBox.isSelected()) ||
+                (record.getRecordType() == RecordHandler.RecordType.DownloadProgressed && downloadProgressedCheckBox.isSelected()) ||
+                (record.getRecordType() == RecordHandler.RecordType.DownloadStarted && downloadStartedCheckBox.isSelected()) ||
+                (record.getRecordType() == RecordHandler.RecordType.DownloadSucceeded && downloadSucceededCheckBox.isSelected());
     }
 
     private void renderArrow(GraphicsContext gc, Point2D a, Point2D b, double offset, double backOff) {
@@ -147,7 +147,7 @@ public class RecordViewer extends Application {
     }
 
     private void renderCollectedDataInfo(GraphicsContext gc,
-                                         RecordDiagnostic.Record record) {
+                                         RecordHandler.Record record) {
 
         gc.setStroke(Color.GREEN);
         gc.setLineWidth(1);
@@ -158,7 +158,7 @@ public class RecordViewer extends Application {
     }
 
     private void renderDownloadRequested(GraphicsContext gc,
-                                         RecordDiagnostic.Record record) {
+                                         RecordHandler.Record record) {
         gc.setStroke(Color.BLUE);
         gc.setLineWidth(3);
 
@@ -168,7 +168,7 @@ public class RecordViewer extends Application {
     }
 
     private void renderDownloadRejected(GraphicsContext gc,
-                                        RecordDiagnostic.Record record) {
+                                        RecordHandler.Record record) {
         gc.setStroke(Color.RED);
         gc.setLineWidth(3);
 
@@ -177,7 +177,7 @@ public class RecordViewer extends Application {
         renderArrow(gc, remote, local, PEER_RADIUS, PEER_RADIUS);
     }
 
-    private void renderDownloadStarted(GraphicsContext gc, RecordDiagnostic.Record record) {
+    private void renderDownloadStarted(GraphicsContext gc, RecordHandler.Record record) {
         gc.setStroke(Color.DARKCYAN);
         gc.setLineWidth(3);
 
@@ -186,7 +186,7 @@ public class RecordViewer extends Application {
         renderArrow(gc, remote, local, PEER_RADIUS, PEER_RADIUS);
     }
 
-    private void renderDownloadProgressed(GraphicsContext gc, RecordDiagnostic.Record record) {
+    private void renderDownloadProgressed(GraphicsContext gc, RecordHandler.Record record) {
         gc.setStroke(Color.ORANGE);
         gc.setLineWidth(3);
 
@@ -195,7 +195,7 @@ public class RecordViewer extends Application {
         renderArrow(gc, remote, local, PEER_RADIUS, PEER_RADIUS);
     }
 
-    private void renderDownloadSucceeded(GraphicsContext gc, RecordDiagnostic.Record record) {
+    private void renderDownloadSucceeded(GraphicsContext gc, RecordHandler.Record record) {
         gc.setStroke(Color.DARKGREEN);
         gc.setLineWidth(6);
 
@@ -252,7 +252,7 @@ public class RecordViewer extends Application {
             return;
         }
 
-        RecordDiagnostic.Record record = filteredRecords.get(index);
+        RecordHandler.Record record = filteredRecords.get(index);
         GraphicsContext gc = canvas.getGraphicsContext2D();
 
         if (clearCheckBox.isSelected()) {
@@ -280,17 +280,17 @@ public class RecordViewer extends Application {
 
 
         // Render the record
-        if (record.getRecordType() == RecordDiagnostic.RecordType.Collected) {
+        if (record.getRecordType() == RecordHandler.RecordType.Collected) {
             renderCollectedDataInfo(gc, record);
-        } else if (record.getRecordType() == RecordDiagnostic.RecordType.DownloadRequested) {
+        } else if (record.getRecordType() == RecordHandler.RecordType.DownloadRequested) {
             renderDownloadRequested(gc, record);
-        } else if (record.getRecordType() == RecordDiagnostic.RecordType.DownloadStarted) {
+        } else if (record.getRecordType() == RecordHandler.RecordType.DownloadStarted) {
             renderDownloadStarted(gc, record);
-        } else if (record.getRecordType() == RecordDiagnostic.RecordType.DownloadSucceeded) {
+        } else if (record.getRecordType() == RecordHandler.RecordType.DownloadSucceeded) {
             renderDownloadSucceeded(gc, record);
-        } else if (record.getRecordType() == RecordDiagnostic.RecordType.DownloadRejected) {
+        } else if (record.getRecordType() == RecordHandler.RecordType.DownloadRejected) {
             renderDownloadRejected(gc, record);
-        } else if (record.getRecordType() == RecordDiagnostic.RecordType.DownloadProgressed) {
+        } else if (record.getRecordType() == RecordHandler.RecordType.DownloadProgressed) {
             renderDownloadProgressed(gc, record);
         }
 
@@ -353,10 +353,10 @@ public class RecordViewer extends Application {
 
         // Init peer data info
         Map<SocketAddress, DataInfo> last = null;
-        for (RecordDiagnostic.Record record : filteredRecords) {
-            if (record.getRecordType() == RecordDiagnostic.RecordType.DownloadStarted ||
-                    record.getRecordType() == RecordDiagnostic.RecordType.DownloadProgressed ||
-                    record.getRecordType() == RecordDiagnostic.RecordType.DownloadSucceeded) {
+        for (RecordHandler.Record record : filteredRecords) {
+            if (record.getRecordType() == RecordHandler.RecordType.DownloadStarted ||
+                    record.getRecordType() == RecordHandler.RecordType.DownloadProgressed ||
+                    record.getRecordType() == RecordHandler.RecordType.DownloadSucceeded) {
 
                 if (last != null) {
                     last = new HashMap<>(last);

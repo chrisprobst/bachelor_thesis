@@ -3,7 +3,7 @@ package de.probst.ba.core.net.peer.peers.netty;
 import de.probst.ba.core.distribution.SeederDistributionAlgorithm;
 import de.probst.ba.core.media.database.DataBase;
 import de.probst.ba.core.net.peer.PeerId;
-import de.probst.ba.core.net.peer.SeederHandler;
+import de.probst.ba.core.net.peer.handler.SeederHandler;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.EventLoopGroup;
@@ -33,12 +33,12 @@ public abstract class AbstractNettyServerSeeder extends AbstractNettySeeder {
 
     protected abstract Class<? extends ServerChannel> getSeederChannelClass();
 
-    protected AbstractNettyServerSeeder(long uploadRate,
+    protected AbstractNettyServerSeeder(long maxUploadRate,
                                         PeerId peerId,
                                         DataBase dataBase,
-                                        SeederDistributionAlgorithm distributionAlgorithm,
-                                        SeederHandler peerHandler,
-                                        Optional<EventLoopGroup> seederEventLoopGroup) {
-        super(uploadRate, peerId, dataBase, distributionAlgorithm, peerHandler, seederEventLoopGroup);
+                                        SeederDistributionAlgorithm seederDistributionAlgorithm,
+                                        Optional<SeederHandler> seederHandler,
+                                        EventLoopGroup seederEventLoopGroup) {
+        super(maxUploadRate, peerId, dataBase, seederDistributionAlgorithm, seederHandler, seederEventLoopGroup);
     }
 }

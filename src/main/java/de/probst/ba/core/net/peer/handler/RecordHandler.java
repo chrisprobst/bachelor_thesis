@@ -1,4 +1,4 @@
-package de.probst.ba.core.diagnostic;
+package de.probst.ba.core.net.peer.handler;
 
 import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.media.transfer.Transfer;
@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 /**
  * Created by chrisprobst on 18.08.14.
  */
-public class RecordDiagnostic implements Diagnostic {
+public class RecordHandler implements LeecherHandler, SeederHandler {
 
     public enum RecordType {
         Start, End,

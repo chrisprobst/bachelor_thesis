@@ -1,6 +1,7 @@
-package de.probst.ba.core.net.peer;
+package de.probst.ba.core.net.peer.state;
 
 import de.probst.ba.core.media.database.DataInfo;
+import de.probst.ba.core.net.peer.Peer;
 
 import java.util.Collections;
 import java.util.Comparator;
@@ -10,21 +11,18 @@ import java.util.Objects;
 import java.util.Optional;
 
 /**
- * Created by chrisprobst on 01.09.14.
+ * Created by chrisprobst on 03.09.14.
  */
-public class PeerState {
+public class DataInfoState extends PeerState {
 
-    // The peer id
-    private final PeerId peerId;
 
     // All already available local data info
     private final Map<String, DataInfo> dataInfo;
 
-    public PeerState(PeerId peerId,
-                     Map<String, DataInfo> dataInfo) {
-        Objects.requireNonNull(peerId);
+    public DataInfoState(Peer peer,
+                         Map<String, DataInfo> dataInfo) {
+        super(peer);
         Objects.requireNonNull(dataInfo);
-        this.peerId = peerId;
         this.dataInfo = Collections.unmodifiableMap(new HashMap<>(dataInfo));
     }
 
@@ -37,13 +35,6 @@ public class PeerState {
                 .filter(p -> !p.getValue().isCompleted())
                 .sorted(Comparator.comparing(p -> p.getValue().getId()))
                 .findFirst().map(p -> p.getValue().getId());
-    }
-
-    /**
-     * @return The peer id.
-     */
-    public PeerId getPeerId() {
-        return peerId;
     }
 
     /**

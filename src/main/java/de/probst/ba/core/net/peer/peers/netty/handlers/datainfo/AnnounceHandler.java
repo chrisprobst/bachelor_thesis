@@ -82,13 +82,13 @@ public final class AnnounceHandler extends ChannelHandlerAdapter implements Runn
         // Transform the data info using the brain
         Optional<Map<String, DataInfo>> transformedDataInfo =
                 seeder.getDistributionAlgorithm().transformUploadDataInfo(
-                        seeder.getPeerState(),
+                        seeder,
                         peerId);
 
         // This is actually a bug in the brain
         if (transformedDataInfo == null) {
-            logger.warn("Brain returned null for " +
-                    "the transformed data info");
+            logger.warn("Seeder " + seeder.getPeerId() + " got null for " +
+                    "the transformed data info, check the algorithm");
             schedule();
             return;
         }
@@ -109,14 +109,17 @@ public final class AnnounceHandler extends ChannelHandlerAdapter implements Runn
                             ctx.close();
 
                             // log the cause
-                            logger.warn(
-                                    "Failed to announce data info, connection closed",
-                                    fut.cause());
+                            logger.warn("Seeder " + seeder.getPeerId() +
+                                    " failed to announce data info, " +
+                                    "connection closed", fut.cause());
                         }
                     }
                 });
 
-        // DIAGNOSTIC
+        logger.debug("Seeder " + seeder.getPeerId() +
+                " announced " + transformedDataInfo + " to " + peerId);
+
+        // HANDLER
         seeder.getPeerHandler().announced(
                 seeder, peerId, dataInfoMessage.getDataInfo());
     }

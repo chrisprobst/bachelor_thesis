@@ -16,6 +16,7 @@ import io.netty.channel.group.ChannelGroup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
 import java.util.Map;
 import java.util.Objects;
@@ -87,13 +88,16 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
         receivedBuffer = false;
     }
 
-    private void update() {
+    private boolean update(ByteBuf buffer) throws IOException {
+        boolean completed = !transferManager.process(buffer);
         transfer.set(transferManager.getTransfer());
+        return completed;
     }
 
     private void reset() {
         transferManager = null;
         transfer.set(null);
+        leecher.leech();
     }
 
     private Optional<Transfer> getTransfer() {
@@ -119,7 +123,6 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
             setup();
 
             // Write the download request
-            logger.debug("Request upload transfer" + transferManager.getTransfer());
             ctx.writeAndFlush(new UploadRequestMessage(transferManager.getTransfer().getDataInfo()))
                     .addListener(fut -> {
                         if (!fut.isSuccess()) {
@@ -127,13 +130,16 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
                             if (!(fut.cause() instanceof ClosedChannelException)) {
                                 ctx.close();
 
-                                logger.warn("Failed to send upload request, connection closed",
-                                        fut.cause());
+                                logger.warn("Leecher " + leecher.getPeerId() +
+                                        " failed to send upload request, connection closed", fut.cause());
                             }
                         }
                     });
 
-            // DIAGNOSTIC
+            logger.debug("Leecher " + leecher.getPeerId() +
+                    " requested download " + transferManager);
+
+            // HANDLER
             leecher.getPeerHandler().downloadRequested(
                     leecher, transferManager);
         }
@@ -147,10 +153,11 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
             UploadRejectedMessage uploadRejectedMessage =
                     (UploadRejectedMessage) msg;
 
-            logger.debug("Upload rejected" +
-                    uploadRejectedMessage.getCause().getMessage());
+            logger.info("Leecher " + leecher.getPeerId() +
+                    " requested the download " + transferManager +
+                    ", but was rejected");
 
-            // DIAGNOSTIC
+            // HANDLER
             leecher.getPeerHandler().downloadRejected(
                     leecher, transferManager, uploadRejectedMessage.getCause());
 
@@ -164,44 +171,45 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
                 // First buffer ? -> Download started!
                 if (!receivedBuffer) {
                     receivedBuffer = true;
-                    logger.debug("Download started" +
-                            transferManager.getTransfer());
+                    logger.debug("Leecher " + leecher.getPeerId() +
+                            " started download " + transferManager);
 
-                    // DIAGNOSTIC
+                    // HANDLER
                     leecher.getPeerHandler().downloadStarted(
                             leecher, transferManager);
                 }
 
                 // Process the buffer and check for completion
-                boolean completed = !transferManager.process(buffer);
-                update();
+                boolean completed = update(buffer);
 
-                logger.debug("Download processed" +
-                        transferManager.getTransfer());
+                logger.debug("Leecher " + leecher.getPeerId() +
+                        " progressed download " + transferManager);
 
-                // DIAGNOSTIC
+                // HANDLER
                 leecher.getPeerHandler().downloadProgressed(
                         leecher, transferManager);
 
                 if (completed) {
-                    logger.debug("Download succeeded" +
-                            transferManager.getTransfer());
+                    logger.debug("Leecher " + leecher.getPeerId() +
+                            " succeeded download " + transferManager);
 
-                    // DIAGNOSTIC
+                    // HANDLER
                     leecher.getPeerHandler().downloadSucceeded(
                             leecher, transferManager);
                 }
 
                 // Query data base
-                DataInfo dataInfoStatus = leecher.getDataBase().get(
+                DataInfo dataInfo = leecher.getDataBase().get(
                         transferManager.getTransfer().getDataInfo().getHash());
 
-                if (dataInfoStatus != null && dataInfoStatus.isCompleted()) {
-                    logger.debug("Data completed" + dataInfoStatus);
+                if (dataInfo != null && dataInfo.isCompleted()) {
+                    logger.info("Leecher " + leecher.getPeerId() +
+                            " completed the data " + dataInfo +
+                            " with " + transferManager);
 
-                    // DIAGNOSTIC
+                    // HANDLER
                     leecher.getPeerHandler().dataCompleted(
-                            leecher, dataInfoStatus, transferManager);
+                            leecher, dataInfo, transferManager);
                 }
 
                 // Ready for next download
@@ -210,7 +218,8 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
 
                     // Stop consuming here
                     if (buffer.readableBytes() > 0) {
-                        logger.warn("Uploader sent too much data" + buffer);
+                        logger.warn("Leecher " + leecher.getPeerId() +
+                                " received too much data " + buffer);
                         break;
                     }
                 }

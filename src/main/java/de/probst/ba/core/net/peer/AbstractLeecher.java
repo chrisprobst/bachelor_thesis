@@ -1,17 +1,23 @@
 package de.probst.ba.core.net.peer;
 
-import de.probst.ba.core.Config;
 import de.probst.ba.core.distribution.LeecherDistributionAlgorithm;
 import de.probst.ba.core.media.database.DataBase;
 import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.media.transfer.Transfer;
+import de.probst.ba.core.net.peer.handler.LeecherAdapter;
+import de.probst.ba.core.net.peer.handler.LeecherHandler;
+import de.probst.ba.core.net.peer.state.LeecherDiagnosticState;
+import de.probst.ba.core.net.peer.state.LeecherState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.ScheduledExecutorService;
+import java.util.Set;
+import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 
 /**
@@ -24,30 +30,27 @@ public abstract class AbstractLeecher extends AbstractPeer implements Leecher {
 
     private final class LeecherDistributionAlgorithmWorker implements Runnable {
 
-        public void schedule() {
-            getScheduler().schedule(this,
-                    Config.getLeecherDistributionAlgorithmDelay(),
-                    Config.getDefaultTimeUnit());
+        private final Executor executor;
+
+        public LeecherDistributionAlgorithmWorker(Executor executor) {
+            Objects.requireNonNull(executor);
+            this.executor = executor;
         }
 
         public void execute() {
-            getScheduler().execute(this);
+            executor.execute(this);
         }
 
         @Override
         public synchronized void run() {
             try {
-                // Get the active network state
-                LeecherState state = getPeerState();
-
                 // Let the algorithm generate transfers
                 Optional<List<Transfer>> transfers =
-                        getDistributionAlgorithm().requestDownloads(state);
+                        getDistributionAlgorithm().requestDownloads(AbstractLeecher.this);
 
                 // This is most likely a bug
                 if (transfers == null) {
                     logger.warn("Algorithm returned null for optional list of transfers");
-                    schedule();
                     return;
                 }
 
@@ -55,38 +58,27 @@ public abstract class AbstractLeecher extends AbstractPeer implements Leecher {
                 // download anything
                 if (!transfers.isPresent() ||
                         transfers.get().isEmpty()) {
-                    schedule();
                     return;
                 }
 
-                // Check that there are no duplicates
-                // Note: Not necessary, race condition was fixed
-                /*
-                transfers.get().stream()
-                        .map(Transfer::getDataInfo)
-                        .collect(Collectors.groupingBy(DataInfo::getHash)).values().stream()
-                        .filter(l -> l.size() > 1) // There cannot be an overlapping
-                        .map(l -> l.stream().reduce(DataInfo::intersection))
-                        .map(Optional::get)
-                        .forEach(dataInfo -> {
-                            if (!dataInfo.isEmpty()) {
-                                throw new IllegalStateException(
-                                        "The algorithm requested the same chunk from different peers: " + transfers.get());
-                            }
-                        });*/
+                // Get downloads
+                Map<PeerId, Transfer> downloads = getDownloads();
+
+                // Here we check that we do not load the same
+                // data info twice
+                Set<DataInfo> requestedDataInfo = new HashSet<>();
 
                 // Create a list of transfers with distinct remote peer ids
                 // and request them to download
                 transfers.get().stream()
-                        .filter(t -> !state.getDownloads().containsKey(t.getRemotePeerId()))
+                        .filter(t -> !downloads.containsKey(t.getRemotePeerId()))
+                        .filter(t -> requestedDataInfo.add(t.getDataInfo()))
                         .collect(Collectors.groupingBy(Transfer::getRemotePeerId))
                         .entrySet().stream()
                         .filter(p -> p.getValue().size() == 1)
                         .map(p -> p.getValue().get(0))
                         .forEach(AbstractLeecher.this::requestDownload);
 
-                // Rerun later
-                schedule();
             } catch (Exception e) {
                 logger.error("The algorithm is dead, shutting leecher down", e);
                 silentClose();
@@ -94,10 +86,7 @@ public abstract class AbstractLeecher extends AbstractPeer implements Leecher {
         }
     }
 
-    private final LeecherDistributionAlgorithmWorker leecherDistributionAlgorithmWorker =
-            new LeecherDistributionAlgorithmWorker();
-
-    protected abstract ScheduledExecutorService getScheduler();
+    private final LeecherDistributionAlgorithmWorker leecherDistributionAlgorithmWorker;
 
     protected abstract void requestDownload(Transfer transfer);
 
@@ -105,16 +94,15 @@ public abstract class AbstractLeecher extends AbstractPeer implements Leecher {
 
     protected abstract Map<PeerId, Map<String, DataInfo>> getRemoteDataInfo();
 
-    protected abstract long getDownloadRate();
+    protected abstract long getMaxDownloadRate();
 
     protected AbstractLeecher(PeerId peerId,
                               DataBase dataBase,
-                              LeecherDistributionAlgorithm distributionAlgorithm,
-                              LeecherHandler peerHandler) {
-        super(peerId, dataBase, distributionAlgorithm, peerHandler);
-
-        // Register the algorithm worker for execution
-        getInitFuture().thenRun(leecherDistributionAlgorithmWorker::schedule);
+                              LeecherDistributionAlgorithm leecherDistributionAlgorithm,
+                              Optional<LeecherHandler> leecherHandler,
+                              Executor executor) {
+        super(peerId, dataBase, leecherDistributionAlgorithm, leecherHandler.orElseGet(LeecherAdapter::new));
+        leecherDistributionAlgorithmWorker = new LeecherDistributionAlgorithmWorker(executor);
     }
 
     @Override
@@ -128,7 +116,12 @@ public abstract class AbstractLeecher extends AbstractPeer implements Leecher {
     }
 
     @Override
-    public LeecherState getPeerState() {
+    public void leech() {
+        leecherDistributionAlgorithmWorker.execute();
+    }
+
+    @Override
+    public LeecherState getDataInfoState() {
         // IMPORTANT:
         // Collect downloads first, so that
         // there is no interleaving with the local data info
@@ -142,11 +135,14 @@ public abstract class AbstractLeecher extends AbstractPeer implements Leecher {
         // -> Not in local data info AND not in downloads -> download same chunk twice -> error!
         Map<PeerId, Transfer> downloads = getDownloads();
 
-        return new LeecherState(
-                getPeerId(),
+        return new LeecherState(this,
                 getDataBase().getDataInfo(),
                 getRemoteDataInfo(),
-                downloads,
-                getDownloadRate());
+                downloads);
+    }
+
+    @Override
+    public LeecherDiagnosticState getDiagnosticState() {
+        return new LeecherDiagnosticState(this, getMaxDownloadRate());
     }
 }

@@ -1,7 +1,9 @@
-package de.probst.ba.core.net.peer;
+package de.probst.ba.core.net.peer.handler;
 
 import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.media.transfer.TransferManager;
+import de.probst.ba.core.net.peer.Leecher;
+import de.probst.ba.core.net.peer.PeerId;
 
 import java.util.Map;
 import java.util.Optional;

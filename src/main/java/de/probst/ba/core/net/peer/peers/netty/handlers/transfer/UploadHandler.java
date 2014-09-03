@@ -65,7 +65,7 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
 
         @Override
         public ByteBuf readChunk(ChannelHandlerContext ctx) throws Exception {
-            ByteBuf byteBuf = Unpooled.buffer(500);
+            ByteBuf byteBuf = Unpooled.buffer(4096);
             try {
                 transferManager.process(byteBuf);
             } catch (Exception e) {
@@ -94,7 +94,7 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
     private volatile TransferManager transferManager;
 
     private boolean setup(ChannelHandlerContext ctx, TransferManager transferManager) {
-        if (parallelUploads.tryIncrement(seeder.getDistributionAlgorithm().getMaxParallelUploads())) {
+        if (parallelUploads.tryIncrement(seeder.getDistributionAlgorithm().getMaxParallelUploads(seeder))) {
             this.transferManager = transferManager;
             ctx.channel().config().setAutoRead(false);
             return true;
@@ -139,10 +139,12 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
             Exception cause = new IllegalArgumentException(
                     "Upload request message null or empty");
 
-            logger.debug(cause.getMessage());
+            logger.info("Seeder " + seeder.getPeerId() +
+                    " rejected upload " + transferManager, cause);
+
             ctx.writeAndFlush(new UploadRejectedMessage(cause));
 
-            // DIAGNOSTIC
+            // HANDLER
             seeder.getPeerHandler().uploadRejected(
                     seeder, null, cause);
         } else {
@@ -156,17 +158,19 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
             // If the upload is not allowed, reject it!
             if (!setup(ctx, newTransferManager)) {
                 Exception cause = new IllegalStateException(
-                        "The brain rejected the upload, because it " +
-                                "reached the maximum number of uploads");
+                        "Maximum number of uploads reached");
 
-                logger.debug(cause.getMessage());
+                logger.info("Seeder " + seeder.getPeerId() +
+                        " rejected upload " + transferManager, cause);
+
                 ctx.writeAndFlush(new UploadRejectedMessage(cause));
 
-                // DIAGNOSTIC
+                // HANDLER
                 seeder.getPeerHandler().uploadRejected(
                         seeder, newTransferManager, cause);
             } else {
-                logger.debug("Starting upload" + newTransferManager.getTransfer());
+                logger.debug("Seeder " + seeder.getPeerId() +
+                        " started upload " + newTransferManager);
 
                 // Upload chunked input
                 ctx.writeAndFlush(new ChunkedDataBaseInput(newTransferManager)).addListener(fut -> {
@@ -175,12 +179,14 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
                         if (!(fut.cause() instanceof ClosedChannelException)) {
                             ctx.close();
 
-                            logger.warn("Upload failed, connection closed", fut.cause());
+                            logger.warn("Seeder " + seeder.getPeerId() +
+                                    " failed to upload, connection closed", fut.cause());
                         }
                     } else {
-                        logger.debug("Upload succeeded");
+                        logger.debug("Seeder " + seeder.getPeerId() +
+                                " succeeded upload " + transferManager);
 
-                        // DIAGNOSTIC
+                        // HANDLER
                         seeder.getPeerHandler().uploadSucceeded(
                                 seeder, transferManager);
 
@@ -189,7 +195,7 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
                     }
                 });
 
-                // DIAGNOSTIC
+                // HANDLER
                 seeder.getPeerHandler().uploadStarted(
                         seeder, newTransferManager);
             }

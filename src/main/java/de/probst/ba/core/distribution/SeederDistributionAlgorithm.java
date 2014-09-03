@@ -2,7 +2,7 @@ package de.probst.ba.core.distribution;
 
 import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.net.peer.PeerId;
-import de.probst.ba.core.net.peer.SeederState;
+import de.probst.ba.core.net.peer.Seeder;
 
 import java.util.Map;
 import java.util.Optional;
@@ -25,11 +25,11 @@ public interface SeederDistributionAlgorithm extends DistributionAlgorithm {
      * we are already uploading the given data. This could help implement the
      * logarithmic strategy where every peer only uploads data to one other peer.
      *
-     * @param state
+     * @param seeder
      * @param remotePeerId The remote peer id.
      * @return An optional data info.
      */
-    Optional<Map<String, DataInfo>> transformUploadDataInfo(SeederState state,
+    Optional<Map<String, DataInfo>> transformUploadDataInfo(Seeder seeder,
                                                             PeerId remotePeerId);
 
     /**
@@ -43,7 +43,8 @@ public interface SeederDistributionAlgorithm extends DistributionAlgorithm {
      * two downloads in parallel because it would not make much sense.
      * So this number is for distinct peers.
      *
+     * @param seeder
      * @return A positive integer > 0.
      */
-    int getMaxParallelUploads();
+    int getMaxParallelUploads(Seeder seeder);
 }

@@ -1,7 +1,9 @@
-package de.probst.ba.core.net.peer;
+package de.probst.ba.core.net.peer.state;
 
 import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.media.transfer.Transfer;
+import de.probst.ba.core.net.peer.Leecher;
+import de.probst.ba.core.net.peer.PeerId;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -13,7 +15,7 @@ import java.util.stream.Collectors;
 /**
  * Created by chrisprobst on 01.09.14.
  */
-public final class LeecherState extends PeerState {
+public final class LeecherState extends DataInfoState {
 
     // The estimated data info
     private final Map<String, DataInfo> estimatedDataInfo;
@@ -26,9 +28,6 @@ public final class LeecherState extends PeerState {
 
     // All pending downloads
     private final Map<PeerId, Transfer> downloads;
-
-    // The download rate
-    private final long downloadRate;
 
     private Map<String, DataInfo> createEstimatedDataInfo() {
         // Our own data info (create a copy for manipulation)
@@ -79,12 +78,11 @@ public final class LeecherState extends PeerState {
                         Map.Entry::getValue));
     }
 
-    public LeecherState(PeerId peerId,
+    public LeecherState(Leecher leecher,
                         Map<String, DataInfo> dataInfo,
                         Map<PeerId, Map<String, DataInfo>> remoteDataInfo,
-                        Map<PeerId, Transfer> downloads,
-                        long downloadRate) {
-        super(peerId, dataInfo);
+                        Map<PeerId, Transfer> downloads) {
+        super(leecher, dataInfo);
 
         Objects.requireNonNull(downloads);
         Objects.requireNonNull(remoteDataInfo);
@@ -94,7 +92,6 @@ public final class LeecherState extends PeerState {
                 .collect(Collectors.toMap(
                         Map.Entry::getKey,
                         p -> Collections.unmodifiableMap(new HashMap<>(p.getValue())))));
-        this.downloadRate = downloadRate;
 
         // Calc the estimated data info
         estimatedDataInfo = createEstimatedDataInfo();
@@ -133,10 +130,8 @@ public final class LeecherState extends PeerState {
         return remoteDataInfo;
     }
 
-    /**
-     * @return The download rate.
-     */
-    public long getDownloadRate() {
-        return downloadRate;
+    @Override
+    public Leecher getPeer() {
+        return (Leecher) super.getPeer();
     }
 }

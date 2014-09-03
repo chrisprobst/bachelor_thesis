@@ -5,11 +5,10 @@ import de.probst.ba.core.media.database.DataBase;
 import de.probst.ba.core.media.transfer.Transfer;
 import de.probst.ba.core.net.peer.AbstractSeeder;
 import de.probst.ba.core.net.peer.PeerId;
-import de.probst.ba.core.net.peer.SeederHandler;
+import de.probst.ba.core.net.peer.handler.SeederHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.codec.SimpleCodec;
 import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.AnnounceHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.group.ChannelGroupHandler;
-import de.probst.ba.core.net.peer.peers.netty.handlers.throttle.WriteThrottle;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.UploadHandler;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -21,6 +20,7 @@ import io.netty.handler.codec.LengthFieldPrepender;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
+import io.netty.handler.traffic.GlobalTrafficShapingHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,7 +38,7 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
     private final Logger logger =
             LoggerFactory.getLogger(AbstractNettySeeder.class);
 
-    private final long uploadRate;
+    private final long maxUploadRate;
 
     private final EventLoopGroup seederEventLoopGroup;
 
@@ -47,26 +47,22 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
 
     private final ChannelGroupHandler seederChannelGroupHandler;
 
-    private final WriteThrottle seederWriteThrottle;
+    private final GlobalTrafficShapingHandler globalSeederTrafficShapingHandler;
 
     private final ChannelInitializer<Channel> seederChannelInitializer = new ChannelInitializer<Channel>() {
         @Override
         public void initChannel(Channel ch) {
-               /* new ChannelTrafficShapingHandler(
-            getUploadRate(),
-            getDownloadRate(),
-            NETTY_TRAFFIC_INTERVAL),*/
 
             // Build pipeline
             ch.pipeline().addLast(
+
+                    // Traffic shaper
+                    globalSeederTrafficShapingHandler,
 
                     // Codec stuff
                     new LengthFieldBasedFrameDecoder(1024 * 1024, 0, 4, 0, 4),
                     new LengthFieldPrepender(4),
                     new SimpleCodec(),
-
-                    // Throttle
-                    seederWriteThrottle,
 
                     // Logging
                     seederLogHandler,
@@ -104,8 +100,23 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
     }
 
     @Override
-    protected long getUploadRate() {
-        return uploadRate;
+    protected long getMaxUploadRate() {
+        return maxUploadRate;
+    }
+
+    @Override
+    protected long getAverageUploadRate() {
+        return 0;
+    }
+
+    @Override
+    protected long getCurrentUploadRate() {
+        return 0;
+    }
+
+    @Override
+    protected long getTotalUploaded() {
+        return 0;
     }
 
     @Override
@@ -115,28 +126,27 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
 
     protected abstract void initSeederBootstrap();
 
-    protected abstract EventLoopGroup createSeederEventLoopGroup();
-
     protected abstract ChannelFuture createSeederInitFuture();
 
-    protected AbstractNettySeeder(long uploadRate,
+    protected AbstractNettySeeder(long maxUploadRate,
                                   PeerId peerId,
                                   DataBase dataBase,
-                                  SeederDistributionAlgorithm distributionAlgorithm,
-                                  SeederHandler peerHandler,
-                                  Optional<EventLoopGroup> seederEventLoopGroup) {
+                                  SeederDistributionAlgorithm seederDistributionAlgorithm,
+                                  Optional<SeederHandler> seederHandler,
+                                  EventLoopGroup seederEventLoopGroup) {
 
-        super(peerId, dataBase, distributionAlgorithm, peerHandler);
+        super(peerId, dataBase, seederDistributionAlgorithm, seederHandler);
 
         Objects.requireNonNull(seederEventLoopGroup);
 
         // Save args
-        this.uploadRate = uploadRate;
-        this.seederEventLoopGroup = seederEventLoopGroup.orElseGet(
-                this::createSeederEventLoopGroup);
+        this.maxUploadRate = maxUploadRate;
+        this.seederEventLoopGroup = seederEventLoopGroup;
 
         // Create internal vars
-        seederWriteThrottle = new WriteThrottle(uploadRate);
+        globalSeederTrafficShapingHandler =
+                new GlobalTrafficShapingHandler(
+                        this.seederEventLoopGroup, getMaxUploadRate(), 0, 0);
         seederChannelGroupHandler = new ChannelGroupHandler(
                 this.seederEventLoopGroup.next());
 
@@ -161,6 +171,7 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
     @Override
     public void close() throws IOException {
         seederEventLoopGroup.shutdownGracefully();
+        globalSeederTrafficShapingHandler.release();
         super.close();
     }
 }

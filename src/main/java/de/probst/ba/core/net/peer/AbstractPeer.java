@@ -2,6 +2,9 @@ package de.probst.ba.core.net.peer;
 
 import de.probst.ba.core.distribution.DistributionAlgorithm;
 import de.probst.ba.core.media.database.DataBase;
+import de.probst.ba.core.net.peer.handler.PeerHandler;
+import de.probst.ba.core.net.peer.state.DataInfoState;
+import de.probst.ba.core.net.peer.state.DiagnosticState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -74,8 +77,13 @@ public abstract class AbstractPeer implements Peer {
     }
 
     @Override
-    public PeerState getPeerState() {
-        return new PeerState(getPeerId(), getDataBase().getDataInfo());
+    public DataInfoState getDataInfoState() {
+        return new DataInfoState(this, getDataBase().getDataInfo());
+    }
+
+    @Override
+    public DiagnosticState getDiagnosticState() {
+        return new DiagnosticState(this);
     }
 
     @Override

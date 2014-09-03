@@ -3,8 +3,9 @@ package de.probst.ba.core.distribution.algorithms;
 import de.probst.ba.core.distribution.LeecherDistributionAlgorithm;
 import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.media.transfer.Transfer;
-import de.probst.ba.core.net.peer.LeecherState;
+import de.probst.ba.core.net.peer.Leecher;
 import de.probst.ba.core.net.peer.PeerId;
+import de.probst.ba.core.net.peer.state.LeecherState;
 import de.probst.ba.core.util.Tuple2;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,14 +23,17 @@ public class OrderedChunkedSwarmLeecherDistributionAlgorithm implements LeecherD
             LoggerFactory.getLogger(OrderedChunkedSwarmLeecherDistributionAlgorithm.class);
 
     @Override
-    public Optional<List<Transfer>> requestDownloads(LeecherState state) {
+    public Optional<List<Transfer>> requestDownloads(Leecher leecher) {
+        // Get the leecher state
+        LeecherState state = leecher.getDataInfoState();
 
         // Get lowest id
         Optional<Long> lowestId = state.getLowestUncompletedDataInfoId();
 
         // This brain has no missing data info
         if (!lowestId.isPresent()) {
-            logger.debug(state.getPeerId() + ": Nothing to download right now");
+            logger.debug("Leecher algorithm of " + leecher.getPeerId() +
+                    " has nothing to download right now");
             return Optional.empty();
         }
 
@@ -39,7 +43,8 @@ public class OrderedChunkedSwarmLeecherDistributionAlgorithm implements LeecherD
                 lowestId.get());
 
         if (remoteDataInfo.isEmpty()) {
-            logger.debug(state.getPeerId() + ": Pending, check later again.");
+            logger.debug("Leecher algorithm of " + leecher.getPeerId() +
+                    " pending, check later again");
             return Optional.empty();
         }
 
@@ -62,14 +67,17 @@ public class OrderedChunkedSwarmLeecherDistributionAlgorithm implements LeecherD
             transfers.add(Transfer.download(next.first(), nextDataInfo));
         }
 
-        logger.debug(state.getPeerId() + ": Requesting " + transfers);
+        logger.debug("Leecher algorithm of " + leecher.getPeerId() +
+                " requesting " + transfers);
 
         // Request this as download
         return Optional.of(transfers);
     }
 
     @Override
-    public boolean addInterest(PeerId remotePeerId, DataInfo newDataInfo) {
+    public boolean addInterest(Leecher leecher,
+                               PeerId remotePeerId,
+                               DataInfo newDataInfo) {
         return true;
     }
 }

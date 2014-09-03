@@ -5,13 +5,6 @@ import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParameterException;
 import com.beust.jcommander.converters.FileConverter;
-import de.probst.ba.core.diagnostic.ChunkCompletionCVSDiagnostic;
-import de.probst.ba.core.diagnostic.CombinedDiagnostic;
-import de.probst.ba.core.diagnostic.Diagnostic;
-import de.probst.ba.core.diagnostic.DiagnosticAdapter;
-import de.probst.ba.core.diagnostic.LoggingDiagnostic;
-import de.probst.ba.core.diagnostic.RecordDiagnostic;
-import de.probst.ba.core.diagnostic.UploadCVSDiagnostic;
 import de.probst.ba.core.distribution.LeecherDistributionAlgorithm;
 import de.probst.ba.core.distribution.SeederDistributionAlgorithm;
 import de.probst.ba.core.distribution.algorithms.Algorithms;
@@ -22,8 +15,9 @@ import de.probst.ba.core.media.transfer.TransferManager;
 import de.probst.ba.core.net.peer.Leecher;
 import de.probst.ba.core.net.peer.Peer;
 import de.probst.ba.core.net.peer.PeerId;
+import de.probst.ba.core.net.peer.handler.LeecherAdapter;
+import de.probst.ba.core.net.peer.handler.LeecherHandler;
 import de.probst.ba.core.net.peer.peers.Peers;
-import de.probst.ba.core.util.IOUtil;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -36,7 +30,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.nio.file.Files;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.LinkedList;
@@ -56,7 +49,7 @@ public class Benchmark {
     public static class PeerCountValidator implements IValueValidator<Integer> {
 
         public static final int MIN = 1;
-        public static final int MAX = 100;
+        public static final int MAX = 16;
         public static final String MSG = "Must be between " + MIN + " and " + MAX;
 
         @Override
@@ -70,8 +63,8 @@ public class Benchmark {
 
     public static class TransferRateValidator implements IValueValidator<Integer> {
 
-        public static final int MIN = 1;
-        public static final int MAX = 1000 * 1000;
+        public static final int MIN = 0;
+        public static final int MAX = 1000 * 1000 * 10;
         public static final String MSG = "Must be between " + MIN + " and " + MAX;
 
         @Override
@@ -101,7 +94,7 @@ public class Benchmark {
     public static class TotalSizeValidator implements IValueValidator<Integer> {
 
         public static final int MIN = 1;
-        public static final int MAX = 10 * 1000 * 1000;
+        public static final int MAX = 1000 * 1000 * 1000;
         public static final String MSG = "Must be between " + MIN + " and " + MAX;
 
         @Override
@@ -180,12 +173,6 @@ public class Benchmark {
     private Long announceDelay = Config.getAnnounceDelay();
 
     @Parameter(
-            names = {"-ld", "--leecher-delay"},
-            description = "The leecher distribution algorithm delay in millis (" + DelayValidator.MSG + ")",
-            validateValueWith = DelayValidator.class)
-    private Long leecherDistributionAlgorithmDelay = Config.getLeecherDistributionAlgorithmDelay();
-
-    @Parameter(
             names = {"-pt", "--peer-type"},
             description = "Peer type (" + PeerTypeValidator.MSG + ")",
             validateValueWith = PeerTypeValidator.class)
@@ -234,27 +221,27 @@ public class Benchmark {
             names = {"-c", "--chunk-count"},
             description = "The number of chunks (" + ChunkCountValidator.MSG + ")",
             validateValueWith = ChunkCountValidator.class)
-    private Integer chunkCount = 40;
+    private Integer chunkCount = 100;
 
     @Parameter(
             names = {"-t", "--total-size"},
             description = "The total size in bytes (" + TotalSizeValidator.MSG + ")",
             validateValueWith = TotalSizeValidator.class)
-    private Integer totalSize = 40 * 500;
+    private Integer totalSize = 1000 * 1000 * 10;
 
     @Parameter(
             names = {"-u", "--upload-rate"},
             description = "The upload rate in bytes per second, " +
                     "must be less-equal than the download rate (" + TransferRateValidator.MSG + ")",
             validateValueWith = TransferRateValidator.class)
-    private Integer uploadRate = 1000;
+    private Integer uploadRate = 1000 * 1000 * 1;
 
     @Parameter(
             names = {"-d", "--download-rate"},
             description = "The download rate in bytes per second, " +
                     "must greater-equal than the upload rate (" + TransferRateValidator.MSG + ")",
             validateValueWith = TransferRateValidator.class)
-    private Integer downloadRate = 1000;
+    private Integer downloadRate = 0;
 
     @Parameter(
             names = {"-s", "--seeders"},
@@ -265,7 +252,7 @@ public class Benchmark {
     @Parameter(names = {"-l", "--leechers"},
             description = "Number of leechers (" + PeerCountValidator.MSG + ")",
             validateValueWith = PeerCountValidator.class)
-    private Integer leechers = 5;
+    private Integer leechers = 7;
 
     private boolean checkParameters(JCommander jCommander) {
         if (showUsage) {
@@ -273,7 +260,7 @@ public class Benchmark {
             return false;
         }
 
-        if (uploadRate > downloadRate) {
+        if (downloadRate != 0 && uploadRate > downloadRate) {
             System.out.println("The upload rate is greater than the download rate");
             System.out.println();
             jCommander.usage();
@@ -302,7 +289,6 @@ public class Benchmark {
 
         // Setup config
         Config.setAnnounceDelay(announceDelay);
-        Config.setLeecherDistributionAlgorithmDelay(leecherDistributionAlgorithmDelay);
 
         // Setup logging
         System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", verbose ? "info" : "warn");
@@ -348,55 +334,22 @@ public class Benchmark {
 
         // Setup diagnostic
         CountDownLatch countDownLatch = new CountDownLatch(leechers * parts);
-        Diagnostic shutdown = new DiagnosticAdapter() {
+        LeecherHandler shutdown = new LeecherAdapter() {
             @Override
             public void dataCompleted(Leecher leecher, DataInfo dataInfo, TransferManager lastTransferManager) {
                 countDownLatch.countDown();
             }
         };
 
-        // Event recording
-        CombinedDiagnostic combinedEvents;
-        RecordDiagnostic eventRecordDiagnostic = null;
-
-        // Stats recording
-        CombinedDiagnostic combinedStats;
-        ChunkCompletionCVSDiagnostic peerChunkCompletionCVSDiagnostic = null;
-        ChunkCompletionCVSDiagnostic totalChunkCompletionCVSDiagnostic = null;
-        UploadCVSDiagnostic peerUploadCVSDiagnostic = null;
-        UploadCVSDiagnostic totalUploadCVSDiagnostic = null;
-
         // Setup events
         if (recordEvents) {
-            eventRecordDiagnostic = new RecordDiagnostic();
-            combinedEvents = new CombinedDiagnostic(eventRecordDiagnostic);
-        } else {
-            combinedEvents = new CombinedDiagnostic();
+
         }
 
         // Setup stats
         if (recordStats) {
 
-            // Setup stats recording
-            peerChunkCompletionCVSDiagnostic = new ChunkCompletionCVSDiagnostic();
-            totalChunkCompletionCVSDiagnostic = new ChunkCompletionCVSDiagnostic();
-            peerUploadCVSDiagnostic = new UploadCVSDiagnostic();
-            totalUploadCVSDiagnostic = new UploadCVSDiagnostic();
-            combinedStats = new CombinedDiagnostic(
-                    peerChunkCompletionCVSDiagnostic,
-                    totalChunkCompletionCVSDiagnostic,
-                    peerUploadCVSDiagnostic,
-                    totalUploadCVSDiagnostic);
-        } else {
-            combinedStats = new CombinedDiagnostic();
         }
-
-        // Create the combined diagnostic
-        Diagnostic combined = new CombinedDiagnostic(
-                combinedEvents,
-                combinedStats,
-                new LoggingDiagnostic(leechers * chunkCount * parts),
-                shutdown);
 
         // Create the algorithm factories
         Supplier<SeederDistributionAlgorithm> seederDistributionAlgorithmSupplier = () ->
@@ -436,7 +389,7 @@ public class Benchmark {
                     DataBases.fakeDataBase(dataInfo),
                     //DataBases.singleFileDataBase(Paths.get("/Users/chrisprobst/Desktop/data.file"), dataInfo[0]),
                     seederDistributionAlgorithmSupplier.get(),
-                    combined,
+                    Optional.empty(),
                     Optional.of(eventLoopGroup)));
         }
 
@@ -454,40 +407,19 @@ public class Benchmark {
                     dataBase,
                     //DataBases.singleFileDataBase(Paths.get("/Users/chrisprobst/Desktop/data.file"), dataInfo[0]),
                     seederDistributionAlgorithmSupplier.get(),
-                    combined,
+                    Optional.empty(),
                     Optional.of(eventLoopGroup)));
 
             // Add the leecher part
             peers.add(Peers.leecher(
                     peerType,
-                    Long.MAX_VALUE,
+                    downloadRate,
                     peerId,
                     dataBase,
                     //DataBases.singleFileDataBase(Paths.get("/Users/chrisprobst/Desktop/data.file"), dataInfo[0]),
                     leecherDistributionAlgorithmSupplier.get(),
-                    combined,
+                    Optional.of(shutdown),
                     Optional.of(eventLoopGroup)));
-        }
-
-        // Initialize stats
-        if (recordStats) {
-            // Setup peer chunk completion cvs diagnostic
-            peerChunkCompletionCVSDiagnostic.setTotal(false);
-            peerChunkCompletionCVSDiagnostic.setDataInfoHash(dataInfo[0].getHash());
-            peerChunkCompletionCVSDiagnostic.setPeers(peers);
-
-            // Setup total chunk completion cvs diagnostic
-            totalChunkCompletionCVSDiagnostic.setTotal(true);
-            totalChunkCompletionCVSDiagnostic.setDataInfoHash(dataInfo[0].getHash());
-            totalChunkCompletionCVSDiagnostic.setPeers(peers);
-
-            // Setup total upload cvs diagnostic
-            peerUploadCVSDiagnostic.setTotal(false);
-            peerUploadCVSDiagnostic.setPeers(peers);
-
-            // Setup total upload cvs diagnostic
-            totalUploadCVSDiagnostic.setTotal(true);
-            totalUploadCVSDiagnostic.setPeers(peers);
         }
 
         // Wait for init
@@ -498,15 +430,12 @@ public class Benchmark {
 
         // Start events
         if (recordEvents) {
-            eventRecordDiagnostic.start();
+
         }
 
         // Start stats
         if (recordStats) {
-            peerChunkCompletionCVSDiagnostic.writeStatus();
-            totalChunkCompletionCVSDiagnostic.writeStatus();
-            peerUploadCVSDiagnostic.writeStatus();
-            totalUploadCVSDiagnostic.writeStatus();
+
         }
 
         // Stop the time
@@ -523,37 +452,45 @@ public class Benchmark {
 
         // Stop events
         if (recordEvents) {
-            eventRecordDiagnostic.end();
+
+        }
+
+        // Start stats
+        if (recordStats) {
+
         }
 
         // Save stats
         if (recordStats) {
+            /*
             // CSV
             logger.info("[== WRITING STATS ==]");
             timeStamp = Instant.now();
 
             // Save peer chunks
             Files.write(new File(recordsDirectory, distributionAlgorithmType + "PeerChunks.csv").toPath(),
-                    peerChunkCompletionCVSDiagnostic.getCVSString().getBytes());
+                    peerChunkCompletionCVSDiagnostic.toString().getBytes());
 
             // Save total chunks
             Files.write(new File(recordsDirectory, distributionAlgorithmType + "TotalChunks.csv").toPath(),
-                    totalChunkCompletionCVSDiagnostic.getCVSString().getBytes());
+                    totalChunkCompletionCVSDiagnostic.toString().getBytes());
 
             // Save peer upload
             Files.write(new File(recordsDirectory, distributionAlgorithmType + "PeerUploads.csv").toPath(),
-                    peerUploadCVSDiagnostic.getCVSString().getBytes());
+                    peerUploadCVSDiagnostic.toString().getBytes());
 
             // Save total upload
             Files.write(new File(recordsDirectory, distributionAlgorithmType + "TotalUploads.csv").toPath(),
-                    totalUploadCVSDiagnostic.getCVSString().getBytes());
+                    totalUploadCVSDiagnostic.toString().getBytes());
 
             duration = Duration.between(timeStamp, Instant.now());
-            logger.info("[== DONE IN: " + (duration.toMillis() / 1000.0) + " seconds ==]");
+            logger.info("[== DONE IN: " + (duration.toMillis() / 1000.0) + " seconds ==]");*/
         }
 
         // Save events
         if (recordEvents) {
+
+            /*
             eventRecordDiagnostic.end();
 
             // Get records and serialize
@@ -561,7 +498,7 @@ public class Benchmark {
             timeStamp = Instant.now();
             IOUtil.serialize(new File(recordsDirectory, distributionAlgorithmType + "Records.dat"), eventRecordDiagnostic.sortAndGetRecords());
             duration = Duration.between(timeStamp, Instant.now());
-            logger.info("[== DONE IN: " + (duration.toMillis() / 1000.0) + " seconds ==]");
+            logger.info("[== DONE IN: " + (duration.toMillis() / 1000.0) + " seconds ==]");*/
         }
 
         // Wait for close

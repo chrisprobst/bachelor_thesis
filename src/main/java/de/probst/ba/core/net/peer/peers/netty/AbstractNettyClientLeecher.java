@@ -2,8 +2,8 @@ package de.probst.ba.core.net.peer.peers.netty;
 
 import de.probst.ba.core.distribution.LeecherDistributionAlgorithm;
 import de.probst.ba.core.media.database.DataBase;
-import de.probst.ba.core.net.peer.LeecherHandler;
 import de.probst.ba.core.net.peer.PeerId;
+import de.probst.ba.core.net.peer.handler.LeecherHandler;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
@@ -28,13 +28,13 @@ public abstract class AbstractNettyClientLeecher extends AbstractNettyLeecher {
 
     protected abstract Class<? extends Channel> getLeecherChannelClass();
 
-    protected AbstractNettyClientLeecher(long downloadRate,
+    protected AbstractNettyClientLeecher(long maxDownloadRate,
                                          PeerId peerId,
                                          DataBase dataBase,
-                                         LeecherDistributionAlgorithm distributionAlgorithm,
-                                         LeecherHandler peerHandler,
-                                         Optional<EventLoopGroup> leecherEventLoopGroup) {
-        super(downloadRate, peerId, dataBase, distributionAlgorithm, peerHandler, leecherEventLoopGroup);
+                                         LeecherDistributionAlgorithm leecherDistributionAlgorithm,
+                                         Optional<LeecherHandler> leecherHandler,
+                                         EventLoopGroup leecherEventLoopGroup) {
+        super(maxDownloadRate, peerId, dataBase, leecherDistributionAlgorithm, leecherHandler, leecherEventLoopGroup);
     }
 
     @Override

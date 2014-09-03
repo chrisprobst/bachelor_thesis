@@ -11,17 +11,23 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.group.ChannelGroup;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * Created by chrisprobst on 11.08.14.
  */
 public final class CollectHandler extends SimpleChannelInboundHandler<DataInfoMessage> {
+
+    private final Logger logger =
+            LoggerFactory.getLogger(CollectHandler.class);
 
     public static Map<PeerId, Map<String, DataInfo>> getRemoteDataInfo(ChannelGroup channelGroup) {
         return channelGroup.stream()
@@ -39,7 +45,8 @@ public final class CollectHandler extends SimpleChannelInboundHandler<DataInfoMe
     }
 
     private final Leecher leecher;
-
+    private Optional<Map<String, DataInfo>> lastRemoteDataInfo =
+            Optional.empty();
     private volatile Optional<Tuple2<PeerId, Map<String, DataInfo>>> remoteDataInfo =
             Optional.empty();
 
@@ -57,16 +64,22 @@ public final class CollectHandler extends SimpleChannelInboundHandler<DataInfoMe
 
         // Try to add interest for all data info
         List<Boolean> succeeded = leecher.getDataBase().addInterestsIf(
-                dataInfoList, y -> leecher.getDistributionAlgorithm().addInterest(remotePeerId, y));
+                dataInfoList, y -> leecher.getDistributionAlgorithm().addInterest(
+                        leecher, remotePeerId, y));
 
-        for (int i = 0; i < succeeded.size(); i++) {
-            if (succeeded.get(i)) {
+        IntStream.range(0, succeeded.size())
+                .filter(succeeded::get)
+                .mapToObj(dataInfoList::get)
+                .forEach(addedDataInfo -> {
 
-                // DIAGNOSTIC
-                leecher.getPeerHandler().interestAdded(
-                        leecher, remotePeerId, dataInfoList.get(i));
-            }
-        }
+                    logger.info("Leecher " + leecher.getPeerId() +
+                            " added interest for " + addedDataInfo +
+                            " from " + remotePeerId);
+
+                    // HANDLER
+                    leecher.getPeerHandler().interestAdded(
+                            leecher, remotePeerId, addedDataInfo);
+                });
     }
 
     private boolean isDataInfoMessageValid(DataInfoMessage dataInfoMessage) {
@@ -101,9 +114,25 @@ public final class CollectHandler extends SimpleChannelInboundHandler<DataInfoMe
                     Optional.empty() : Optional.of(Tuple.of(peerId, filteredRemoteDataInfo));
         }
 
-        // DIAGNOSTIC
+        Optional<Map<String, DataInfo>> dataInfo =
+                remoteDataInfo.map(Tuple2::second);
+
+        logger.debug("Leecher " + leecher.getPeerId() +
+                " collected " + dataInfo + " from " + peerId);
+
+        // HANDLER
         leecher.getPeerHandler().collected(
-                leecher, peerId, getRemoteDataInfo().map(Tuple2::second));
+                leecher, peerId, dataInfo);
+
+        // Leech if we received something
+        // which is different from the last
+        // received value
+        dataInfo.filter(m -> !m.isEmpty())
+                .filter(m -> !m.equals(lastRemoteDataInfo))
+                .ifPresent(m -> leecher.leech());
+
+        // Save last remote data info
+        lastRemoteDataInfo = dataInfo;
     }
 
     public CollectHandler(Leecher leecher) {

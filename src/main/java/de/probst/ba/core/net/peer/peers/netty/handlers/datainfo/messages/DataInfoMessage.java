@@ -16,7 +16,7 @@ public final class DataInfoMessage implements Serializable {
 
     public DataInfoMessage(Optional<Map<String, DataInfo>> dataInfo) {
         Objects.requireNonNull(dataInfo);
-        this.dataInfo = dataInfo.orElseGet(() -> null);
+        this.dataInfo = dataInfo.orElse(null);
     }
 
     public Optional<Map<String, DataInfo>> getDataInfo() {

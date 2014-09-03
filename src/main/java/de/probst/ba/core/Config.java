@@ -10,8 +10,7 @@ public final class Config {
     private Config() {
     }
 
-    private static volatile long announceDelay = 1000;
-    private static volatile long leecherDistributionAlgorithmDelay = 500;
+    private static volatile long announceDelay = 75;
 
     public static int getDefaultCVSElementWidth() {
         return 30;
@@ -29,13 +28,5 @@ public final class Config {
 
     public static void setAnnounceDelay(long announceDelay) {
         Config.announceDelay = announceDelay;
-    }
-
-    public static long getLeecherDistributionAlgorithmDelay() {
-        return leecherDistributionAlgorithmDelay;
-    }
-
-    public static void setLeecherDistributionAlgorithmDelay(long leecherDistributionAlgorithmDelay) {
-        Config.leecherDistributionAlgorithmDelay = leecherDistributionAlgorithmDelay;
     }
 }
