@@ -2,8 +2,8 @@ package de.probst.ba.core.net.peer;
 
 import de.probst.ba.core.distribution.SeederDistributionAlgorithm;
 import de.probst.ba.core.net.peer.handler.SeederHandler;
-import de.probst.ba.core.net.peer.state.SeederDiagnosticState;
-import de.probst.ba.core.net.peer.state.SeederState;
+import de.probst.ba.core.net.peer.state.SeederDataInfoState;
+import de.probst.ba.core.net.peer.state.SeederStatisticState;
 
 /**
  * Created by chrisprobst on 01.09.14.
@@ -11,13 +11,13 @@ import de.probst.ba.core.net.peer.state.SeederState;
 public interface Seeder extends Peer {
 
     @Override
-    SeederState getDataInfoState();
+    SeederDataInfoState getDataInfoState();
 
     @Override
     SeederHandler getPeerHandler();
 
     @Override
-    SeederDiagnosticState getDiagnosticState();
+    SeederStatisticState getStatisticState();
 
     @Override
     SeederDistributionAlgorithm getDistributionAlgorithm();

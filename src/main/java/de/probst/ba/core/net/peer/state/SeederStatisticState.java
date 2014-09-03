@@ -5,18 +5,18 @@ import de.probst.ba.core.net.peer.Peer;
 /**
  * Created by chrisprobst on 03.09.14.
  */
-public class SeederDiagnosticState extends DiagnosticState {
+public class SeederStatisticState extends StatisticState {
 
     private final long maxUploadRate;
     private final long averageUploadRate;
     private final long currentUploadRate;
     private final long totalUploaded;
 
-    public SeederDiagnosticState(Peer peer,
-                                 long maxUploadRate,
-                                 long averageUploadRate,
-                                 long currentUploadRate,
-                                 long totalUploaded) {
+    public SeederStatisticState(Peer peer,
+                                long maxUploadRate,
+                                long averageUploadRate,
+                                long currentUploadRate,
+                                long totalUploaded) {
         super(peer);
         this.maxUploadRate = maxUploadRate;
         this.averageUploadRate = averageUploadRate;

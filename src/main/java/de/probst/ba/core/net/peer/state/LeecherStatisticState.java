@@ -5,11 +5,11 @@ import de.probst.ba.core.net.peer.Peer;
 /**
  * Created by chrisprobst on 03.09.14.
  */
-public class LeecherDiagnosticState extends DiagnosticState {
+public class LeecherStatisticState extends StatisticState {
 
     private final long maxDownloadRate;
 
-    public LeecherDiagnosticState(Peer peer, long maxDownloadRate) {
+    public LeecherStatisticState(Peer peer, long maxDownloadRate) {
         super(peer);
         this.maxDownloadRate = maxDownloadRate;
     }

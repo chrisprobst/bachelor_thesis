@@ -4,7 +4,7 @@ import de.probst.ba.core.distribution.DistributionAlgorithm;
 import de.probst.ba.core.media.database.DataBase;
 import de.probst.ba.core.net.peer.handler.PeerHandler;
 import de.probst.ba.core.net.peer.state.DataInfoState;
-import de.probst.ba.core.net.peer.state.DiagnosticState;
+import de.probst.ba.core.net.peer.state.StatisticState;
 
 import java.io.Closeable;
 import java.util.concurrent.CompletableFuture;
@@ -23,7 +23,7 @@ public interface Peer extends Closeable {
 
     DataInfoState getDataInfoState();
 
-    DiagnosticState getDiagnosticState();
+    StatisticState getStatisticState();
 
     DataBase getDataBase();
 

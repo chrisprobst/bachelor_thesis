@@ -4,7 +4,7 @@ import de.probst.ba.core.distribution.DistributionAlgorithm;
 import de.probst.ba.core.media.database.DataBase;
 import de.probst.ba.core.net.peer.handler.PeerHandler;
 import de.probst.ba.core.net.peer.state.DataInfoState;
-import de.probst.ba.core.net.peer.state.DiagnosticState;
+import de.probst.ba.core.net.peer.state.StatisticState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -82,8 +82,8 @@ public abstract class AbstractPeer implements Peer {
     }
 
     @Override
-    public DiagnosticState getDiagnosticState() {
-        return new DiagnosticState(this);
+    public StatisticState getStatisticState() {
+        return new StatisticState(this);
     }
 
     @Override

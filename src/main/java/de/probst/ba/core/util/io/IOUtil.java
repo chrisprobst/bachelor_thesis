@@ -1,4 +1,4 @@
-package de.probst.ba.core.util;
+package de.probst.ba.core.util.io;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;

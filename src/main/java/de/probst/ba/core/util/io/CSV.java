@@ -1,4 +1,4 @@
-package de.probst.ba.core.diagnostic;
+package de.probst.ba.core.util.io;
 
 import java.io.IOException;
 import java.time.Duration;

@@ -2,8 +2,8 @@ package de.probst.ba.core.net.peer;
 
 import de.probst.ba.core.distribution.LeecherDistributionAlgorithm;
 import de.probst.ba.core.net.peer.handler.LeecherHandler;
-import de.probst.ba.core.net.peer.state.LeecherDiagnosticState;
-import de.probst.ba.core.net.peer.state.LeecherState;
+import de.probst.ba.core.net.peer.state.LeecherDataInfoState;
+import de.probst.ba.core.net.peer.state.LeecherStatisticState;
 
 import java.net.SocketAddress;
 
@@ -17,10 +17,10 @@ public interface Leecher extends Peer {
     void leech();
 
     @Override
-    LeecherState getDataInfoState();
+    LeecherDataInfoState getDataInfoState();
 
     @Override
-    LeecherDiagnosticState getDiagnosticState();
+    LeecherStatisticState getStatisticState();
 
     @Override
     LeecherHandler getPeerHandler();

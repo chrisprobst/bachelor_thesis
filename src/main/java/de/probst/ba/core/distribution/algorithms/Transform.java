@@ -2,8 +2,8 @@ package de.probst.ba.core.distribution.algorithms;
 
 import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.net.peer.PeerId;
-import de.probst.ba.core.util.Tuple;
-import de.probst.ba.core.util.Tuple2;
+import de.probst.ba.core.util.collections.Tuple;
+import de.probst.ba.core.util.collections.Tuple2;
 
 import java.util.Collections;
 import java.util.Comparator;

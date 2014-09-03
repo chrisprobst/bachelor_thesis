@@ -5,8 +5,8 @@ import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.media.transfer.Transfer;
 import de.probst.ba.core.net.peer.Leecher;
 import de.probst.ba.core.net.peer.PeerId;
-import de.probst.ba.core.net.peer.state.LeecherState;
-import de.probst.ba.core.util.Tuple2;
+import de.probst.ba.core.net.peer.state.LeecherDataInfoState;
+import de.probst.ba.core.util.collections.Tuple2;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,16 +25,16 @@ public class OrderedLogarithmicLeecherDistributionAlgorithm implements LeecherDi
     @Override
     public Optional<List<Transfer>> requestDownloads(Leecher leecher) {
         // Get the leecher state
-        LeecherState state = leecher.getDataInfoState();
+        LeecherDataInfoState leecherDataInfoState = leecher.getDataInfoState();
 
-        if (!state.getDownloads().isEmpty()) {
+        if (!leecherDataInfoState.getDownloads().isEmpty()) {
             logger.debug("Leecher algorithm of " + leecher.getPeerId() +
                     " is already downloading");
             return Optional.empty();
         }
 
         // Get lowest id
-        Optional<Long> lowestId = state.getLowestUncompletedDataInfoId();
+        Optional<Long> lowestId = leecherDataInfoState.getLowestUncompletedDataInfoId();
 
         // This brain has no missing data info
         if (!lowestId.isPresent()) {
@@ -45,7 +45,7 @@ public class OrderedLogarithmicLeecherDistributionAlgorithm implements LeecherDi
 
         // We are only interested in the first data info
         List<Tuple2<PeerId, DataInfo>> remoteDataInfo = Transform.findFirstByIdAndSort(
-                state.getEstimatedMissingRemoteDataInfo(),
+                leecherDataInfoState.getEstimatedMissingRemoteDataInfo(),
                 lowestId.get());
 
         if (remoteDataInfo.isEmpty()) {

@@ -1,6 +1,6 @@
 package de.probst.ba.core.net.peer.peers.netty.handlers.codec;
 
-import de.probst.ba.core.util.IOUtil;
+import de.probst.ba.core.util.io.IOUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;

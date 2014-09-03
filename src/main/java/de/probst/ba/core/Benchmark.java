@@ -5,7 +5,6 @@ import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParameterException;
 import com.beust.jcommander.converters.FileConverter;
-import de.probst.ba.core.diagnostic.UploadBandwidthCSV;
 import de.probst.ba.core.distribution.LeecherDistributionAlgorithm;
 import de.probst.ba.core.distribution.SeederDistributionAlgorithm;
 import de.probst.ba.core.distribution.algorithms.Algorithms;
@@ -19,6 +18,7 @@ import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.handler.LeecherAdapter;
 import de.probst.ba.core.net.peer.handler.LeecherHandler;
 import de.probst.ba.core.net.peer.peers.Peers;
+import de.probst.ba.core.statistic.UploadBandwidthStatistic;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -283,7 +283,6 @@ public class Benchmark {
             return false;
         }
 
-
         return true;
     }
 
@@ -334,7 +333,7 @@ public class Benchmark {
         // The event loop group shared by all peers
         EventLoopGroup eventLoopGroup = new NioEventLoopGroup();
 
-        // Setup diagnostic
+        // Setup countdown
         CountDownLatch countDownLatch = new CountDownLatch(leechers * parts);
         LeecherHandler shutdown = new LeecherAdapter() {
             @Override
@@ -348,12 +347,12 @@ public class Benchmark {
 
         }
 
-        UploadBandwidthCSV uploadBandwidthCSV = null;
+        UploadBandwidthStatistic uploadBandwidthStatistic = null;
 
         // Setup stats
         if (recordStats) {
             Path csvPath = new File(recordsDirectory, distributionAlgorithmType + "TotalUploads.csv").toPath();
-            uploadBandwidthCSV = new UploadBandwidthCSV(eventLoopGroup, peers, csvPath, 100, true);
+            uploadBandwidthStatistic = new UploadBandwidthStatistic(csvPath, eventLoopGroup, 100, peers, true);
         }
 
         // Create the algorithm factories
@@ -440,7 +439,7 @@ public class Benchmark {
 
         // Start stats
         if (recordStats) {
-            uploadBandwidthCSV.schedule();
+            uploadBandwidthStatistic.schedule();
         }
 
         // Stop the time
@@ -462,8 +461,8 @@ public class Benchmark {
 
         // Stop  stats
         if (recordStats) {
-            if (uploadBandwidthCSV != null) {
-                uploadBandwidthCSV.close();
+            if (uploadBandwidthStatistic != null) {
+                uploadBandwidthStatistic.close();
             }
         }
 

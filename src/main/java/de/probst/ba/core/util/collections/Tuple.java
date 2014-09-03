@@ -1,4 +1,4 @@
-package de.probst.ba.core.util;
+package de.probst.ba.core.util.collections;
 
 import java.util.NoSuchElementException;
 

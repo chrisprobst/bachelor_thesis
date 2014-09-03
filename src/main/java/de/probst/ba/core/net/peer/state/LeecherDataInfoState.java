@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 /**
  * Created by chrisprobst on 01.09.14.
  */
-public final class LeecherState extends DataInfoState {
+public final class LeecherDataInfoState extends DataInfoState {
 
     // The estimated data info
     private final Map<String, DataInfo> estimatedDataInfo;
@@ -78,10 +78,10 @@ public final class LeecherState extends DataInfoState {
                         Map.Entry::getValue));
     }
 
-    public LeecherState(Leecher leecher,
-                        Map<String, DataInfo> dataInfo,
-                        Map<PeerId, Map<String, DataInfo>> remoteDataInfo,
-                        Map<PeerId, Transfer> downloads) {
+    public LeecherDataInfoState(Leecher leecher,
+                                Map<String, DataInfo> dataInfo,
+                                Map<PeerId, Map<String, DataInfo>> remoteDataInfo,
+                                Map<PeerId, Transfer> downloads) {
         super(leecher, dataInfo);
 
         Objects.requireNonNull(downloads);

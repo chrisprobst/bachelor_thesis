@@ -223,7 +223,7 @@ public class RecordHandler implements LeecherHandler, SeederHandler {
     }
 
     ////
-    //// DIAGNOSTICS METHODS
+    //// HANDLER METHODS
     ////
 
     @Override

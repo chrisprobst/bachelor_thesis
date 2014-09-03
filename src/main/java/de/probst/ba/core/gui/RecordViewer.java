@@ -3,7 +3,7 @@ package de.probst.ba.core.gui;
 import de.probst.ba.core.net.peer.handler.RecordHandler;
 import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.net.peer.PeerId;
-import de.probst.ba.core.util.IOUtil;
+import de.probst.ba.core.util.io.IOUtil;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;

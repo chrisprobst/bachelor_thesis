@@ -13,14 +13,14 @@ import java.util.Objects;
 /**
  * Created by chrisprobst on 01.09.14.
  */
-public final class SeederState extends DataInfoState {
+public final class SeederDataInfoState extends DataInfoState {
 
     // All pending uploads
     private final Map<PeerId, Transfer> uploads;
 
-    public SeederState(Seeder seeder,
-                       Map<String, DataInfo> dataInfo,
-                       Map<PeerId, Transfer> uploads) {
+    public SeederDataInfoState(Seeder seeder,
+                               Map<String, DataInfo> dataInfo,
+                               Map<PeerId, Transfer> uploads) {
 
         super(seeder, dataInfo);
 

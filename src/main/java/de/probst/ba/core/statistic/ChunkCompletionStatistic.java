@@ -1,39 +1,41 @@
-package de.probst.ba.core.diagnostic;
+package de.probst.ba.core.statistic;
 
 import de.probst.ba.core.Config;
 import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.net.peer.Peer;
 
-import java.util.Collection;
+import java.nio.file.Path;
 import java.util.Objects;
+import java.util.Queue;
 
 /**
  * Created by chrisprobst on 22.08.14.
  */
-public final class ChunkCompletionCSV extends CSV {
+public final class ChunkCompletionStatistic extends FileStatistic {
 
-    private final boolean total;
+    private final Queue<Peer> peers;
     private final String dataInfoHash;
+    private final boolean total;
 
-    private void writeHeader(Collection<Peer> peers) {
-        writeElement("Time", Config.getDefaultCVSElementWidth());
+    private void writeHeader() {
+        csv.writeElement("Time", Config.getDefaultCVSElementWidth());
 
         if (total) {
-            writeElement(
+            csv.writeElement(
                     "Total percentage",
                     Config.getDefaultCVSElementWidth());
         } else {
             for (Peer peer : peers) {
-                writeElement(
+                csv.writeElement(
                         peer.getPeerId().getAddress(),
                         Config.getDefaultCVSElementWidth());
             }
         }
 
-        writeLine();
+        csv.writeLine();
     }
 
-    private void writeTotalStatus(Collection<Peer> peers) {
+    private void writeTotalStatus() {
         double totalPercentage = 0;
         int cnt = 0;
         for (Peer peer : peers) {
@@ -44,49 +46,48 @@ public final class ChunkCompletionCSV extends CSV {
             cnt++;
         }
         totalPercentage /= cnt;
-        writeElement(totalPercentage,
+        csv.writeElement(totalPercentage,
                 Config.getDefaultCVSElementWidth());
     }
 
-    private void writeIndividualStatus(Collection<Peer> peers) {
+    private void writeIndividualStatus() {
         for (Peer peer : peers) {
             DataInfo dataInfo = peer.getDataBase().get(dataInfoHash);
             if (dataInfo != null) {
-                writeElement(dataInfo.getPercentage(),
+                csv.writeElement(dataInfo.getPercentage(),
                         Config.getDefaultCVSElementWidth());
             } else {
-                writeElement(0.0,
+                csv.writeElement(0.0,
                         Config.getDefaultCVSElementWidth());
             }
         }
     }
 
-    public ChunkCompletionCSV(boolean total, String dataInfoHash) {
-        Objects.requireNonNull(dataInfoHash);
-        this.total = total;
-        this.dataInfoHash = dataInfoHash;
-    }
-
-    public synchronized void writeStatus(Collection<Peer> peers) {
-        Objects.requireNonNull(peers);
-
-        if (isFirstElement()) {
-            writeHeader(peers);
+    @Override
+    protected void doWriteStatistic() {
+        if (csv.isFirstElement()) {
+            writeHeader();
         }
 
-        writeDuration(Config.getDefaultCVSElementWidth());
+        csv.writeDuration(Config.getDefaultCVSElementWidth());
 
         if (total) {
-            writeTotalStatus(peers);
+            writeTotalStatus();
         } else {
-            writeIndividualStatus(peers);
+            writeIndividualStatus();
         }
 
-        writeLine();
+        csv.writeLine();
     }
 
-    @Override
-    public synchronized String toString() {
-        return super.toString();
+    public ChunkCompletionStatistic(Path csvPath,
+                                    Queue<Peer> peers,
+                                    String dataInfoHash,
+                                    boolean total) {
+        super(csvPath);
+        Objects.requireNonNull(peers);
+        this.peers = peers;
+        this.dataInfoHash = dataInfoHash;
+        this.total = total;
     }
 }

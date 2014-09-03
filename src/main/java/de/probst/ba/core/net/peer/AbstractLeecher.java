@@ -6,8 +6,8 @@ import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.media.transfer.Transfer;
 import de.probst.ba.core.net.peer.handler.LeecherAdapter;
 import de.probst.ba.core.net.peer.handler.LeecherHandler;
-import de.probst.ba.core.net.peer.state.LeecherDiagnosticState;
-import de.probst.ba.core.net.peer.state.LeecherState;
+import de.probst.ba.core.net.peer.state.LeecherDataInfoState;
+import de.probst.ba.core.net.peer.state.LeecherStatisticState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,8 +56,7 @@ public abstract class AbstractLeecher extends AbstractPeer implements Leecher {
 
                 // The algorithm do not want to
                 // download anything
-                if (!transfers.isPresent() ||
-                        transfers.get().isEmpty()) {
+                if (!transfers.isPresent() || transfers.get().isEmpty()) {
                     return;
                 }
 
@@ -121,7 +120,7 @@ public abstract class AbstractLeecher extends AbstractPeer implements Leecher {
     }
 
     @Override
-    public LeecherState getDataInfoState() {
+    public LeecherDataInfoState getDataInfoState() {
         // IMPORTANT:
         // Collect downloads first, so that
         // there is no interleaving with the local data info
@@ -135,14 +134,14 @@ public abstract class AbstractLeecher extends AbstractPeer implements Leecher {
         // -> Not in local data info AND not in downloads -> download same chunk twice -> error!
         Map<PeerId, Transfer> downloads = getDownloads();
 
-        return new LeecherState(this,
+        return new LeecherDataInfoState(this,
                 getDataBase().getDataInfo(),
                 getRemoteDataInfo(),
                 downloads);
     }
 
     @Override
-    public LeecherDiagnosticState getDiagnosticState() {
-        return new LeecherDiagnosticState(this, getMaxDownloadRate());
+    public LeecherStatisticState getStatisticState() {
+        return new LeecherStatisticState(this, getMaxDownloadRate());
     }
 }
