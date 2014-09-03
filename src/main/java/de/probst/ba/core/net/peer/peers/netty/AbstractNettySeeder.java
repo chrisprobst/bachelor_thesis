@@ -21,8 +21,7 @@ import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.handler.traffic.GlobalTrafficShapingHandler;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import io.netty.handler.traffic.TrafficCounter;
 
 import java.io.IOException;
 import java.util.Map;
@@ -35,9 +34,6 @@ import java.util.concurrent.Future;
  */
 public abstract class AbstractNettySeeder extends AbstractSeeder {
 
-    private final Logger logger =
-            LoggerFactory.getLogger(AbstractNettySeeder.class);
-
     private final long maxUploadRate;
 
     private final EventLoopGroup seederEventLoopGroup;
@@ -47,6 +43,8 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
 
     private final ChannelGroupHandler seederChannelGroupHandler;
 
+    private final GlobalTrafficShapingHandler globalSeederCurrentUploadRateHandler;
+
     private final GlobalTrafficShapingHandler globalSeederTrafficShapingHandler;
 
     private final ChannelInitializer<Channel> seederChannelInitializer = new ChannelInitializer<Channel>() {
@@ -55,6 +53,9 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
 
             // Build pipeline
             ch.pipeline().addLast(
+
+                    // Current upload rate handler
+                    globalSeederCurrentUploadRateHandler,
 
                     // Traffic shaper
                     globalSeederTrafficShapingHandler,
@@ -78,7 +79,7 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
                     new AnnounceHandler(AbstractNettySeeder.this)
             );
 
-            // Initilaize seeder channel
+            // Initialize seeder channel
             initSeederChannel(ch);
         }
     };
@@ -106,17 +107,24 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
 
     @Override
     protected long getAverageUploadRate() {
-        return 0;
+        TrafficCounter trafficCounter = globalSeederCurrentUploadRateHandler.trafficCounter();
+        long bytesWritten = trafficCounter.cumulativeWrittenBytes();
+        double time = (System.currentTimeMillis() - trafficCounter.lastCumulativeTime()) / 1000.0;
+        return time > 0 ? (long) (bytesWritten / time) : 0;
     }
 
     @Override
     protected long getCurrentUploadRate() {
-        return 0;
+        return globalSeederCurrentUploadRateHandler
+                .trafficCounter()
+                .lastWriteThroughput();
     }
 
     @Override
     protected long getTotalUploaded() {
-        return 0;
+        return globalSeederCurrentUploadRateHandler
+                .trafficCounter()
+                .cumulativeWrittenBytes();
     }
 
     @Override
@@ -147,6 +155,9 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
         globalSeederTrafficShapingHandler =
                 new GlobalTrafficShapingHandler(
                         this.seederEventLoopGroup, getMaxUploadRate(), 0, 0);
+        globalSeederCurrentUploadRateHandler =
+                new GlobalTrafficShapingHandler(
+                        this.seederEventLoopGroup, 0, 0, 100);
         seederChannelGroupHandler = new ChannelGroupHandler(
                 this.seederEventLoopGroup.next());
 

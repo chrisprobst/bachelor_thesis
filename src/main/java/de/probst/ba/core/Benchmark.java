@@ -5,6 +5,7 @@ import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParameterException;
 import com.beust.jcommander.converters.FileConverter;
+import de.probst.ba.core.diagnostic.UploadBandwidthCSV;
 import de.probst.ba.core.distribution.LeecherDistributionAlgorithm;
 import de.probst.ba.core.distribution.SeederDistributionAlgorithm;
 import de.probst.ba.core.distribution.algorithms.Algorithms;
@@ -30,11 +31,12 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.LinkedList;
 import java.util.Optional;
 import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.function.IntFunction;
@@ -327,7 +329,7 @@ public class Benchmark {
                 .toArray(DataInfo[]::new);
 
         // List of peers
-        Queue<Peer> peers = new LinkedList<>();
+        Queue<Peer> peers = new ConcurrentLinkedQueue<>();
 
         // The event loop group shared by all peers
         EventLoopGroup eventLoopGroup = new NioEventLoopGroup();
@@ -346,9 +348,12 @@ public class Benchmark {
 
         }
 
+        UploadBandwidthCSV uploadBandwidthCSV = null;
+
         // Setup stats
         if (recordStats) {
-
+            Path csvPath = new File(recordsDirectory, distributionAlgorithmType + "TotalUploads.csv").toPath();
+            uploadBandwidthCSV = new UploadBandwidthCSV(eventLoopGroup, peers, csvPath, 100, true);
         }
 
         // Create the algorithm factories
@@ -435,7 +440,7 @@ public class Benchmark {
 
         // Start stats
         if (recordStats) {
-
+            uploadBandwidthCSV.schedule();
         }
 
         // Stop the time
@@ -455,9 +460,11 @@ public class Benchmark {
 
         }
 
-        // Start stats
+        // Stop  stats
         if (recordStats) {
-
+            if (uploadBandwidthCSV != null) {
+                uploadBandwidthCSV.close();
+            }
         }
 
         // Save stats
@@ -503,6 +510,8 @@ public class Benchmark {
 
         // Wait for close
         Peers.closeAndWait(peers);
+
+        Thread.sleep(1000);
     }
 
     public static void main(String[] args) throws InterruptedException, ExecutionException, IOException {
