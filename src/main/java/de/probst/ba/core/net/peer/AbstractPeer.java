@@ -16,8 +16,7 @@ import java.util.concurrent.CompletableFuture;
  */
 public abstract class AbstractPeer implements Peer {
 
-    private final Logger logger =
-            LoggerFactory.getLogger(AbstractPeer.class);
+    private final Logger logger = LoggerFactory.getLogger(AbstractPeer.class);
 
     private final PeerId peerId;
 
@@ -27,16 +26,7 @@ public abstract class AbstractPeer implements Peer {
 
     private final PeerHandler peerHandler;
 
-    private final CompletableFuture<?> initFuture =
-            new CompletableFuture<>();
-
-    protected void silentClose() {
-        try {
-            close();
-        } catch (IOException e) {
-            logger.error("Failed to close peer", e);
-        }
-    }
+    private final CompletableFuture<?> initFuture = new CompletableFuture<>();
 
     protected AbstractPeer(PeerId peerId,
                            DataBase dataBase,
@@ -53,6 +43,14 @@ public abstract class AbstractPeer implements Peer {
         this.dataBase = dataBase;
         this.distributionAlgorithm = distributionAlgorithm;
         this.peerHandler = peerHandler;
+    }
+
+    protected void silentClose() {
+        try {
+            close();
+        } catch (IOException e) {
+            logger.error("Failed to close peer", e);
+        }
     }
 
     @Override

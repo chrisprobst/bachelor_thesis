@@ -16,10 +16,7 @@ import java.util.stream.Collectors;
 public final class FakeDataBase extends AbstractDataBase {
 
     public FakeDataBase(DataInfo... dataInfo) {
-        this(Arrays.stream(dataInfo)
-                .collect(Collectors.toMap(
-                        DataInfo::getHash,
-                        Function.identity())));
+        this(Arrays.stream(dataInfo).collect(Collectors.toMap(DataInfo::getHash, Function.identity())));
     }
 
     public FakeDataBase(Map<String, DataInfo> initialDataInfo) {

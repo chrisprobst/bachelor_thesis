@@ -14,8 +14,7 @@ import java.util.Optional;
 public class DefaultSeederDistributionAlgorithm implements SeederDistributionAlgorithm {
 
     @Override
-    public Optional<Map<String, DataInfo>> transformUploadDataInfo(Seeder seeder,
-                                                                   PeerId remotePeerId) {
+    public Optional<Map<String, DataInfo>> transformUploadDataInfo(Seeder seeder, PeerId remotePeerId) {
         return Optional.of(seeder.getDataBase().getDataInfo());
     }
 

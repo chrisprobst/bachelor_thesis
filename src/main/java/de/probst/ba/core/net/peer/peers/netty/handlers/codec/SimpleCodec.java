@@ -23,10 +23,9 @@ public class SimpleCodec extends MessageToMessageCodec<ByteBuf, Object> {
     protected void encode(ChannelHandlerContext ctx, Object msg, List<Object> out) throws Exception {
         if (msg instanceof Serializable) {
             out.add(Unpooled.wrappedBuffer(Unpooled.buffer(1).writeByte(0),
-                    Unpooled.wrappedBuffer(IOUtil.serialize(msg))));
+                                           Unpooled.wrappedBuffer(IOUtil.serialize(msg))));
         } else {
-            out.add(Unpooled.wrappedBuffer(Unpooled.buffer(1).writeByte(1),
-                    ((ByteBuf) msg).retain()));
+            out.add(Unpooled.wrappedBuffer(Unpooled.buffer(1).writeByte(1), ((ByteBuf) msg).retain()));
         }
     }
 

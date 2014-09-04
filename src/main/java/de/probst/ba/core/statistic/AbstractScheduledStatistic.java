@@ -17,9 +17,7 @@ public abstract class AbstractScheduledStatistic extends AbstractFileStatistic i
 
     private Future<?> schedulation;
 
-    public AbstractScheduledStatistic(Path csvPath,
-                                      ScheduledExecutorService scheduledExecutorService,
-                                      long delay) {
+    public AbstractScheduledStatistic(Path csvPath, ScheduledExecutorService scheduledExecutorService, long delay) {
         super(csvPath);
         Objects.requireNonNull(scheduledExecutorService);
         this.scheduledExecutorService = scheduledExecutorService;
@@ -30,8 +28,7 @@ public abstract class AbstractScheduledStatistic extends AbstractFileStatistic i
         if (schedulation != null) {
             throw new IllegalStateException("schedulation != null");
         }
-        schedulation = scheduledExecutorService.schedule(
-                this, delay, TimeUnit.MILLISECONDS);
+        schedulation = scheduledExecutorService.schedule(this, delay, TimeUnit.MILLISECONDS);
     }
 
     @Override

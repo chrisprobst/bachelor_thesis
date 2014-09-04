@@ -17,18 +17,22 @@ public final class ChunkCompletionStatistic extends AbstractFileStatistic {
     private final String dataInfoHash;
     private final boolean total;
 
+    public ChunkCompletionStatistic(Path csvPath, Queue<Peer> peers, String dataInfoHash, boolean total) {
+        super(csvPath);
+        Objects.requireNonNull(peers);
+        this.peers = peers;
+        this.dataInfoHash = dataInfoHash;
+        this.total = total;
+    }
+
     private void writeHeader() {
         csv.writeElement("Time", Config.getDefaultCVSElementWidth());
 
         if (total) {
-            csv.writeElement(
-                    "Total percentage",
-                    Config.getDefaultCVSElementWidth());
+            csv.writeElement("Total percentage", Config.getDefaultCVSElementWidth());
         } else {
             for (Peer peer : peers) {
-                csv.writeElement(
-                        peer.getPeerId().getAddress(),
-                        Config.getDefaultCVSElementWidth());
+                csv.writeElement(peer.getPeerId().getAddress(), Config.getDefaultCVSElementWidth());
             }
         }
 
@@ -46,19 +50,16 @@ public final class ChunkCompletionStatistic extends AbstractFileStatistic {
             cnt++;
         }
         totalPercentage /= cnt;
-        csv.writeElement(totalPercentage,
-                Config.getDefaultCVSElementWidth());
+        csv.writeElement(totalPercentage, Config.getDefaultCVSElementWidth());
     }
 
     private void writeIndividualStatus() {
         for (Peer peer : peers) {
             DataInfo dataInfo = peer.getDataBase().get(dataInfoHash);
             if (dataInfo != null) {
-                csv.writeElement(dataInfo.getPercentage(),
-                        Config.getDefaultCVSElementWidth());
+                csv.writeElement(dataInfo.getPercentage(), Config.getDefaultCVSElementWidth());
             } else {
-                csv.writeElement(0.0,
-                        Config.getDefaultCVSElementWidth());
+                csv.writeElement(0.0, Config.getDefaultCVSElementWidth());
             }
         }
     }
@@ -78,16 +79,5 @@ public final class ChunkCompletionStatistic extends AbstractFileStatistic {
         }
 
         csv.writeLine();
-    }
-
-    public ChunkCompletionStatistic(Path csvPath,
-                                    Queue<Peer> peers,
-                                    String dataInfoHash,
-                                    boolean total) {
-        super(csvPath);
-        Objects.requireNonNull(peers);
-        this.peers = peers;
-        this.dataInfoHash = dataInfoHash;
-        this.total = total;
     }
 }

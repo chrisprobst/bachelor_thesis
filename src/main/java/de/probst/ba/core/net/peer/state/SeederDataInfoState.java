@@ -5,8 +5,6 @@ import de.probst.ba.core.media.transfer.Transfer;
 import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.Seeder;
 
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -18,15 +16,11 @@ public final class SeederDataInfoState extends DataInfoState {
     // All pending uploads
     private final Map<PeerId, Transfer> uploads;
 
-    public SeederDataInfoState(Seeder seeder,
-                               Map<String, DataInfo> dataInfo,
-                               Map<PeerId, Transfer> uploads) {
+    public SeederDataInfoState(Seeder seeder, Map<String, DataInfo> dataInfo, Map<PeerId, Transfer> uploads) {
 
         super(seeder, dataInfo);
-
         Objects.requireNonNull(uploads);
-
-        this.uploads = Collections.unmodifiableMap(new HashMap<>(uploads));
+        this.uploads = uploads;
     }
 
     /**

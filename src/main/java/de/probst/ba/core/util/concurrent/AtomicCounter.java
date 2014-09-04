@@ -7,8 +7,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public final class AtomicCounter {
 
-    private final AtomicInteger atomicInteger =
-            new AtomicInteger();
+    private final AtomicInteger atomicInteger = new AtomicInteger();
 
     public boolean tryIncrement(int maximum) {
         if (maximum < 1) {

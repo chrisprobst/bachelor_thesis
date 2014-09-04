@@ -16,8 +16,8 @@ import de.probst.ba.core.net.peer.Leecher;
 import de.probst.ba.core.net.peer.Peer;
 import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.Seeder;
-import de.probst.ba.core.net.peer.handler.LeecherAdapter;
-import de.probst.ba.core.net.peer.handler.LeecherHandler;
+import de.probst.ba.core.net.peer.handler.LeecherPeerAdapter;
+import de.probst.ba.core.net.peer.handler.LeecherPeerHandler;
 import de.probst.ba.core.net.peer.peers.Peers;
 import de.probst.ba.core.net.peer.state.BandwidthStatisticState;
 import de.probst.ba.core.statistic.BandwidthStatistic;
@@ -50,213 +50,83 @@ import java.util.stream.IntStream;
  */
 public class Benchmark {
 
-    public static class PeerCountValidator implements IValueValidator<Integer> {
-
-        public static final int MIN = 1;
-        public static final int MAX = 20;
-        public static final String MSG = "Must be between " + MIN + " and " + MAX;
-
-        @Override
-        public void validate(String name, Integer value) throws ParameterException {
-            if (value < MIN || value > MAX) {
-                throw new ParameterException("Parameter " + name + ": "
-                        + MSG + " (found: " + value + ")");
-            }
-        }
-    }
-
-    public static class TransferRateValidator implements IValueValidator<Integer> {
-
-        public static final int MIN = 0;
-        public static final int MAX = 1000 * 1000 * 10;
-        public static final String MSG = "Must be between " + MIN + " and " + MAX;
-
-        @Override
-        public void validate(String name, Integer value) throws ParameterException {
-            if (value < MIN || value > MAX) {
-                throw new ParameterException("Parameter " + name + ": "
-                        + MSG + " (found: " + value + ")");
-            }
-        }
-    }
-
-    public static class DelayValidator implements IValueValidator<Long> {
-
-        public static final long MIN = 10;
-        public static final long MAX = 100 * 1000;
-        public static final String MSG = "Must be between " + MIN + " and " + MAX;
-
-        @Override
-        public void validate(String name, Long value) throws ParameterException {
-            if (value < MIN || value > MAX) {
-                throw new ParameterException("Parameter " + name + ": "
-                        + MSG + " (found: " + value + ")");
-            }
-        }
-    }
-
-    public static class TotalSizeValidator implements IValueValidator<Integer> {
-
-        public static final int MIN = 1;
-        public static final int MAX = 1000 * 1000 * 1000;
-        public static final String MSG = "Must be between " + MIN + " and " + MAX;
-
-        @Override
-        public void validate(String name, Integer value) throws ParameterException {
-            if (value < MIN || value > MAX) {
-                throw new ParameterException("Parameter " + name + ": "
-                        + MSG + " (found: " + value + ")");
-            }
-        }
-    }
-
-    public static class ChunkCountValidator implements IValueValidator<Integer> {
-
-        public static final int MIN = 1;
-        public static final int MAX = 10 * 1000;
-        public static final String MSG = "Must be between " + MIN + " and " + MAX;
-
-        @Override
-        public void validate(String name, Integer value) throws ParameterException {
-            if (value < MIN || value > MAX) {
-                throw new ParameterException("Parameter " + name + ": "
-                        + MSG + " (found: " + value + ")");
-            }
-        }
-    }
-
-    public static class PartsValidator implements IValueValidator<Integer> {
-
-        public static final int MIN = 1;
-        public static final int MAX = 1000;
-        public static final String MSG = "Must be between " + MIN + " and " + MAX;
-
-        @Override
-        public void validate(String name, Integer value) throws ParameterException {
-            if (value < MIN || value > MAX) {
-                throw new ParameterException("Parameter " + name + ": "
-                        + MSG + " (found: " + value + ")");
-            }
-        }
-    }
-
-    public static class PeerTypeValidator implements IValueValidator<String> {
-
-        public static final String LOCAL = "Local";
-        public static final String TCP = "TCP";
-        public static final String MSG = "Must be '" + LOCAL + "' or '" + TCP + "'";
-
-        @Override
-        public void validate(String name, String value) throws ParameterException {
-            if (!value.equals(LOCAL) && !value.equals(TCP)) {
-                throw new ParameterException("Parameter " + name + ": "
-                        + MSG + " (found: " + value + ")");
-            }
-        }
-    }
-
-    public static class DistributionAlgorithmTypeValidator implements IValueValidator<String> {
-
-        public static final String CHUNKEDSWARM = "chunked-swarm";
-        public static final String LOGARITHMIC = "logarithmic";
-        public static final String MSG = "Must be '" + CHUNKEDSWARM + "' or '" + LOGARITHMIC + "'";
-
-        @Override
-        public void validate(String name, String value) throws ParameterException {
-            if (!value.equals(CHUNKEDSWARM) && !value.equals(LOGARITHMIC)) {
-                throw new ParameterException("Parameter " + name + ": "
-                        + MSG + " (found: " + value + ")");
-            }
-        }
-    }
-
-    @Parameter(
-            names = {"-ad", "--announce-delay"},
-            description = "The announce delay in millis (" + DelayValidator.MSG + ")",
-            validateValueWith = DelayValidator.class)
+    @Parameter(names = {"-ad", "--announce-delay"},
+               description = "The announce delay in millis (" + DelayValidator.MSG + ")",
+               validateValueWith = DelayValidator.class)
     private Long announceDelay = Config.getAnnounceDelay();
-
-    @Parameter(
-            names = {"-pt", "--peer-type"},
-            description = "Peer type (" + PeerTypeValidator.MSG + ")",
-            validateValueWith = PeerTypeValidator.class)
+    @Parameter(names = {"-pt", "--peer-type"},
+               description = "Peer type (" + PeerTypeValidator.MSG + ")",
+               validateValueWith = PeerTypeValidator.class)
     private String peerTypeString = PeerTypeValidator.LOCAL;
-
-    @Parameter(
-            names = {"-da", "--distribution-algorithm"},
-            description = "Distribution algorithm type (" + DistributionAlgorithmTypeValidator.MSG + ")",
-            validateValueWith = DistributionAlgorithmTypeValidator.class)
+    @Parameter(names = {"-da", "--distribution-algorithm"},
+               description = "Distribution algorithm type (" + DistributionAlgorithmTypeValidator.MSG + ")",
+               validateValueWith = DistributionAlgorithmTypeValidator.class)
     private String distributionAlgorithmType = DistributionAlgorithmTypeValidator.LOGARITHMIC;
-
-    @Parameter(
-            names = {"-h", "--help"},
-            description = "Show usage")
+    @Parameter(names = {"-h", "--help"},
+               description = "Show usage")
     private Boolean showUsage = false;
-
-    @Parameter(
-            names = {"-v", "--verbose"},
-            description = "Verbose mode")
+    @Parameter(names = {"-v", "--verbose"},
+               description = "Verbose mode")
     private Boolean verbose = false;
-
-    @Parameter(
-            names = {"-re", "--record-events"},
-            description = "Record the events and serialize them")
+    @Parameter(names = {"-re", "--record-events"},
+               description = "Record the events and serialize them")
     private Boolean recordEvents = false;
-
-    @Parameter(
-            names = {"-rs", "--record-statistics"},
-            description = "Record statistics and save them in cvs form")
+    @Parameter(names = {"-rs", "--record-statistics"},
+               description = "Record statistics and save them in cvs form")
     private Boolean recordStats = false;
-
-    @Parameter(
-            names = {"-dir", "--directory"},
-            description = "The directory to save the records",
-            converter = FileConverter.class,
-            required = false)
+    @Parameter(names = {"-dir", "--directory"},
+               description = "The directory to save the records",
+               converter = FileConverter.class,
+               required = false)
     private File recordsDirectory = new File(".");
-
-    @Parameter(
-            names = {"-p", "--parts"},
-            description = "(Experimental) The number of parts (" + PartsValidator.MSG + ")",
-            validateValueWith = PartsValidator.class)
+    @Parameter(names = {"-p", "--parts"},
+               description = "(Experimental) The number of parts (" + PartsValidator.MSG + ")",
+               validateValueWith = PartsValidator.class)
     private Integer parts = 1;
-
-    @Parameter(
-            names = {"-c", "--chunk-count"},
-            description = "The number of chunks (" + ChunkCountValidator.MSG + ")",
-            validateValueWith = ChunkCountValidator.class)
+    @Parameter(names = {"-c", "--chunk-count"},
+               description = "The number of chunks (" + ChunkCountValidator.MSG + ")",
+               validateValueWith = ChunkCountValidator.class)
     private Integer chunkCount = 100;
-
-    @Parameter(
-            names = {"-t", "--total-size"},
-            description = "The total size in bytes (" + TotalSizeValidator.MSG + ")",
-            validateValueWith = TotalSizeValidator.class)
+    @Parameter(names = {"-t", "--total-size"},
+               description = "The total size in bytes (" + TotalSizeValidator.MSG + ")",
+               validateValueWith = TotalSizeValidator.class)
     private Integer totalSize = 1000 * 1000 * 10;
-
-    @Parameter(
-            names = {"-u", "--upload-rate"},
-            description = "The upload rate in bytes per second, " +
-                    "must be less-equal than the download rate (" + TransferRateValidator.MSG + ")",
-            validateValueWith = TransferRateValidator.class)
+    @Parameter(names = {"-u", "--upload-rate"},
+               description = "The upload rate in bytes per second, " +
+                       "must be less-equal than the download rate (" + TransferRateValidator.MSG + ")",
+               validateValueWith = TransferRateValidator.class)
     private Integer uploadRate = 1000 * 1000 * 1;
-
-    @Parameter(
-            names = {"-d", "--download-rate"},
-            description = "The download rate in bytes per second, " +
-                    "must greater-equal than the upload rate (" + TransferRateValidator.MSG + ")",
-            validateValueWith = TransferRateValidator.class)
+    @Parameter(names = {"-d", "--download-rate"},
+               description = "The download rate in bytes per second, " +
+                       "must greater-equal than the upload rate (" + TransferRateValidator.MSG + ")",
+               validateValueWith = TransferRateValidator.class)
     private Integer downloadRate = 0;
-
-    @Parameter(
-            names = {"-s", "--seeders"},
-            description = "Number of seeders (" + PeerCountValidator.MSG + ")",
-            validateValueWith = PeerCountValidator.class)
+    @Parameter(names = {"-s", "--seeders"},
+               description = "Number of seeders (" + PeerCountValidator.MSG + ")",
+               validateValueWith = PeerCountValidator.class)
     private Integer seeders = 1;
-
     @Parameter(names = {"-l", "--leechers"},
-            description = "Number of leechers (" + PeerCountValidator.MSG + ")",
-            validateValueWith = PeerCountValidator.class)
+               description = "Number of leechers (" + PeerCountValidator.MSG + ")",
+               validateValueWith = PeerCountValidator.class)
     private Integer leechers = 7;
+
+    public static void main(String[] args) throws InterruptedException, ExecutionException, IOException {
+        // Setup parser
+        Benchmark benchmark = new Benchmark();
+        JCommander jCommander = new JCommander(benchmark);
+
+        try {
+            jCommander.parse(args);
+            if (benchmark.checkParameters(jCommander)) {
+                benchmark.start();
+            }
+        } catch (ParameterException e) {
+            System.out.println(e.getMessage());
+            System.out.println();
+            jCommander.usage();
+            return;
+        }
+    }
 
     private boolean checkParameters(JCommander jCommander) {
         if (showUsage) {
@@ -308,7 +178,8 @@ public class Benchmark {
         double intelligentBrainTime = timePerTransfer / seeders * 1.3;
 
         // log(n) - log(s) = log(n / s) = log((s + l) / s) = log(1 + l/s)
-        double logarithmicBrainTime = timePerTransfer * Math.ceil(Math.log(1 + leechers / (double) seeders) / Math.log(2));
+        double logarithmicBrainTime =
+                timePerTransfer * Math.ceil(Math.log(1 + leechers / (double) seeders) / Math.log(2));
 
         // A small info for all waiters
         logger.info("[== One transfer needs approx.: " + timePerTransfer + " seconds ==]");
@@ -318,16 +189,14 @@ public class Benchmark {
 
         // Benchmark data
         DataInfo[] dataInfo = IntStream.range(0, parts)
-                .mapToObj(i -> new DataInfo(
-                        i,
-                        totalSize,
-                        Optional.empty(),
-                        Optional.empty(),
-                        "Benchmark hash, part: " + i,
-                        chunkCount,
-                        String::valueOf)
-                        .full())
-                .toArray(DataInfo[]::new);
+                                       .mapToObj(i -> new DataInfo(i,
+                                                                   totalSize,
+                                                                   Optional.empty(),
+                                                                   Optional.empty(),
+                                                                   "Benchmark hash, part: " + i,
+                                                                   chunkCount,
+                                                                   String::valueOf).full())
+                                       .toArray(DataInfo[]::new);
 
         // List of peers
         Queue<Peer> peerQueue = new ConcurrentLinkedQueue<>();
@@ -339,7 +208,7 @@ public class Benchmark {
 
         // Setup countdown
         CountDownLatch countDownLatch = new CountDownLatch(leechers * parts);
-        LeecherHandler shutdown = new LeecherAdapter() {
+        LeecherPeerHandler shutdown = new LeecherPeerAdapter() {
             @Override
             public void dataCompleted(Leecher leecher, DataInfo dataInfo, TransferManager lastTransferManager) {
                 countDownLatch.countDown();
@@ -358,23 +227,27 @@ public class Benchmark {
         if (recordStats) {
             Path csvPath = new File(recordsDirectory, distributionAlgorithmType + "TotalUploads.csv").toPath();
             Path csvPath2 = new File(recordsDirectory, distributionAlgorithmType + "TotalDownloads.csv").toPath();
-            uploadBandwidthStatistic = new BandwidthStatistic(csvPath, eventLoopGroup, 250, seederQueue,
-                    BandwidthStatisticState::getAverageUploadRate,
-                    BandwidthStatistic.Mode.Peer);
-            downloadBandwidthStatistic = new BandwidthStatistic(csvPath2, eventLoopGroup, 250, leecherQueue,
-                    BandwidthStatisticState::getAverageDownloadRate,
-                    BandwidthStatistic.Mode.Peer);
+            uploadBandwidthStatistic = new BandwidthStatistic(csvPath,
+                                                              eventLoopGroup,
+                                                              250,
+                                                              seederQueue,
+                                                              BandwidthStatisticState::getAverageUploadRate,
+                                                              BandwidthStatistic.Mode.Peer);
+            downloadBandwidthStatistic = new BandwidthStatistic(csvPath2,
+                                                                eventLoopGroup,
+                                                                250,
+                                                                leecherQueue,
+                                                                BandwidthStatisticState::getAverageDownloadRate,
+                                                                BandwidthStatistic.Mode.Peer);
         }
 
         // Create the algorithm factories
-        Supplier<SeederDistributionAlgorithm> seederDistributionAlgorithmSupplier = () ->
-                distributionAlgorithmType.equals(DistributionAlgorithmTypeValidator.LOGARITHMIC) ?
-                        Algorithms.limitedSeederDistributionAlgorithm(1) :
-                        Algorithms.defaultSeederDistributionAlgorithm();
-        Supplier<LeecherDistributionAlgorithm> leecherDistributionAlgorithmSupplier = () ->
-                distributionAlgorithmType.equals(DistributionAlgorithmTypeValidator.LOGARITHMIC) ?
-                        Algorithms.orderedLogarithmicLeecherDistributionAlgorithm() :
-                        Algorithms.orderedChunkedSwarmLeecherDistributionAlgorithm();
+        Supplier<SeederDistributionAlgorithm> seederDistributionAlgorithmSupplier =
+                () -> distributionAlgorithmType.equals(DistributionAlgorithmTypeValidator.LOGARITHMIC) ? Algorithms.limitedSeederDistributionAlgorithm(
+                        1) : Algorithms.defaultSeederDistributionAlgorithm();
+        Supplier<LeecherDistributionAlgorithm> leecherDistributionAlgorithmSupplier =
+                () -> distributionAlgorithmType.equals(DistributionAlgorithmTypeValidator.LOGARITHMIC) ? Algorithms.orderedLogarithmicLeecherDistributionAlgorithm() : Algorithms
+                        .orderedChunkedSwarmLeecherDistributionAlgorithm();
 
         // Get the peer type
         Peers.Type peerType = Peers.Type.valueOf(peerTypeString);
@@ -397,16 +270,15 @@ public class Benchmark {
 
         // Setup all seeders
         for (int i = 0; i < seeders; i++) {
-            Seeder seeder = Peers.seeder(
-                    peerType,
-                    uploadRate,
-                    downloadRate,
-                    new PeerId(seederAddress.apply(i)),
-                    DataBases.fakeDataBase(dataInfo),
-                    //DataBases.singleFileDataBase(Paths.get("/Users/chrisprobst/Desktop/data.file"), dataInfo[0]),
-                    seederDistributionAlgorithmSupplier.get(),
-                    Optional.empty(),
-                    Optional.of(eventLoopGroup));
+            Seeder seeder = Peers.seeder(peerType,
+                                         uploadRate,
+                                         downloadRate,
+                                         new PeerId(seederAddress.apply(i)),
+                                         DataBases.fakeDataBase(dataInfo),
+                                         //DataBases.singleFileDataBase(Paths.get("/Users/chrisprobst/Desktop/data.file"), dataInfo[0]),
+                                         seederDistributionAlgorithmSupplier.get(),
+                                         Optional.empty(),
+                                         Optional.of(eventLoopGroup));
 
             seederQueue.add(seeder);
             peerQueue.add(seeder);
@@ -419,29 +291,27 @@ public class Benchmark {
             DataBase dataBase = DataBases.fakeDataBase();
 
             // Add the seeder part
-            Seeder seeder = Peers.seeder(
-                    peerType,
-                    uploadRate,
-                    downloadRate,
-                    peerId,
-                    dataBase,
-                    //DataBases.singleFileDataBase(Paths.get("/Users/chrisprobst/Desktop/data.file"), dataInfo[0]),
-                    seederDistributionAlgorithmSupplier.get(),
-                    Optional.empty(),
-                    Optional.of(eventLoopGroup));
+            Seeder seeder = Peers.seeder(peerType,
+                                         uploadRate,
+                                         downloadRate,
+                                         peerId,
+                                         dataBase,
+                                         //DataBases.singleFileDataBase(Paths.get("/Users/chrisprobst/Desktop/data.file"), dataInfo[0]),
+                                         seederDistributionAlgorithmSupplier.get(),
+                                         Optional.empty(),
+                                         Optional.of(eventLoopGroup));
 
 
             // Add the leecher part
-            Leecher leecher = Peers.leecher(
-                    peerType,
-                    uploadRate,
-                    downloadRate,
-                    peerId,
-                    dataBase,
-                    //DataBases.singleFileDataBase(Paths.get("/Users/chrisprobst/Desktop/data.file"), dataInfo[0]),
-                    leecherDistributionAlgorithmSupplier.get(),
-                    Optional.of(shutdown),
-                    Optional.of(eventLoopGroup));
+            Leecher leecher = Peers.leecher(peerType,
+                                            uploadRate,
+                                            downloadRate,
+                                            peerId,
+                                            dataBase,
+                                            //DataBases.singleFileDataBase(Paths.get("/Users/chrisprobst/Desktop/data.file"), dataInfo[0]),
+                                            leecherDistributionAlgorithmSupplier.get(),
+                                            Optional.of(shutdown),
+                                            Optional.of(eventLoopGroup));
 
             seederQueue.add(seeder);
             leecherQueue.add(leecher);
@@ -541,21 +411,115 @@ public class Benchmark {
         Thread.sleep(1000);
     }
 
-    public static void main(String[] args) throws InterruptedException, ExecutionException, IOException {
-        // Setup parser
-        Benchmark benchmark = new Benchmark();
-        JCommander jCommander = new JCommander(benchmark);
+    public static class PeerCountValidator implements IValueValidator<Integer> {
 
-        try {
-            jCommander.parse(args);
-            if (benchmark.checkParameters(jCommander)) {
-                benchmark.start();
+        public static final int MIN = 1;
+        public static final int MAX = 20;
+        public static final String MSG = "Must be between " + MIN + " and " + MAX;
+
+        @Override
+        public void validate(String name, Integer value) throws ParameterException {
+            if (value < MIN || value > MAX) {
+                throw new ParameterException("Parameter " + name + ": " + MSG + " (found: " + value + ")");
             }
-        } catch (ParameterException e) {
-            System.out.println(e.getMessage());
-            System.out.println();
-            jCommander.usage();
-            return;
+        }
+    }
+
+    public static class TransferRateValidator implements IValueValidator<Integer> {
+
+        public static final int MIN = 0;
+        public static final int MAX = 1000 * 1000 * 10;
+        public static final String MSG = "Must be between " + MIN + " and " + MAX;
+
+        @Override
+        public void validate(String name, Integer value) throws ParameterException {
+            if (value < MIN || value > MAX) {
+                throw new ParameterException("Parameter " + name + ": " + MSG + " (found: " + value + ")");
+            }
+        }
+    }
+
+    public static class DelayValidator implements IValueValidator<Long> {
+
+        public static final long MIN = 10;
+        public static final long MAX = 100 * 1000;
+        public static final String MSG = "Must be between " + MIN + " and " + MAX;
+
+        @Override
+        public void validate(String name, Long value) throws ParameterException {
+            if (value < MIN || value > MAX) {
+                throw new ParameterException("Parameter " + name + ": " + MSG + " (found: " + value + ")");
+            }
+        }
+    }
+
+    public static class TotalSizeValidator implements IValueValidator<Integer> {
+
+        public static final int MIN = 1;
+        public static final int MAX = 1000 * 1000 * 1000;
+        public static final String MSG = "Must be between " + MIN + " and " + MAX;
+
+        @Override
+        public void validate(String name, Integer value) throws ParameterException {
+            if (value < MIN || value > MAX) {
+                throw new ParameterException("Parameter " + name + ": " + MSG + " (found: " + value + ")");
+            }
+        }
+    }
+
+    public static class ChunkCountValidator implements IValueValidator<Integer> {
+
+        public static final int MIN = 1;
+        public static final int MAX = 10 * 1000;
+        public static final String MSG = "Must be between " + MIN + " and " + MAX;
+
+        @Override
+        public void validate(String name, Integer value) throws ParameterException {
+            if (value < MIN || value > MAX) {
+                throw new ParameterException("Parameter " + name + ": " + MSG + " (found: " + value + ")");
+            }
+        }
+    }
+
+    public static class PartsValidator implements IValueValidator<Integer> {
+
+        public static final int MIN = 1;
+        public static final int MAX = 1000;
+        public static final String MSG = "Must be between " + MIN + " and " + MAX;
+
+        @Override
+        public void validate(String name, Integer value) throws ParameterException {
+            if (value < MIN || value > MAX) {
+                throw new ParameterException("Parameter " + name + ": " + MSG + " (found: " + value + ")");
+            }
+        }
+    }
+
+    public static class PeerTypeValidator implements IValueValidator<String> {
+
+        public static final String LOCAL = "Local";
+        public static final String TCP = "TCP";
+        public static final String MSG = "Must be '" + LOCAL + "' or '" + TCP + "'";
+
+        @Override
+        public void validate(String name, String value) throws ParameterException {
+            if (!value.equals(LOCAL) && !value.equals(TCP)) {
+                throw new ParameterException("Parameter " + name + ": " + MSG + " (found: " + value + ")");
+            }
+        }
+    }
+
+    public static class DistributionAlgorithmTypeValidator implements IValueValidator<String> {
+
+        public static final String CHUNKEDSWARM = "chunked-swarm";
+        public static final String LOGARITHMIC = "logarithmic";
+        public static final String MSG = "Must be '" + CHUNKEDSWARM + "' or '" + LOGARITHMIC + "'";
+
+        @Override
+        public void validate(String name, String value) throws ParameterException {
+            if (!value.equals(CHUNKEDSWARM) && !value.equals(LOGARITHMIC)) {
+                throw new ParameterException("Parameter " + name + ": " + MSG + " (found: " + value + ")");
+            }
         }
     }
 }

@@ -29,19 +29,124 @@ import java.util.stream.Collectors;
  */
 public final class UploadHandler extends SimpleChannelInboundHandler<UploadRequestMessage> {
 
+    private final Logger logger = LoggerFactory.getLogger(UploadHandler.class);
+    private final Seeder seeder;
+    private final AtomicCounter parallelUploads;
+    private volatile TransferManager transferManager;
+
+    public UploadHandler(Seeder seeder, AtomicCounter parallelUploads) {
+        Objects.requireNonNull(seeder);
+        Objects.requireNonNull(parallelUploads);
+        this.seeder = seeder;
+        this.parallelUploads = parallelUploads;
+    }
+
     public static Map<PeerId, Transfer> getUploads(ChannelGroup channelGroup) {
         return channelGroup.stream()
-                .map(UploadHandler::get)
-                .map(UploadHandler::getTransferManager)
-                .filter(Optional::isPresent)
-                .map(Optional::get)
-                .collect(Collectors.toMap(
-                        p -> p.getTransfer().getRemotePeerId(),
-                        TransferManager::getTransfer));
+                           .map(UploadHandler::get)
+                           .map(UploadHandler::getTransferManager)
+                           .filter(Optional::isPresent)
+                           .map(Optional::get)
+                           .collect(Collectors.toMap(p -> p.getTransfer().getRemotePeerId(),
+                                                     TransferManager::getTransfer));
     }
 
     public static UploadHandler get(Channel remotePeer) {
         return remotePeer.pipeline().get(UploadHandler.class);
+    }
+
+    private boolean setup(ChannelHandlerContext ctx, TransferManager transferManager) {
+        if (parallelUploads.tryIncrement(seeder.getDistributionAlgorithm().getMaxParallelUploads(seeder))) {
+            this.transferManager = transferManager;
+            ctx.channel().config().setAutoRead(false);
+            return true;
+        }
+        return false;
+    }
+
+    private void reset(ChannelHandlerContext ctx) {
+        transferManager = null;
+        ctx.channel().config().setAutoRead(true);
+        parallelUploads.tryDecrement();
+    }
+
+    public Optional<TransferManager> getTransferManager() {
+        return Optional.ofNullable(transferManager);
+    }
+
+    private boolean isUploadRequestMessageValid(UploadRequestMessage uploadRequestMessage) {
+        return uploadRequestMessage != null &&
+                uploadRequestMessage.getDataInfo() != null &&
+                !uploadRequestMessage.getDataInfo().isEmpty();
+    }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        ctx.close();
+        super.exceptionCaught(ctx, cause);
+    }
+
+    @Override
+    protected void messageReceived(ChannelHandlerContext ctx, UploadRequestMessage msg) throws Exception {
+
+        if (!isUploadRequestMessageValid(msg)) {
+            Exception cause = new IllegalArgumentException("Upload request message null or empty");
+
+            logger.info("Seeder " + seeder.getPeerId() +
+                                " rejected upload " + transferManager, cause);
+
+            ctx.writeAndFlush(new UploadRejectedMessage(cause));
+
+            // HANDLER
+            seeder.getPeerHandler().uploadRejected(seeder, null, cause);
+        } else {
+
+            // Create a new transfer manager
+            TransferManager newTransferManager = seeder.getDataBase()
+                                                       .createTransferManager(Transfer.upload(new NettyPeerId(ctx.channel()),
+                                                                                              msg.getDataInfo()));
+
+            // If the upload is not allowed, reject it!
+            if (!setup(ctx, newTransferManager)) {
+                Exception cause = new IllegalStateException("Maximum number of uploads reached");
+
+                logger.info("Seeder " + seeder.getPeerId() +
+                                    " rejected upload " + transferManager, cause);
+
+                ctx.writeAndFlush(new UploadRejectedMessage(cause));
+
+                // HANDLER
+                seeder.getPeerHandler().uploadRejected(seeder, newTransferManager, cause);
+            } else {
+                logger.debug("Seeder " + seeder.getPeerId() +
+                                     " started upload " + newTransferManager);
+
+                // Upload chunked input
+                ctx.writeAndFlush(new ChunkedDataBaseInput(newTransferManager)).addListener(fut -> {
+                    if (!fut.isSuccess()) {
+                        // Close if this exception was not expected
+                        if (!(fut.cause() instanceof ClosedChannelException)) {
+                            ctx.close();
+
+                            logger.warn("Seeder " + seeder.getPeerId() +
+                                                " failed to upload, connection closed", fut.cause());
+                        }
+                    } else {
+                        logger.debug("Seeder " + seeder.getPeerId() +
+                                             " succeeded upload " + transferManager);
+
+                        // HANDLER
+                        seeder.getPeerHandler().uploadSucceeded(seeder, transferManager);
+
+                        // Restore
+                        reset(ctx);
+                    }
+                });
+
+                // HANDLER
+                seeder.getPeerHandler().uploadStarted(seeder, newTransferManager);
+            }
+        }
     }
 
     private static final class ChunkedDataBaseInput implements ChunkedInput<ByteBuf> {
@@ -82,123 +187,6 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
         @Override
         public long progress() {
             return transferManager.getTransfer().getCompletedSize();
-        }
-    }
-
-
-    private final Logger logger =
-            LoggerFactory.getLogger(UploadHandler.class);
-
-    private final Seeder seeder;
-    private final AtomicCounter parallelUploads;
-    private volatile TransferManager transferManager;
-
-    private boolean setup(ChannelHandlerContext ctx, TransferManager transferManager) {
-        if (parallelUploads.tryIncrement(seeder.getDistributionAlgorithm().getMaxParallelUploads(seeder))) {
-            this.transferManager = transferManager;
-            ctx.channel().config().setAutoRead(false);
-            return true;
-        }
-        return false;
-    }
-
-    private void reset(ChannelHandlerContext ctx) {
-        transferManager = null;
-        ctx.channel().config().setAutoRead(true);
-        parallelUploads.tryDecrement();
-    }
-
-    public UploadHandler(Seeder seeder, AtomicCounter parallelUploads) {
-        Objects.requireNonNull(seeder);
-        Objects.requireNonNull(parallelUploads);
-        this.seeder = seeder;
-        this.parallelUploads = parallelUploads;
-    }
-
-    public Optional<TransferManager> getTransferManager() {
-        return Optional.ofNullable(transferManager);
-    }
-
-    private boolean isUploadRequestMessageValid(UploadRequestMessage uploadRequestMessage) {
-        return uploadRequestMessage != null &&
-                uploadRequestMessage.getDataInfo() != null &&
-                !uploadRequestMessage.getDataInfo().isEmpty();
-    }
-
-    @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        ctx.close();
-        super.exceptionCaught(ctx, cause);
-    }
-
-    @Override
-    protected void messageReceived(ChannelHandlerContext ctx,
-                                   UploadRequestMessage msg) throws Exception {
-
-        if (!isUploadRequestMessageValid(msg)) {
-            Exception cause = new IllegalArgumentException(
-                    "Upload request message null or empty");
-
-            logger.info("Seeder " + seeder.getPeerId() +
-                    " rejected upload " + transferManager, cause);
-
-            ctx.writeAndFlush(new UploadRejectedMessage(cause));
-
-            // HANDLER
-            seeder.getPeerHandler().uploadRejected(
-                    seeder, null, cause);
-        } else {
-
-            // Create a new transfer manager
-            TransferManager newTransferManager = seeder.getDataBase()
-                    .createTransferManager(Transfer.upload(
-                            new NettyPeerId(ctx.channel()),
-                            msg.getDataInfo()));
-
-            // If the upload is not allowed, reject it!
-            if (!setup(ctx, newTransferManager)) {
-                Exception cause = new IllegalStateException(
-                        "Maximum number of uploads reached");
-
-                logger.info("Seeder " + seeder.getPeerId() +
-                        " rejected upload " + transferManager, cause);
-
-                ctx.writeAndFlush(new UploadRejectedMessage(cause));
-
-                // HANDLER
-                seeder.getPeerHandler().uploadRejected(
-                        seeder, newTransferManager, cause);
-            } else {
-                logger.debug("Seeder " + seeder.getPeerId() +
-                        " started upload " + newTransferManager);
-
-                // Upload chunked input
-                ctx.writeAndFlush(new ChunkedDataBaseInput(newTransferManager)).addListener(fut -> {
-                    if (!fut.isSuccess()) {
-                        // Close if this exception was not expected
-                        if (!(fut.cause() instanceof ClosedChannelException)) {
-                            ctx.close();
-
-                            logger.warn("Seeder " + seeder.getPeerId() +
-                                    " failed to upload, connection closed", fut.cause());
-                        }
-                    } else {
-                        logger.debug("Seeder " + seeder.getPeerId() +
-                                " succeeded upload " + transferManager);
-
-                        // HANDLER
-                        seeder.getPeerHandler().uploadSucceeded(
-                                seeder, transferManager);
-
-                        // Restore
-                        reset(ctx);
-                    }
-                });
-
-                // HANDLER
-                seeder.getPeerHandler().uploadStarted(
-                        seeder, newTransferManager);
-            }
         }
     }
 }

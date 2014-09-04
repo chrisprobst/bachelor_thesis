@@ -19,8 +19,7 @@ public class DataInfoState extends PeerState {
     // All already available local data info
     private final Map<String, DataInfo> dataInfo;
 
-    public DataInfoState(Peer peer,
-                         Map<String, DataInfo> dataInfo) {
+    public DataInfoState(Peer peer, Map<String, DataInfo> dataInfo) {
         super(peer);
         Objects.requireNonNull(dataInfo);
         this.dataInfo = Collections.unmodifiableMap(new HashMap<>(dataInfo));
@@ -31,10 +30,12 @@ public class DataInfoState extends PeerState {
      * data info.
      */
     public Optional<Long> getLowestUncompletedDataInfoId() {
-        return getDataInfo().entrySet().stream()
-                .filter(p -> !p.getValue().isCompleted())
-                .sorted(Comparator.comparing(p -> p.getValue().getId()))
-                .findFirst().map(p -> p.getValue().getId());
+        return getDataInfo().entrySet()
+                            .stream()
+                            .filter(p -> !p.getValue().isCompleted())
+                            .sorted(Comparator.comparing(p -> p.getValue().getId()))
+                            .findFirst()
+                            .map(p -> p.getValue().getId());
     }
 
     /**

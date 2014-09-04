@@ -6,7 +6,7 @@ import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.media.transfer.Transfer;
 import de.probst.ba.core.net.peer.AbstractLeecher;
 import de.probst.ba.core.net.peer.PeerId;
-import de.probst.ba.core.net.peer.handler.LeecherHandler;
+import de.probst.ba.core.net.peer.handler.LeecherPeerHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.bandwidth.BandwidthManager;
 import de.probst.ba.core.net.peer.peers.netty.handlers.codec.SimpleCodec;
 import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.CollectHandler;
@@ -36,8 +36,7 @@ import java.util.concurrent.Future;
  */
 public abstract class AbstractNettyLeecher extends AbstractLeecher {
 
-    private final Logger logger =
-            LoggerFactory.getLogger(AbstractNettyLeecher.class);
+    private final Logger logger = LoggerFactory.getLogger(AbstractNettyLeecher.class);
 
 
     private final EventLoopGroup leecherEventLoopGroup;
@@ -46,8 +45,7 @@ public abstract class AbstractNettyLeecher extends AbstractLeecher {
 
     private final BandwidthManager leecherBandwidthManager;
 
-    private final LoggingHandler leecherLogHandler =
-            new LoggingHandler(LogLevel.TRACE);
+    private final LoggingHandler leecherLogHandler = new LoggingHandler(LogLevel.TRACE);
 
     private final ChannelInitializer<Channel> leecherChannelInitializer = new ChannelInitializer<Channel>() {
         @Override
@@ -73,12 +71,37 @@ public abstract class AbstractNettyLeecher extends AbstractLeecher {
 
                     // Logic
                     new DownloadHandler(AbstractNettyLeecher.this),
-                    new CollectHandler(AbstractNettyLeecher.this)
-            );
+                    new CollectHandler(AbstractNettyLeecher.this));
 
             initLeecherChannel(ch);
         }
     };
+
+    protected AbstractNettyLeecher(long maxUploadRate,
+                                   long maxDownloadRate,
+                                   PeerId peerId,
+                                   DataBase dataBase,
+                                   LeecherDistributionAlgorithm leecherDistributionAlgorithm,
+                                   Optional<LeecherPeerHandler> leecherHandler,
+                                   EventLoopGroup leecherEventLoopGroup) {
+
+        super(peerId, dataBase, leecherDistributionAlgorithm, leecherHandler, leecherEventLoopGroup.next());
+
+        Objects.requireNonNull(leecherEventLoopGroup);
+
+        // Save args
+        this.leecherEventLoopGroup = leecherEventLoopGroup;
+
+        // Create internal vars
+        leecherBandwidthManager = new BandwidthManager(this, leecherEventLoopGroup, maxUploadRate, maxDownloadRate);
+        leecherChannelGroupHandler = new ChannelGroupHandler(this.leecherEventLoopGroup.next());
+
+        // Init bootstrap
+        initLeecherBootstrap();
+
+        // Set init future
+        getInitFuture().complete(null);
+    }
 
     protected void initLeecherChannel(Channel ch) {
 
@@ -110,12 +133,10 @@ public abstract class AbstractNettyLeecher extends AbstractLeecher {
     protected void requestDownload(Transfer transfer) {
         Objects.requireNonNull(transfer);
 
-        Channel remotePeer = getLeecherChannelGroup().find(
-                (ChannelId) transfer.getRemotePeerId().getGuid());
+        Channel remotePeer = getLeecherChannelGroup().find((ChannelId) transfer.getRemotePeerId().getGuid());
 
         if (remotePeer == null) {
-            logger.warn("The algorithm requested to " +
-                    "download from a dead peer");
+            logger.warn("The algorithm requested to " + "download from a dead peer");
         } else {
             try {
                 DownloadHandler.download(remotePeer, transfer);
@@ -126,36 +147,6 @@ public abstract class AbstractNettyLeecher extends AbstractLeecher {
     }
 
     protected abstract void initLeecherBootstrap();
-
-    protected AbstractNettyLeecher(
-            long maxUploadRate,
-            long maxDownloadRate,
-            PeerId peerId,
-            DataBase dataBase,
-            LeecherDistributionAlgorithm leecherDistributionAlgorithm,
-            Optional<LeecherHandler> leecherHandler,
-            EventLoopGroup leecherEventLoopGroup) {
-
-        super(peerId, dataBase, leecherDistributionAlgorithm,
-                leecherHandler, leecherEventLoopGroup.next());
-
-        Objects.requireNonNull(leecherEventLoopGroup);
-
-        // Save args
-        this.leecherEventLoopGroup = leecherEventLoopGroup;
-
-        // Create internal vars
-        leecherBandwidthManager = new BandwidthManager(this,
-                leecherEventLoopGroup, maxUploadRate, maxDownloadRate);
-        leecherChannelGroupHandler = new ChannelGroupHandler(
-                this.leecherEventLoopGroup.next());
-
-        // Init bootstrap
-        initLeecherBootstrap();
-
-        // Set init future
-        getInitFuture().complete(null);
-    }
 
     @Override
     public BandwidthStatisticState getBandwidthStatisticState() {

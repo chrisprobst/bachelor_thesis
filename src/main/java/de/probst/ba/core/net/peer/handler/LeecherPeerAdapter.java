@@ -11,8 +11,8 @@ import java.util.Optional;
 /**
  * Created by chrisprobst on 03.09.14.
  */
-public class LeecherAdapter implements LeecherHandler {
-    
+public class LeecherPeerAdapter implements LeecherPeerHandler {
+
     @Override
     public void collected(Leecher leecher, PeerId remotePeerId, Optional<Map<String, DataInfo>> dataInfo) {
 

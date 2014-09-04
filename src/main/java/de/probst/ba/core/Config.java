@@ -7,16 +7,15 @@ import java.util.concurrent.TimeUnit;
  */
 public final class Config {
 
+    private static final TimeUnit DEFAULT_TIME_UNIT = TimeUnit.MILLISECONDS;
+    private static volatile long announceDelay = 75;
+
     private Config() {
     }
-
-    private static volatile long announceDelay = 75;
 
     public static int getDefaultCVSElementWidth() {
         return 30;
     }
-
-    private static final TimeUnit DEFAULT_TIME_UNIT = TimeUnit.MILLISECONDS;
 
     public static TimeUnit getDefaultTimeUnit() {
         return DEFAULT_TIME_UNIT;

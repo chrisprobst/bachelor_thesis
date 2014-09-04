@@ -29,8 +29,7 @@ public interface SeederDistributionAlgorithm extends DistributionAlgorithm {
      * @param remotePeerId The remote peer id.
      * @return An optional data info.
      */
-    Optional<Map<String, DataInfo>> transformUploadDataInfo(Seeder seeder,
-                                                            PeerId remotePeerId);
+    Optional<Map<String, DataInfo>> transformUploadDataInfo(Seeder seeder, PeerId remotePeerId);
 
     /**
      * Returns the maximum number of active uploads running in

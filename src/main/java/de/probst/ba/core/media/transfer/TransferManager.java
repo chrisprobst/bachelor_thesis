@@ -43,10 +43,7 @@ public final class TransferManager {
         this.transfer = transfer;
 
         // Create an iterator for all missing chunks
-        missingChunks = transfer
-                .getDataInfo()
-                .getCompletedChunks()
-                .iterator();
+        missingChunks = transfer.getDataInfo().getCompletedChunks().iterator();
 
         // Setup the next chunk transfer
         // for the first time
@@ -67,9 +64,7 @@ public final class TransferManager {
 
         // Get the next missing chunk index
         chunkIndex = missingChunks.next();
-        chunkSize = getTransfer()
-                .getDataInfo()
-                .getChunkSize(chunkIndex);
+        chunkSize = getTransfer().getDataInfo().getChunkSize(chunkIndex);
         offset = 0;
 
         return true;
@@ -116,23 +111,21 @@ public final class TransferManager {
 
         if (chunkCompleted) {
             // We can complete the chunk
-            dataBase.processBufferAndComplete(
-                    getTransfer().getDataInfo().getHash(),
-                    chunkIndex,
-                    offset,
-                    byteBuf,
-                    bufferLength,
-                    isDownload);
+            dataBase.processBufferAndComplete(getTransfer().getDataInfo().getHash(),
+                                              chunkIndex,
+                                              offset,
+                                              byteBuf,
+                                              bufferLength,
+                                              isDownload);
 
         } else {
             // Fill the chunk
-            dataBase.processBuffer(
-                    getTransfer().getDataInfo().getHash(),
-                    chunkIndex,
-                    offset,
-                    byteBuf,
-                    bufferLength,
-                    isDownload);
+            dataBase.processBuffer(getTransfer().getDataInfo().getHash(),
+                                   chunkIndex,
+                                   offset,
+                                   byteBuf,
+                                   bufferLength,
+                                   isDownload);
         }
 
         // Increase

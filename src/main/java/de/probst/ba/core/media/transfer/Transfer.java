@@ -16,37 +16,19 @@ import java.util.stream.IntStream;
  */
 public final class Transfer implements Serializable {
 
-    public static Transfer upload(PeerId remotePeerId,
-                                  DataInfo dataInfo) {
-        return new Transfer(remotePeerId, dataInfo, false);
-    }
-
-    public static Transfer download(PeerId remotePeerId,
-                                    DataInfo dataInfo) {
-        return new Transfer(remotePeerId, dataInfo, true);
-    }
-
     // The remote peer id
     private final PeerId remotePeerId;
-
     // The data info which describes this transfer
     private final DataInfo dataInfo;
-
     // Tells whether or not this transfer
     // is a download or an upload
     private final boolean download;
-
     // The size of this transfer
     private final long size;
-
     // The completed size of this transfer
     private final long completedSize;
 
-    private Transfer(PeerId remotePeerId,
-                     DataInfo dataInfo,
-                     boolean download,
-                     long size,
-                     long completedSize) {
+    private Transfer(PeerId remotePeerId, DataInfo dataInfo, boolean download, long size, long completedSize) {
         this.remotePeerId = remotePeerId;
         this.dataInfo = dataInfo;
         this.download = download;
@@ -54,16 +36,11 @@ public final class Transfer implements Serializable {
         this.completedSize = completedSize;
     }
 
-    public Transfer(PeerId remotePeerId,
-                    DataInfo dataInfo,
-                    boolean download) {
+    public Transfer(PeerId remotePeerId, DataInfo dataInfo, boolean download) {
         this(remotePeerId, dataInfo, download, 0);
     }
 
-    public Transfer(PeerId remotePeerId,
-                    DataInfo dataInfo,
-                    boolean download,
-                    long completedSize) {
+    public Transfer(PeerId remotePeerId, DataInfo dataInfo, boolean download, long completedSize) {
 
         Objects.requireNonNull(remotePeerId);
         Objects.requireNonNull(dataInfo);
@@ -87,6 +64,14 @@ public final class Transfer implements Serializable {
         this.dataInfo = dataInfo;
         this.download = download;
         this.completedSize = completedSize;
+    }
+
+    public static Transfer upload(PeerId remotePeerId, DataInfo dataInfo) {
+        return new Transfer(remotePeerId, dataInfo, false);
+    }
+
+    public static Transfer download(PeerId remotePeerId, DataInfo dataInfo) {
+        return new Transfer(remotePeerId, dataInfo, true);
     }
 
     /**
@@ -121,12 +106,7 @@ public final class Transfer implements Serializable {
             throw new IllegalArgumentException("size <= 0");
         }
 
-        return new Transfer(
-                getRemotePeerId(),
-                getDataInfo(),
-                isDownload(),
-                getSize(),
-                getCompletedSize() + size);
+        return new Transfer(getRemotePeerId(), getDataInfo(), isDownload(), getSize(), getCompletedSize() + size);
     }
 
     /**
@@ -141,9 +121,7 @@ public final class Transfer implements Serializable {
                 completedChunks.add(chunk);
             }
         }
-        return completedChunks
-                .stream()
-                .mapToInt(Integer::intValue);
+        return completedChunks.stream().mapToInt(Integer::intValue);
     }
 
     /**

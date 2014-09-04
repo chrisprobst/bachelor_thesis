@@ -1,8 +1,8 @@
 package de.probst.ba.core.gui;
 
-import de.probst.ba.core.net.peer.handler.RecordHandler;
 import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.net.peer.PeerId;
+import de.probst.ba.core.net.peer.handler.RecordPeerPeerHandler;
 import de.probst.ba.core.util.io.IOUtil;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -39,23 +39,22 @@ public class RecordViewer extends Application {
 
     public static final int WIDTH = 1300;
     public static final int HEIGHT = 850;
+    private Canvas canvas = new Canvas(WIDTH, HEIGHT);
     public static final int SLIDER_HEIGHT = 150;
-
     public static final double PEER_RADIUS = 46;
 
     // Initialized once
-    private List<RecordHandler.Record> rawRecords;
-    private RecordHandler.Record start;
-    private RecordHandler.Record end;
+    private List<RecordPeerPeerHandler.Record> rawRecords;
+    private RecordPeerPeerHandler.Record start;
+    private RecordPeerPeerHandler.Record end;
     private Map<SocketAddress, Point2D> peerPositions = new HashMap<>();
 
     // Dynamically created
-    private List<RecordHandler.Record> filteredRecords;
+    private List<RecordPeerPeerHandler.Record> filteredRecords;
     private List<Map<SocketAddress, DataInfo>> peerDataInfo;
 
     // Gui stuff
     private Font timeFont = Font.font("monospace");
-    private Canvas canvas = new Canvas(WIDTH, HEIGHT);
     private Slider slider = new Slider();
     private CheckBox collectedCheckBox = new CheckBox("Data Info");
     private CheckBox downloadRejectedCheckBox = new CheckBox("Rejected downloads");
@@ -65,13 +64,27 @@ public class RecordViewer extends Application {
     private CheckBox downloadSucceededCheckBox = new CheckBox("Succeeded downloads");
     private CheckBox clearCheckBox = new CheckBox("Clear canvas");
 
+    // Listener
+    private final ChangeListener<Boolean> guiSetupListener = (observable, oldValue, newValue) -> setupData();
+    private final ChangeListener<Number> sliderUpdateListener = (observable, oldValue, newValue) -> {
+        if (oldValue.intValue() != newValue.intValue()) {
+            renderPeerRecord(newValue.intValue());
+        }
+    };
+    private final ChangeListener<Boolean> clearListener =
+            (observable, oldValue, newValue) -> renderPeerRecord(slider.valueProperty().intValue());
+
+    public static void main(String[] args) {
+        launch(args);
+    }
+
     private void initPeers(File file) throws IOException, ClassNotFoundException {
         rawRecords = IOUtil.deserialize(file);
 
         if (rawRecords.size() > 0) {
             int index = 0;
-            RecordHandler.Record tmp = rawRecords.get(index);
-            if (tmp.getRecordType() == RecordHandler.RecordType.Start) {
+            RecordPeerPeerHandler.Record tmp = rawRecords.get(index);
+            if (tmp.getRecordType() == RecordPeerPeerHandler.RecordType.Start) {
                 start = tmp;
                 rawRecords.remove(index);
             }
@@ -79,17 +92,17 @@ public class RecordViewer extends Application {
 
         if (rawRecords.size() > 0) {
             int index = rawRecords.size() - 1;
-            RecordHandler.Record tmp = rawRecords.get(index);
-            if (tmp.getRecordType() == RecordHandler.RecordType.End) {
+            RecordPeerPeerHandler.Record tmp = rawRecords.get(index);
+            if (tmp.getRecordType() == RecordPeerPeerHandler.RecordType.End) {
                 end = tmp;
                 rawRecords.remove(index);
             }
         }
 
         List<PeerId> peers = rawRecords.stream()
-                .map(RecordHandler.Record::getPeerId)
-                .distinct()
-                .collect(Collectors.toList());
+                                       .map(RecordPeerPeerHandler.Record::getPeerId)
+                                       .distinct()
+                                       .collect(Collectors.toList());
 
         System.out.println("Deserialized records: " + rawRecords.size());
 
@@ -108,13 +121,17 @@ public class RecordViewer extends Application {
         }
     }
 
-    private boolean isValidRecord(RecordHandler.Record record) {
-        return (record.getRecordType() == RecordHandler.RecordType.Collected && collectedCheckBox.isSelected()) ||
-                (record.getRecordType() == RecordHandler.RecordType.DownloadRejected && downloadRejectedCheckBox.isSelected()) ||
-                (record.getRecordType() == RecordHandler.RecordType.DownloadRequested && downloadRequestedCheckBox.isSelected()) ||
-                (record.getRecordType() == RecordHandler.RecordType.DownloadProgressed && downloadProgressedCheckBox.isSelected()) ||
-                (record.getRecordType() == RecordHandler.RecordType.DownloadStarted && downloadStartedCheckBox.isSelected()) ||
-                (record.getRecordType() == RecordHandler.RecordType.DownloadSucceeded && downloadSucceededCheckBox.isSelected());
+    private boolean isValidRecord(RecordPeerPeerHandler.Record record) {
+        return (record.getRecordType() == RecordPeerPeerHandler.RecordType.Collected && collectedCheckBox.isSelected()) ||
+                (record.getRecordType() == RecordPeerPeerHandler.RecordType.DownloadRejected && downloadRejectedCheckBox
+                        .isSelected()) ||
+                (record.getRecordType() == RecordPeerPeerHandler.RecordType.DownloadRequested && downloadRequestedCheckBox
+                        .isSelected()) ||
+                (record.getRecordType() == RecordPeerPeerHandler.RecordType.DownloadProgressed && downloadProgressedCheckBox
+                        .isSelected()) ||
+                (record.getRecordType() == RecordPeerPeerHandler.RecordType.DownloadStarted && downloadStartedCheckBox.isSelected()) ||
+                (record.getRecordType() == RecordPeerPeerHandler.RecordType.DownloadSucceeded && downloadSucceededCheckBox
+                        .isSelected());
     }
 
     private void renderArrow(GraphicsContext gc, Point2D a, Point2D b, double offset, double backOff) {
@@ -128,26 +145,20 @@ public class RecordViewer extends Application {
         Point2D newA = a.add(normDirection.multiply(offset));
         Point2D newB = newA.add(normDirection.multiply(length));
 
-        Point2D ortho = new Point2D(
-                -normDirection.getY(),
-                normDirection.getX());
+        Point2D ortho = new Point2D(-normDirection.getY(), normDirection.getX());
 
         Point2D c = newB.subtract(normDirection.multiply(15));
         Point2D c1 = c.add(ortho.multiply(10));
         Point2D c2 = c.subtract(ortho.multiply(10));
 
-        gc.strokeLine(newA.getX(), newA.getY(),
-                newB.getX(), newB.getY());
+        gc.strokeLine(newA.getX(), newA.getY(), newB.getX(), newB.getY());
 
-        gc.strokeLine(newB.getX(), newB.getY(),
-                c1.getX(), c1.getY());
+        gc.strokeLine(newB.getX(), newB.getY(), c1.getX(), c1.getY());
 
-        gc.strokeLine(newB.getX(), newB.getY(),
-                c2.getX(), c2.getY());
+        gc.strokeLine(newB.getX(), newB.getY(), c2.getX(), c2.getY());
     }
 
-    private void renderCollectedDataInfo(GraphicsContext gc,
-                                         RecordHandler.Record record) {
+    private void renderCollectedDataInfo(GraphicsContext gc, RecordPeerPeerHandler.Record record) {
 
         gc.setStroke(Color.GREEN);
         gc.setLineWidth(1);
@@ -157,8 +168,7 @@ public class RecordViewer extends Application {
         renderArrow(gc, remote, local, PEER_RADIUS, PEER_RADIUS);
     }
 
-    private void renderDownloadRequested(GraphicsContext gc,
-                                         RecordHandler.Record record) {
+    private void renderDownloadRequested(GraphicsContext gc, RecordPeerPeerHandler.Record record) {
         gc.setStroke(Color.BLUE);
         gc.setLineWidth(3);
 
@@ -167,8 +177,7 @@ public class RecordViewer extends Application {
         renderArrow(gc, local, remote, PEER_RADIUS, PEER_RADIUS);
     }
 
-    private void renderDownloadRejected(GraphicsContext gc,
-                                        RecordHandler.Record record) {
+    private void renderDownloadRejected(GraphicsContext gc, RecordPeerPeerHandler.Record record) {
         gc.setStroke(Color.RED);
         gc.setLineWidth(3);
 
@@ -177,7 +186,7 @@ public class RecordViewer extends Application {
         renderArrow(gc, remote, local, PEER_RADIUS, PEER_RADIUS);
     }
 
-    private void renderDownloadStarted(GraphicsContext gc, RecordHandler.Record record) {
+    private void renderDownloadStarted(GraphicsContext gc, RecordPeerPeerHandler.Record record) {
         gc.setStroke(Color.DARKCYAN);
         gc.setLineWidth(3);
 
@@ -186,7 +195,7 @@ public class RecordViewer extends Application {
         renderArrow(gc, remote, local, PEER_RADIUS, PEER_RADIUS);
     }
 
-    private void renderDownloadProgressed(GraphicsContext gc, RecordHandler.Record record) {
+    private void renderDownloadProgressed(GraphicsContext gc, RecordPeerPeerHandler.Record record) {
         gc.setStroke(Color.ORANGE);
         gc.setLineWidth(3);
 
@@ -195,7 +204,7 @@ public class RecordViewer extends Application {
         renderArrow(gc, remote, local, PEER_RADIUS, PEER_RADIUS);
     }
 
-    private void renderDownloadSucceeded(GraphicsContext gc, RecordHandler.Record record) {
+    private void renderDownloadSucceeded(GraphicsContext gc, RecordPeerPeerHandler.Record record) {
         gc.setStroke(Color.DARKGREEN);
         gc.setLineWidth(6);
 
@@ -204,14 +213,7 @@ public class RecordViewer extends Application {
         renderArrow(gc, remote, local, PEER_RADIUS, PEER_RADIUS + 6);
         double radius = PEER_RADIUS + 3;
 
-        gc.strokeArc(
-                local.getX() - radius,
-                local.getY() - radius,
-                radius * 2,
-                radius * 2,
-                0,
-                360,
-                ArcType.OPEN);
+        gc.strokeArc(local.getX() - radius, local.getY() - radius, radius * 2, radius * 2, 0, 360, ArcType.OPEN);
     }
 
     private void renderPercentage(Point2D pos, DataInfo dataInfo) {
@@ -238,8 +240,7 @@ public class RecordViewer extends Application {
         dataInfo.getCompletedChunks().forEach(i -> {
             gc.setLineWidth(12);
             gc.setStroke(Color.LAWNGREEN);
-            gc.strokeArc(x - 40, y - 40, 80, 80,
-                    angle * i - extent, angle + extent, ArcType.CHORD);
+            gc.strokeArc(x - 40, y - 40, 80, 80, angle * i - extent, angle + extent, ArcType.CHORD);
         });
     }
 
@@ -252,7 +253,7 @@ public class RecordViewer extends Application {
             return;
         }
 
-        RecordHandler.Record record = filteredRecords.get(index);
+        RecordPeerPeerHandler.Record record = filteredRecords.get(index);
         GraphicsContext gc = canvas.getGraphicsContext2D();
 
         if (clearCheckBox.isSelected()) {
@@ -280,17 +281,17 @@ public class RecordViewer extends Application {
 
 
         // Render the record
-        if (record.getRecordType() == RecordHandler.RecordType.Collected) {
+        if (record.getRecordType() == RecordPeerPeerHandler.RecordType.Collected) {
             renderCollectedDataInfo(gc, record);
-        } else if (record.getRecordType() == RecordHandler.RecordType.DownloadRequested) {
+        } else if (record.getRecordType() == RecordPeerPeerHandler.RecordType.DownloadRequested) {
             renderDownloadRequested(gc, record);
-        } else if (record.getRecordType() == RecordHandler.RecordType.DownloadStarted) {
+        } else if (record.getRecordType() == RecordPeerPeerHandler.RecordType.DownloadStarted) {
             renderDownloadStarted(gc, record);
-        } else if (record.getRecordType() == RecordHandler.RecordType.DownloadSucceeded) {
+        } else if (record.getRecordType() == RecordPeerPeerHandler.RecordType.DownloadSucceeded) {
             renderDownloadSucceeded(gc, record);
-        } else if (record.getRecordType() == RecordHandler.RecordType.DownloadRejected) {
+        } else if (record.getRecordType() == RecordPeerPeerHandler.RecordType.DownloadRejected) {
             renderDownloadRejected(gc, record);
-        } else if (record.getRecordType() == RecordHandler.RecordType.DownloadProgressed) {
+        } else if (record.getRecordType() == RecordPeerPeerHandler.RecordType.DownloadProgressed) {
             renderDownloadProgressed(gc, record);
         }
 
@@ -301,20 +302,11 @@ public class RecordViewer extends Application {
 
             // Render inner arc
             gc.setFill(Color.LIGHTSTEELBLUE);
-            gc.fillArc(
-                    x - PEER_RADIUS,
-                    y - PEER_RADIUS,
-                    PEER_RADIUS * 2,
-                    PEER_RADIUS * 2,
-                    0,
-                    360,
-                    ArcType.OPEN);
+            gc.fillArc(x - PEER_RADIUS, y - PEER_RADIUS, PEER_RADIUS * 2, PEER_RADIUS * 2, 0, 360, ArcType.OPEN);
 
             // Render the percentage
             if (peerDataInfo.get(index) != null) {
-                renderPercentage(
-                        peer.getValue(),
-                        peerDataInfo.get(index).get(peer.getKey()));
+                renderPercentage(peer.getValue(), peerDataInfo.get(index).get(peer.getKey()));
             }
 
             // Render outer arc
@@ -322,14 +314,7 @@ public class RecordViewer extends Application {
             double newRadius = PEER_RADIUS - outerArcThickness / 2;
             gc.setLineWidth(outerArcThickness);
             gc.setStroke(Color.INDIANRED);
-            gc.strokeArc(
-                    x - newRadius,
-                    y - newRadius,
-                    newRadius * 2,
-                    newRadius * 2,
-                    0,
-                    360,
-                    ArcType.OPEN);
+            gc.strokeArc(x - newRadius, y - newRadius, newRadius * 2, newRadius * 2, 0, 360, ArcType.OPEN);
 
             // Render node name
             gc.setStroke(Color.BLACK);
@@ -338,38 +323,36 @@ public class RecordViewer extends Application {
 
             // Render the data info
             if (peerDataInfo.get(index) != null) {
-                renderChunks(
-                        peer.getValue(),
-                        peerDataInfo.get(index).get(peer.getKey()));
+                renderChunks(peer.getValue(), peerDataInfo.get(index).get(peer.getKey()));
             }
         }
     }
 
     private void setupData() {
-        filteredRecords = rawRecords.stream()
-                .filter(this::isValidRecord)
-                .collect(Collectors.toList());
+        filteredRecords = rawRecords.stream().filter(this::isValidRecord).collect(Collectors.toList());
         peerDataInfo = new ArrayList<>(filteredRecords.size());
 
         // Init peer data info
         Map<SocketAddress, DataInfo> last = null;
-        for (RecordHandler.Record record : filteredRecords) {
-            if (record.getRecordType() == RecordHandler.RecordType.DownloadStarted ||
-                    record.getRecordType() == RecordHandler.RecordType.DownloadProgressed ||
-                    record.getRecordType() == RecordHandler.RecordType.DownloadSucceeded) {
+        for (RecordPeerPeerHandler.Record record : filteredRecords) {
+            if (record.getRecordType() == RecordPeerPeerHandler.RecordType.DownloadStarted ||
+                    record.getRecordType() == RecordPeerPeerHandler.RecordType.DownloadProgressed ||
+                    record.getRecordType() == RecordPeerPeerHandler.RecordType.DownloadSucceeded) {
 
                 if (last != null) {
                     last = new HashMap<>(last);
                     last.merge(record.getPeerId().getAddress(),
-                            record.getTransfer().getCompletedDataInfo(),
-                            DataInfo::union);
+                               record.getTransfer().getCompletedDataInfo(),
+                               DataInfo::union);
                     peerDataInfo.add(last);
                 } else {
                     last = new HashMap<>();
                     for (SocketAddress addr : peerPositions.keySet()) {
-                        last.put(addr, record.getPeerId().getAddress().equals(addr) ?
-                                record.getTransfer().getCompletedDataInfo() :
-                                record.getTransfer().getDataInfo().empty());
+                        last.put(addr,
+                                 record.getPeerId().getAddress().equals(addr) ? record.getTransfer()
+                                                                                      .getCompletedDataInfo() : record.getTransfer()
+                                                                                                                      .getDataInfo()
+                                                                                                                      .empty());
                     }
 
                     peerDataInfo.add(last);
@@ -410,15 +393,6 @@ public class RecordViewer extends Application {
             }
         }
     }
-
-    private final ChangeListener<Boolean> guiSetupListener = (observable, oldValue, newValue) -> setupData();
-    private final ChangeListener<Number> sliderUpdateListener = (observable, oldValue, newValue) -> {
-        if (oldValue.intValue() != newValue.intValue()) {
-            renderPeerRecord(newValue.intValue());
-        }
-    };
-    private final ChangeListener<Boolean> clearListener =
-            (observable, oldValue, newValue) -> renderPeerRecord(slider.valueProperty().intValue());
 
     private void setupGui(Stage primaryStage) {
 
@@ -464,8 +438,7 @@ public class RecordViewer extends Application {
 
         slider.valueProperty().addListener(sliderUpdateListener);
 
-        Scene scene = new Scene(borderPane,
-                WIDTH, HEIGHT + SLIDER_HEIGHT);
+        Scene scene = new Scene(borderPane, WIDTH, HEIGHT + SLIDER_HEIGHT);
         primaryStage.setTitle("Records viewer 0.1");
         primaryStage.setScene(scene);
         primaryStage.show();
@@ -477,9 +450,7 @@ public class RecordViewer extends Application {
         File file = fileChooser.showOpenDialog(primaryStage);
 
         if (file == null) {
-            Dialogs.create()
-                    .message("No file selected")
-                    .showInformation();
+            Dialogs.create().message("No file selected").showInformation();
 
             Platform.exit();
         } else {
@@ -490,16 +461,10 @@ public class RecordViewer extends Application {
             } catch (Exception e) {
                 e.printStackTrace();
 
-                Dialogs.create()
-                        .message("Failed to load file: " + e.getMessage())
-                        .showInformation();
+                Dialogs.create().message("Failed to load file: " + e.getMessage()).showInformation();
 
                 Platform.exit();
             }
         }
-    }
-
-    public static void main(String[] args) {
-        launch(args);
     }
 }

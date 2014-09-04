@@ -67,15 +67,12 @@ public final class DataInfo implements Serializable {
                     String hash,
                     int chunkCount,
                     IntFunction<String> chunkCreator) {
-        this(
-                id,
-                size,
-                name,
-                description,
-                hash,
-                IntStream.range(0, chunkCount)
-                        .mapToObj(chunkCreator)
-                        .collect(Collectors.toList()));
+        this(id,
+             size,
+             name,
+             description,
+             hash,
+             IntStream.range(0, chunkCount).mapToObj(chunkCreator).collect(Collectors.toList()));
     }
 
     public DataInfo(long id,
@@ -107,8 +104,7 @@ public final class DataInfo implements Serializable {
         this.name = name.orElse(null);
         this.description = description.orElse(null);
         this.hash = hash;
-        this.chunkHashes = Collections.unmodifiableList(
-                new ArrayList<>(chunkHashes));
+        this.chunkHashes = Collections.unmodifiableList(new ArrayList<>(chunkHashes));
         chunks = new BitSet(chunkHashes.size());
 
         // Calculate the usual chunk size
@@ -161,14 +157,7 @@ public final class DataInfo implements Serializable {
      * @return
      */
     public DataInfo empty() {
-        return new DataInfo(
-                getId(),
-                getSize(),
-                getName(),
-                getDescription(),
-                getHash(),
-                getChunkHashes()
-        );
+        return new DataInfo(getId(), getSize(), getName(), getDescription(), getHash(), getChunkHashes());
     }
 
     /**
@@ -181,8 +170,7 @@ public final class DataInfo implements Serializable {
      */
     public DataInfo whereChunk(int chunkIndex, boolean value) {
         if (chunkIndex < 0 || chunkIndex >= getChunkCount()) {
-            throw new IndexOutOfBoundsException(
-                    "chunkIndex < 0 || chunkIndex >= getChunkCount()");
+            throw new IndexOutOfBoundsException("chunkIndex < 0 || chunkIndex >= getChunkCount()");
         }
         DataInfo copy = duplicate();
         copy.chunks.set(chunkIndex, value);
@@ -261,9 +249,8 @@ public final class DataInfo implements Serializable {
      */
     public boolean isCompatibleWith(DataInfo other) {
         Objects.requireNonNull(other);
-        return other.getSize() == getSize() &&
-                other.getHash().equals(getHash()) &&
-                other.getChunkHashes().equals(getChunkHashes());
+        return other.getSize() == getSize() && other.getHash().equals(getHash()) && other.getChunkHashes()
+                                                                                         .equals(getChunkHashes());
     }
 
     /**
@@ -383,8 +370,7 @@ public final class DataInfo implements Serializable {
      */
     public long getChunkSize(int chunkIndex) {
         if (chunkIndex < 0 || chunkIndex >= getChunkCount()) {
-            throw new IndexOutOfBoundsException(
-                    "chunkIndex < 0 || chunkIndex >= getChunkCount()");
+            throw new IndexOutOfBoundsException("chunkIndex < 0 || chunkIndex >= getChunkCount()");
         }
         return chunkIndex < getChunkCount() - 1 ? chunkSize : lastChunkSize;
     }
@@ -407,9 +393,7 @@ public final class DataInfo implements Serializable {
      * @return The completed size.
      */
     public long getCompletedSize() {
-        return getCompletedChunks()
-                .mapToLong(this::getChunkSize)
-                .sum();
+        return getCompletedChunks().mapToLong(this::getChunkSize).sum();
     }
 
     /**
@@ -417,9 +401,7 @@ public final class DataInfo implements Serializable {
      * @return The offset according to the chunk index.
      */
     public long getOffset(int chunkIndex) {
-        return IntStream.range(0, chunkIndex)
-                .mapToLong(this::getChunkSize)
-                .sum();
+        return IntStream.range(0, chunkIndex).mapToLong(this::getChunkSize).sum();
     }
 
     /**
@@ -488,8 +470,7 @@ public final class DataInfo implements Serializable {
      */
     public boolean isChunkCompleted(int chunkIndex) {
         if (chunkIndex < 0 || chunkIndex >= getChunkCount()) {
-            throw new IndexOutOfBoundsException(
-                    "chunkIndex < 0 || chunkIndex >= getChunkCount()");
+            throw new IndexOutOfBoundsException("chunkIndex < 0 || chunkIndex >= getChunkCount()");
         }
 
         return chunks.get(chunkIndex);

@@ -6,6 +6,10 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
+ * A peer id is a combination of a socket address
+ * and a guid object which can be anything but should
+ * be unique in one process.
+ * <p>
  * Created by chrisprobst on 18.08.14.
  */
 public class PeerId implements Serializable {

@@ -40,7 +40,5 @@ public interface LeecherDistributionAlgorithm extends DistributionAlgorithm {
      * @param newDataInfo
      * @return
      */
-    boolean addInterest(Leecher leecher,
-                        PeerId remotePeerId,
-                        DataInfo newDataInfo);
+    boolean addInterest(Leecher leecher, PeerId remotePeerId, DataInfo newDataInfo);
 }

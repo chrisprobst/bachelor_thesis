@@ -17,8 +17,7 @@ import java.util.stream.Collectors;
  */
 public abstract class AbstractDataBase implements DataBase {
 
-    protected final Map<String, DataInfo> dataInfo =
-            new HashMap<>();
+    protected final Map<String, DataInfo> dataInfo = new HashMap<>();
 
     protected abstract void doProcessBuffer(DataInfo dataInfo,
                                             int chunkIndex,
@@ -28,9 +27,7 @@ public abstract class AbstractDataBase implements DataBase {
                                             int length,
                                             boolean download) throws IOException;
 
-    protected void doComplete(DataInfo dataInfo,
-                              int chunkIndex,
-                              boolean download) throws IOException {
+    protected void doComplete(DataInfo dataInfo, int chunkIndex, boolean download) throws IOException {
         if (download) {
             this.dataInfo.computeIfPresent(dataInfo.getHash(), (k, v) -> v.withChunk(chunkIndex));
         }
@@ -42,25 +39,22 @@ public abstract class AbstractDataBase implements DataBase {
     }
 
     @Override
-    public synchronized List<Boolean> addInterestsIf(List<DataInfo> dataInfo,
-                                                     Predicate<? super DataInfo> predicate) {
+    public synchronized List<Boolean> addInterestsIf(List<DataInfo> dataInfo, Predicate<? super DataInfo> predicate) {
         Objects.requireNonNull(dataInfo);
         Objects.requireNonNull(predicate);
 
-        return dataInfo.stream()
-                .map(x -> {
-                    if (!x.isEmpty()) {
-                        throw new IllegalArgumentException("!x.isEmpty()");
-                    }
+        return dataInfo.stream().map(x -> {
+            if (!x.isEmpty()) {
+                throw new IllegalArgumentException("!x.isEmpty()");
+            }
 
-                    if (!this.dataInfo.containsKey(x.getHash()) && predicate.test(x)) {
-                        this.dataInfo.put(x.getHash(), x);
-                        return true;
-                    }
+            if (!this.dataInfo.containsKey(x.getHash()) && predicate.test(x)) {
+                this.dataInfo.put(x.getHash(), x);
+                return true;
+            }
 
-                    return false;
-                })
-                .collect(Collectors.toList());
+            return false;
+        }).collect(Collectors.toList());
     }
 
     @Override
@@ -92,7 +86,7 @@ public abstract class AbstractDataBase implements DataBase {
         if (dataInfo == null) {
             String upOrDown = download ? "downloading" : "uploading";
             throw new IllegalArgumentException("Data info for " + upOrDown +
-                    " does not exist. Hash: " + hash);
+                                                       " does not exist. Hash: " + hash);
         }
 
         if (download && dataInfo.isChunkCompleted(chunkIndex)) {
@@ -114,13 +108,11 @@ public abstract class AbstractDataBase implements DataBase {
         }
 
         if (download && byteBuf.readableBytes() < length) {
-            throw new IllegalArgumentException("" +
-                    "download && byteBuf.readableBytes() < length");
+            throw new IllegalArgumentException("" + "download && byteBuf.readableBytes() < length");
         }
 
         if (!download && byteBuf.writableBytes() < length) {
-            throw new IllegalArgumentException("" +
-                    "!download && byteBuf.writableBytes() < length");
+            throw new IllegalArgumentException("" + "!download && byteBuf.writableBytes() < length");
         }
 
         if (offset + length > chunkSize) {
@@ -128,14 +120,7 @@ public abstract class AbstractDataBase implements DataBase {
         }
 
         // Do process the buffer
-        doProcessBuffer(
-                dataInfo,
-                chunkIndex,
-                chunkSize,
-                offset,
-                byteBuf,
-                length,
-                download);
+        doProcessBuffer(dataInfo, chunkIndex, chunkSize, offset, byteBuf, length, download);
     }
 
     @Override
@@ -147,12 +132,7 @@ public abstract class AbstractDataBase implements DataBase {
                                                       boolean download) throws IOException {
 
         // Process buffer as usual
-        processBuffer(
-                hash,
-                chunkIndex,
-                offset, byteBuf,
-                length,
-                download);
+        processBuffer(hash, chunkIndex, offset, byteBuf, length, download);
 
         // Complete the chunk
         doComplete(dataInfo.get(hash), chunkIndex, download);

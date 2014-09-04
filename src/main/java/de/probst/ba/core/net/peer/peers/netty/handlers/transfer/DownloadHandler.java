@@ -30,15 +30,24 @@ import java.util.stream.Collectors;
  */
 public final class DownloadHandler extends ChannelHandlerAdapter {
 
+    private final Logger logger = LoggerFactory.getLogger(DownloadHandler.class);
+    private final Leecher leecher;
+    private final AtomicReference<Transfer> transfer = new AtomicReference<>();
+    private TransferManager transferManager;
+    private boolean receivedBuffer;
+
+    public DownloadHandler(Leecher leecher) {
+        Objects.requireNonNull(leecher);
+        this.leecher = leecher;
+    }
+
     public static Map<PeerId, Transfer> getDownloads(ChannelGroup channelGroup) {
         return channelGroup.stream()
-                .map(DownloadHandler::get)
-                .map(DownloadHandler::getTransfer)
-                .filter(Optional::isPresent)
-                .map(Optional::get)
-                .collect(Collectors.toMap(
-                        Transfer::getRemotePeerId,
-                        Function.<Transfer>identity()));
+                           .map(DownloadHandler::get)
+                           .map(DownloadHandler::getTransfer)
+                           .filter(Optional::isPresent)
+                           .map(Optional::get)
+                           .collect(Collectors.toMap(Transfer::getRemotePeerId, Function.<Transfer>identity()));
     }
 
     public static DownloadHandler get(Channel remotePeer) {
@@ -49,14 +58,12 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
 
         // Make sure it is a download transfer
         if (transfer.isUpload()) {
-            throw new IllegalArgumentException(
-                    "transfer.isUpload()");
+            throw new IllegalArgumentException("transfer.isUpload()");
         }
 
         // Check that the ids are the same
         if (!transfer.getRemotePeerId().equals(new NettyPeerId(remoteChannel))) {
-            throw new IllegalArgumentException(
-                    "!transfer.getRemotePeerId().equals(new NettyPeerId(remoteChannel))");
+            throw new IllegalArgumentException("!transfer.getRemotePeerId().equals(new NettyPeerId(remoteChannel))");
         }
 
         // Mark as downloading
@@ -65,16 +72,6 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
         // Request the transfer
         remoteChannel.pipeline().fireUserEventTriggered(transfer);
     }
-
-    private final Logger logger =
-            LoggerFactory.getLogger(DownloadHandler.class);
-
-    private final Leecher leecher;
-    private final AtomicReference<Transfer> transfer =
-            new AtomicReference<>();
-
-    private TransferManager transferManager;
-    private boolean receivedBuffer;
 
     private void download(Transfer transfer) {
         Objects.requireNonNull(transfer);
@@ -105,11 +102,6 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
         return Optional.ofNullable(transfer.get());
     }
 
-    public DownloadHandler(Leecher leecher) {
-        Objects.requireNonNull(leecher);
-        this.leecher = leecher;
-    }
-
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         ctx.close();
@@ -125,24 +117,23 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
 
             // Write the download request
             ctx.writeAndFlush(new UploadRequestMessage(transferManager.getTransfer().getDataInfo()))
-                    .addListener(fut -> {
-                        if (!fut.isSuccess()) {
-                            // Close if this exception was not expected
-                            if (!(fut.cause() instanceof ClosedChannelException)) {
-                                ctx.close();
+               .addListener(fut -> {
+                   if (!fut.isSuccess()) {
+                       // Close if this exception was not expected
+                       if (!(fut.cause() instanceof ClosedChannelException)) {
+                           ctx.close();
 
-                                logger.warn("Leecher " + leecher.getPeerId() +
-                                        " failed to send upload request, connection closed", fut.cause());
-                            }
-                        }
-                    });
+                           logger.warn("Leecher " + leecher.getPeerId() +
+                                               " failed to send upload request, connection closed", fut.cause());
+                       }
+                   }
+               });
 
             logger.debug("Leecher " + leecher.getPeerId() +
-                    " requested download " + transferManager);
+                                 " requested download " + transferManager);
 
             // HANDLER
-            leecher.getPeerHandler().downloadRequested(
-                    leecher, transferManager);
+            leecher.getPeerHandler().downloadRequested(leecher, transferManager);
         }
 
         super.userEventTriggered(ctx, evt);
@@ -151,16 +142,14 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof UploadRejectedMessage) {
-            UploadRejectedMessage uploadRejectedMessage =
-                    (UploadRejectedMessage) msg;
+            UploadRejectedMessage uploadRejectedMessage = (UploadRejectedMessage) msg;
 
             logger.info("Leecher " + leecher.getPeerId() +
-                    " requested the download " + transferManager +
-                    ", but was rejected");
+                                " requested the download " + transferManager +
+                                ", but was rejected");
 
             // HANDLER
-            leecher.getPeerHandler().downloadRejected(
-                    leecher, transferManager, uploadRejectedMessage.getCause());
+            leecher.getPeerHandler().downloadRejected(leecher, transferManager, uploadRejectedMessage.getCause());
 
             reset();
         } else if (msg instanceof ByteBuf) {
@@ -173,44 +162,39 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
                 if (!receivedBuffer) {
                     receivedBuffer = true;
                     logger.debug("Leecher " + leecher.getPeerId() +
-                            " started download " + transferManager);
+                                         " started download " + transferManager);
 
                     // HANDLER
-                    leecher.getPeerHandler().downloadStarted(
-                            leecher, transferManager);
+                    leecher.getPeerHandler().downloadStarted(leecher, transferManager);
                 }
 
                 // Process the buffer and check for completion
                 boolean completed = update(buffer);
 
                 logger.debug("Leecher " + leecher.getPeerId() +
-                        " progressed download " + transferManager);
+                                     " progressed download " + transferManager);
 
                 // HANDLER
-                leecher.getPeerHandler().downloadProgressed(
-                        leecher, transferManager);
+                leecher.getPeerHandler().downloadProgressed(leecher, transferManager);
 
                 if (completed) {
                     logger.debug("Leecher " + leecher.getPeerId() +
-                            " succeeded download " + transferManager);
+                                         " succeeded download " + transferManager);
 
                     // HANDLER
-                    leecher.getPeerHandler().downloadSucceeded(
-                            leecher, transferManager);
+                    leecher.getPeerHandler().downloadSucceeded(leecher, transferManager);
                 }
 
                 // Query data base
-                DataInfo dataInfo = leecher.getDataBase().get(
-                        transferManager.getTransfer().getDataInfo().getHash());
+                DataInfo dataInfo = leecher.getDataBase().get(transferManager.getTransfer().getDataInfo().getHash());
 
                 if (dataInfo != null && dataInfo.isCompleted()) {
                     logger.info("Leecher " + leecher.getPeerId() +
-                            " completed the data " + dataInfo +
-                            " with " + transferManager);
+                                        " completed the data " + dataInfo +
+                                        " with " + transferManager);
 
                     // HANDLER
-                    leecher.getPeerHandler().dataCompleted(
-                            leecher, dataInfo, transferManager);
+                    leecher.getPeerHandler().dataCompleted(leecher, dataInfo, transferManager);
                 }
 
                 // Ready for next download
@@ -220,7 +204,7 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
                     // Stop consuming here
                     if (buffer.readableBytes() > 0) {
                         logger.warn("Leecher " + leecher.getPeerId() +
-                                " received too much data " + buffer);
+                                            " received too much data " + buffer);
                         break;
                     }
                 }

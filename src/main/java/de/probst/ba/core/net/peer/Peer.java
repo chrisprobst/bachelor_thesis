@@ -11,23 +11,53 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 
 /**
+ * A peer is the base for a seeder or a leecher.
+ * It contains all components necessary for both.
+ * <p>
  * Created by chrisprobst on 15.08.14.
  */
 public interface Peer extends Closeable {
 
+    /**
+     * @return The peer id.
+     */
     PeerId getPeerId();
 
+    /**
+     * @return A completable future which is triggered
+     * when this peer is ready for work.
+     */
     CompletableFuture<?> getInitFuture();
 
+    /**
+     * @return A future which can be used to wait for
+     * the complete close of this peer.
+     */
     Future<?> getCloseFuture();
 
+    /**
+     * @return The data info state created
+     * by the data base.
+     */
     DataInfoState getDataInfoState();
 
+    /**
+     * @return The bandwidth statistic state for this peer.
+     */
     BandwidthStatisticState getBandwidthStatisticState();
 
+    /**
+     * @return The data base for this peer.
+     */
     DataBase getDataBase();
 
+    /**
+     * @return The peer handler for this peer.
+     */
     PeerHandler getPeerHandler();
 
+    /**
+     * @return The distribution algorithm for this peer.
+     */
     DistributionAlgorithm getDistributionAlgorithm();
 }

@@ -31,8 +31,7 @@ public interface DataBase extends Closeable {
      * @param predicate
      * @return
      */
-    List<Boolean> addInterestsIf(List<DataInfo> dataInfo,
-                                 Predicate<? super DataInfo> predicate);
+    List<Boolean> addInterestsIf(List<DataInfo> dataInfo, Predicate<? super DataInfo> predicate);
 
     /**
      * @param hash
@@ -105,13 +104,11 @@ public interface DataBase extends Closeable {
 
         DataInfo existingDataInfo = get(transfer.getDataInfo().getHash());
         if (existingDataInfo == null) {
-            throw new IllegalArgumentException(
-                    "Data info does not exist");
+            throw new IllegalArgumentException("Data info does not exist");
         }
 
         if (transfer.isUpload() && !existingDataInfo.contains(transfer.getDataInfo())) {
-            throw new IllegalArgumentException(
-                    "!download && !existingDataInfo.contains(transfer.getDataInfo())");
+            throw new IllegalArgumentException("!download && !existingDataInfo.contains(transfer.getDataInfo())");
         }
 
         return new TransferManager(this, transfer);

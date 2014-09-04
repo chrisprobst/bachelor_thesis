@@ -20,7 +20,8 @@ public final class SingleFileDataBase extends AbstractDataBase {
 
     public SingleFileDataBase(Path path, DataInfo singleDataInfo) throws IOException {
         Objects.requireNonNull(singleDataInfo);
-        fileChannel = FileChannel.open(path, StandardOpenOption.CREATE, StandardOpenOption.READ, StandardOpenOption.WRITE);
+        fileChannel =
+                FileChannel.open(path, StandardOpenOption.CREATE, StandardOpenOption.READ, StandardOpenOption.WRITE);
         dataInfo.put(singleDataInfo.getHash(), singleDataInfo);
     }
 

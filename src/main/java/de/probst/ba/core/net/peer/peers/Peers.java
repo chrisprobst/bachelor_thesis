@@ -7,8 +7,8 @@ import de.probst.ba.core.net.peer.Leecher;
 import de.probst.ba.core.net.peer.Peer;
 import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.Seeder;
-import de.probst.ba.core.net.peer.handler.LeecherHandler;
-import de.probst.ba.core.net.peer.handler.SeederHandler;
+import de.probst.ba.core.net.peer.handler.LeecherPeerHandler;
+import de.probst.ba.core.net.peer.handler.SeederPeerHandler;
 import de.probst.ba.core.net.peer.peers.netty.LocalNettyLeecher;
 import de.probst.ba.core.net.peer.peers.netty.LocalNettySeeder;
 import de.probst.ba.core.net.peer.peers.netty.TcpNettyLeecher;
@@ -28,10 +28,6 @@ import java.util.concurrent.ExecutionException;
  */
 public final class Peers {
 
-    public enum Type {
-        Local, TCP
-    }
-
     private Peers() {
     }
 
@@ -41,15 +37,23 @@ public final class Peers {
                                 PeerId peerId,
                                 DataBase dataBase,
                                 SeederDistributionAlgorithm seederDistributionAlgorithm,
-                                Optional<SeederHandler> seederHandler,
+                                Optional<SeederPeerHandler> seederHandler,
                                 Optional<EventLoopGroup> seederEventLoopGroup) {
         return type == Type.TCP ?
-                new TcpNettySeeder(maxUploadRate, maxDownloadRate, peerId, dataBase,
-                        seederDistributionAlgorithm, seederHandler,
-                        seederEventLoopGroup.orElseGet(NioEventLoopGroup::new)) :
-                new LocalNettySeeder(maxUploadRate, maxDownloadRate, peerId, dataBase,
-                        seederDistributionAlgorithm, seederHandler,
-                        seederEventLoopGroup.orElseGet(DefaultEventLoopGroup::new));
+                new TcpNettySeeder(maxUploadRate,
+                                   maxDownloadRate,
+                                   peerId,
+                                   dataBase,
+                                   seederDistributionAlgorithm,
+                                   seederHandler,
+                                   seederEventLoopGroup.orElseGet(NioEventLoopGroup::new)) :
+                new LocalNettySeeder(maxUploadRate,
+                                     maxDownloadRate,
+                                     peerId,
+                                     dataBase,
+                                     seederDistributionAlgorithm,
+                                     seederHandler,
+                                     seederEventLoopGroup.orElseGet(DefaultEventLoopGroup::new));
     }
 
     public static Leecher leecher(Type type,
@@ -58,15 +62,23 @@ public final class Peers {
                                   PeerId peerId,
                                   DataBase dataBase,
                                   LeecherDistributionAlgorithm leecherDistributionAlgorithm,
-                                  Optional<LeecherHandler> leecherHandler,
+                                  Optional<LeecherPeerHandler> leecherHandler,
                                   Optional<EventLoopGroup> leecherEventLoopGroup) {
         return type == Type.TCP ?
-                new TcpNettyLeecher(maxUploadRate, maxDownloadRate, peerId, dataBase,
-                        leecherDistributionAlgorithm, leecherHandler,
-                        leecherEventLoopGroup.orElseGet(NioEventLoopGroup::new)) :
-                new LocalNettyLeecher(maxUploadRate, maxDownloadRate, peerId, dataBase,
-                        leecherDistributionAlgorithm, leecherHandler,
-                        leecherEventLoopGroup.orElseGet(DefaultEventLoopGroup::new));
+                new TcpNettyLeecher(maxUploadRate,
+                                    maxDownloadRate,
+                                    peerId,
+                                    dataBase,
+                                    leecherDistributionAlgorithm,
+                                    leecherHandler,
+                                    leecherEventLoopGroup.orElseGet(NioEventLoopGroup::new)) :
+                new LocalNettyLeecher(maxUploadRate,
+                                      maxDownloadRate,
+                                      peerId,
+                                      dataBase,
+                                      leecherDistributionAlgorithm,
+                                      leecherHandler,
+                                      leecherEventLoopGroup.orElseGet(DefaultEventLoopGroup::new));
     }
 
     public static void waitForInit(Collection<Peer> peers) throws ExecutionException, InterruptedException {
@@ -76,7 +88,8 @@ public final class Peers {
         }
     }
 
-    public static void closeAndWait(Collection<Peer> peers) throws ExecutionException, InterruptedException, IOException {
+    public static void closeAndWait(Collection<Peer> peers)
+            throws ExecutionException, InterruptedException, IOException {
         Objects.requireNonNull(peers);
         for (Peer peer : peers) {
             peer.close();
@@ -97,11 +110,15 @@ public final class Peers {
     public static void connectGrid(Collection<Peer> peers) {
         Objects.requireNonNull(peers);
         peers.stream()
-                .filter(leecher -> leecher instanceof Leecher)
-                .forEach(leecher -> peers.stream()
-                        .filter(seeder -> seeder instanceof Seeder)
-                        .filter(seeder -> seeder != leecher)
-                        .filter(seeder -> !seeder.getPeerId().equals(leecher.getPeerId()))
-                        .forEach(seeder -> ((Leecher) leecher).connect(seeder.getPeerId().getAddress())));
+             .filter(leecher -> leecher instanceof Leecher)
+             .forEach(leecher -> peers.stream()
+                                      .filter(seeder -> seeder instanceof Seeder)
+                                      .filter(seeder -> seeder != leecher)
+                                      .filter(seeder -> !seeder.getPeerId().equals(leecher.getPeerId()))
+                                      .forEach(seeder -> ((Leecher) leecher).connect(seeder.getPeerId().getAddress())));
+    }
+
+    public enum Type {
+        Local, TCP
     }
 }

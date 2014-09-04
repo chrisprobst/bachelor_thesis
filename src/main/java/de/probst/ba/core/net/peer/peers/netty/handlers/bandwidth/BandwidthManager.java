@@ -17,6 +17,19 @@ public final class BandwidthManager implements AutoCloseable {
     private final GlobalTrafficShapingHandler globalStatisticHandler;
     private final Peer peer;
 
+    public BandwidthManager(Peer peer,
+                            ScheduledExecutorService scheduledExecutorService,
+                            long maxUploadRate,
+                            long maxDownloadRate) {
+        Objects.requireNonNull(peer);
+
+        this.peer = peer;
+        globalTrafficShapingHandler =
+                new GlobalTrafficShapingHandler(scheduledExecutorService, maxUploadRate, maxDownloadRate, 0);
+
+        globalStatisticHandler = new GlobalTrafficShapingHandler(scheduledExecutorService, 0, 0);
+    }
+
     private long getMaxUploadRate() {
         return globalTrafficShapingHandler.getWriteLimit();
     }
@@ -29,15 +42,11 @@ public final class BandwidthManager implements AutoCloseable {
     }
 
     private long getCurrentUploadRate() {
-        return globalStatisticHandler
-                .trafficCounter()
-                .lastWriteThroughput();
+        return globalStatisticHandler.trafficCounter().lastWriteThroughput();
     }
 
     private long getTotalUploaded() {
-        return globalStatisticHandler
-                .trafficCounter()
-                .cumulativeWrittenBytes();
+        return globalStatisticHandler.trafficCounter().cumulativeWrittenBytes();
     }
 
     private long getMaxDownloadRate() {
@@ -52,36 +61,11 @@ public final class BandwidthManager implements AutoCloseable {
     }
 
     private long getCurrentDownloadRate() {
-        return globalStatisticHandler
-                .trafficCounter()
-                .lastReadThroughput();
+        return globalStatisticHandler.trafficCounter().lastReadThroughput();
     }
 
     private long getTotalDownloaded() {
-        return globalStatisticHandler
-                .trafficCounter()
-                .cumulativeReadBytes();
-    }
-
-    public BandwidthManager(Peer peer,
-                            ScheduledExecutorService scheduledExecutorService,
-                            long maxUploadRate,
-                            long maxDownloadRate) {
-        Objects.requireNonNull(peer);
-
-        this.peer = peer;
-        globalTrafficShapingHandler =
-                new GlobalTrafficShapingHandler(
-                        scheduledExecutorService,
-                        maxUploadRate,
-                        maxDownloadRate,
-                        0);
-
-        globalStatisticHandler =
-                new GlobalTrafficShapingHandler(
-                        scheduledExecutorService,
-                        0,
-                        0);
+        return globalStatisticHandler.trafficCounter().cumulativeReadBytes();
     }
 
     public GlobalTrafficShapingHandler getGlobalStatisticHandler() {
@@ -94,15 +78,15 @@ public final class BandwidthManager implements AutoCloseable {
 
     public BandwidthStatisticState getBandwidthStatisticState() {
         return new BandwidthStatisticState(peer,
-                getMaxUploadRate(),
-                getAverageUploadRate(),
-                getCurrentUploadRate(),
-                getTotalUploaded(),
+                                           getMaxUploadRate(),
+                                           getAverageUploadRate(),
+                                           getCurrentUploadRate(),
+                                           getTotalUploaded(),
 
-                getMaxDownloadRate(),
-                getAverageDownloadRate(),
-                getCurrentDownloadRate(),
-                getTotalDownloaded());
+                                           getMaxDownloadRate(),
+                                           getAverageDownloadRate(),
+                                           getCurrentDownloadRate(),
+                                           getTotalDownloaded());
     }
 
     @Override

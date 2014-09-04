@@ -28,22 +28,23 @@ import java.util.concurrent.ScheduledFuture;
  */
 public final class AnnounceHandler extends ChannelHandlerAdapter implements Runnable {
 
-    private final Logger logger =
-            LoggerFactory.getLogger(AnnounceHandler.class);
+    private final Logger logger = LoggerFactory.getLogger(AnnounceHandler.class);
 
     private final Seeder seeder;
     private ChannelHandlerContext ctx;
     private ScheduledFuture<?> timer;
+
+    public AnnounceHandler(Seeder seeder) {
+        Objects.requireNonNull(seeder);
+        this.seeder = seeder;
+    }
 
     /**
      * Schedule the announce task with this
      * event loop.
      */
     private void schedule() {
-        timer = ctx.channel().eventLoop().schedule(
-                this,
-                Config.getAnnounceDelay(),
-                Config.getDefaultTimeUnit());
+        timer = ctx.channel().eventLoop().schedule(this, Config.getAnnounceDelay(), Config.getDefaultTimeUnit());
     }
 
     /**
@@ -54,11 +55,6 @@ public final class AnnounceHandler extends ChannelHandlerAdapter implements Runn
         if (timer != null) {
             timer.cancel(false);
         }
-    }
-
-    public AnnounceHandler(Seeder seeder) {
-        Objects.requireNonNull(seeder);
-        this.seeder = seeder;
     }
 
     @Override
@@ -81,46 +77,41 @@ public final class AnnounceHandler extends ChannelHandlerAdapter implements Runn
 
         // Transform the data info using the brain
         Optional<Map<String, DataInfo>> transformedDataInfo =
-                seeder.getDistributionAlgorithm().transformUploadDataInfo(
-                        seeder,
-                        peerId);
+                seeder.getDistributionAlgorithm().transformUploadDataInfo(seeder, peerId);
 
         // This is actually a bug in the brain
         if (transformedDataInfo == null) {
             logger.warn("Seeder " + seeder.getPeerId() + " got null for " +
-                    "the transformed data info, check the algorithm");
+                                "the transformed data info, check the algorithm");
             schedule();
             return;
         }
 
         // Create a new data info message
-        DataInfoMessage dataInfoMessage =
-                new DataInfoMessage(transformedDataInfo);
+        DataInfoMessage dataInfoMessage = new DataInfoMessage(transformedDataInfo);
 
         // Write and flush the data info message
-        ctx.writeAndFlush(dataInfoMessage)
-                .addListener(fut -> {
-                    if (fut.isSuccess()) {
-                        // Success, lets schedule again
-                        schedule();
-                    } else {
-                        // Close if this exception was not expected
-                        if (!(fut.cause() instanceof ClosedChannelException)) {
-                            ctx.close();
+        ctx.writeAndFlush(dataInfoMessage).addListener(fut -> {
+            if (fut.isSuccess()) {
+                // Success, lets schedule again
+                schedule();
+            } else {
+                // Close if this exception was not expected
+                if (!(fut.cause() instanceof ClosedChannelException)) {
+                    ctx.close();
 
-                            // log the cause
-                            logger.warn("Seeder " + seeder.getPeerId() +
-                                    " failed to announce data info, " +
-                                    "connection closed", fut.cause());
-                        }
-                    }
-                });
+                    // log the cause
+                    logger.warn("Seeder " + seeder.getPeerId() +
+                                        " failed to announce data info, " +
+                                        "connection closed", fut.cause());
+                }
+            }
+        });
 
         logger.debug("Seeder " + seeder.getPeerId() +
-                " announced " + transformedDataInfo + " to " + peerId);
+                             " announced " + transformedDataInfo + " to " + peerId);
 
         // HANDLER
-        seeder.getPeerHandler().announced(
-                seeder, peerId, dataInfoMessage.getDataInfo());
+        seeder.getPeerHandler().announced(seeder, peerId, dataInfoMessage.getDataInfo());
     }
 }

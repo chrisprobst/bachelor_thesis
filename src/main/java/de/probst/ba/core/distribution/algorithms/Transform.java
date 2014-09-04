@@ -32,14 +32,18 @@ public final class Transform {
      */
     public static List<Tuple2<PeerId, DataInfo>> findFirstByIdAndSort(Map<PeerId, Map<String, DataInfo>> remoteDataInfo,
                                                                       long dataInfoId) {
-        return remoteDataInfo.entrySet().stream()
-                .map(p -> Tuple.of(
-                        p.getKey(),
-                        p.getValue().values().stream().filter(d -> d.getId() == dataInfoId).findFirst()))
-                .filter(p -> p.second().isPresent())
-                .sorted(Comparator.comparing(p -> p.second().get().getCompletedChunkCount()))
-                .map(t -> Tuple.of(t.first(), t.second().get()))
-                .collect(Collectors.toList());
+        return remoteDataInfo.entrySet()
+                             .stream()
+                             .map(p -> Tuple.of(p.getKey(),
+                                                p.getValue()
+                                                 .values()
+                                                 .stream()
+                                                 .filter(d -> d.getId() == dataInfoId)
+                                                 .findFirst()))
+                             .filter(p -> p.second().isPresent())
+                             .sorted(Comparator.comparing(p -> p.second().get().getCompletedChunkCount()))
+                             .map(t -> Tuple.of(t.first(), t.second().get()))
+                             .collect(Collectors.toList());
     }
 
     /**
@@ -53,17 +57,13 @@ public final class Transform {
     public static List<Tuple2<PeerId, DataInfo>> removeFromAllAndSort(List<Tuple2<PeerId, DataInfo>> remoteDataInfo,
                                                                       DataInfo removeDataInfo) {
         // Remove the data info from the list
-        remoteDataInfo.replaceAll(t -> Tuple.of(
-                t.first(),
-                t.second().substract(removeDataInfo)));
+        remoteDataInfo.replaceAll(t -> Tuple.of(t.first(), t.second().substract(removeDataInfo)));
 
         // Do remove empty data info
         remoteDataInfo.removeIf(t -> t.second().isEmpty());
 
         // Reorder
-        Collections.sort(
-                remoteDataInfo,
-                Comparator.comparing(t -> t.second().getCompletedChunkCount()));
+        Collections.sort(remoteDataInfo, Comparator.comparing(t -> t.second().getCompletedChunkCount()));
 
         return remoteDataInfo;
     }

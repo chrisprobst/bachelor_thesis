@@ -11,8 +11,8 @@ import java.util.Optional;
 /**
  * Created by chrisprobst on 03.09.14.
  */
-public class SeederAdapter implements SeederHandler {
-    
+public class SeederPeerAdapter implements SeederPeerHandler {
+
     @Override
     public void announced(Seeder seeder, PeerId remotePeerId, Optional<Map<String, DataInfo>> dataInfo) {
 
