@@ -40,20 +40,20 @@ public final class Peers {
                                 Optional<SeederPeerHandler> seederHandler,
                                 Optional<EventLoopGroup> seederEventLoopGroup) {
         return type == Type.TCP ?
-                new TcpNettySeeder(maxUploadRate,
-                                   maxDownloadRate,
-                                   peerId,
-                                   dataBase,
-                                   seederDistributionAlgorithm,
-                                   seederHandler,
-                                   seederEventLoopGroup.orElseGet(NioEventLoopGroup::new)) :
-                new LocalNettySeeder(maxUploadRate,
-                                     maxDownloadRate,
-                                     peerId,
-                                     dataBase,
-                                     seederDistributionAlgorithm,
-                                     seederHandler,
-                                     seederEventLoopGroup.orElseGet(DefaultEventLoopGroup::new));
+               new TcpNettySeeder(maxUploadRate,
+                                  maxDownloadRate,
+                                  peerId,
+                                  dataBase,
+                                  seederDistributionAlgorithm,
+                                  seederHandler,
+                                  seederEventLoopGroup.orElseGet(NioEventLoopGroup::new)) :
+               new LocalNettySeeder(maxUploadRate,
+                                    maxDownloadRate,
+                                    peerId,
+                                    dataBase,
+                                    seederDistributionAlgorithm,
+                                    seederHandler,
+                                    seederEventLoopGroup.orElseGet(DefaultEventLoopGroup::new));
     }
 
     public static Leecher leecher(Type type,
@@ -65,20 +65,20 @@ public final class Peers {
                                   Optional<LeecherPeerHandler> leecherHandler,
                                   Optional<EventLoopGroup> leecherEventLoopGroup) {
         return type == Type.TCP ?
-                new TcpNettyLeecher(maxUploadRate,
-                                    maxDownloadRate,
-                                    peerId,
-                                    dataBase,
-                                    leecherDistributionAlgorithm,
-                                    leecherHandler,
-                                    leecherEventLoopGroup.orElseGet(NioEventLoopGroup::new)) :
-                new LocalNettyLeecher(maxUploadRate,
-                                      maxDownloadRate,
-                                      peerId,
-                                      dataBase,
-                                      leecherDistributionAlgorithm,
-                                      leecherHandler,
-                                      leecherEventLoopGroup.orElseGet(DefaultEventLoopGroup::new));
+               new TcpNettyLeecher(maxUploadRate,
+                                   maxDownloadRate,
+                                   peerId,
+                                   dataBase,
+                                   leecherDistributionAlgorithm,
+                                   leecherHandler,
+                                   leecherEventLoopGroup.orElseGet(NioEventLoopGroup::new)) :
+               new LocalNettyLeecher(maxUploadRate,
+                                     maxDownloadRate,
+                                     peerId,
+                                     dataBase,
+                                     leecherDistributionAlgorithm,
+                                     leecherHandler,
+                                     leecherEventLoopGroup.orElseGet(DefaultEventLoopGroup::new));
     }
 
     public static void waitForInit(Collection<Peer> peers) throws ExecutionException, InterruptedException {

@@ -479,14 +479,14 @@ public final class DataInfo implements Serializable {
     @Override
     public String toString() {
         return "DataInfo{" +
-                "id=" + id +
-                ", size=" + size +
-                ", name=" + getName() +
-                ", description=" + getDescription() +
-                ", hash='" + hash + '\'' +
-                ", chunkHashes=" + chunkHashes +
-                ", chunks=" + chunks +
-                '}';
+               "id=" + id +
+               ", size=" + size +
+               ", name=" + getName() +
+               ", description=" + getDescription() +
+               ", hash='" + hash + '\'' +
+               ", chunkHashes=" + chunkHashes +
+               ", chunks=" + chunks +
+               '}';
     }
 
     @Override

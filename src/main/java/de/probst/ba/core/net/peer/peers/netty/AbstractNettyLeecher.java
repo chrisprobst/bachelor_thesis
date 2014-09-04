@@ -38,7 +38,6 @@ public abstract class AbstractNettyLeecher extends AbstractLeecher {
 
     private final Logger logger = LoggerFactory.getLogger(AbstractNettyLeecher.class);
 
-
     private final EventLoopGroup leecherEventLoopGroup;
 
     private final ChannelGroupHandler leecherChannelGroupHandler;
@@ -136,7 +135,7 @@ public abstract class AbstractNettyLeecher extends AbstractLeecher {
         Channel remotePeer = getLeecherChannelGroup().find((ChannelId) transfer.getRemotePeerId().getGuid());
 
         if (remotePeer == null) {
-            logger.warn("The algorithm requested to " + "download from a dead peer");
+            logger.warn("The algorithm requested to download from a dead peer");
         } else {
             try {
                 DownloadHandler.download(remotePeer, transfer);

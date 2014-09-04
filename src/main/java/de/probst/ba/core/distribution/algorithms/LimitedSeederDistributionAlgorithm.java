@@ -26,8 +26,9 @@ public class LimitedSeederDistributionAlgorithm implements SeederDistributionAlg
     @Override
     public Optional<Map<String, DataInfo>> transformUploadDataInfo(Seeder seeder, PeerId remotePeerId) {
         SeederDataInfoState seederDataInfoState = seeder.getDataInfoState();
-        int size = seederDataInfoState.getUploads().size();
-        return size < maxParallelUploads ? Optional.of(seederDataInfoState.getDataInfo()) : Optional.empty();
+        return seederDataInfoState.getUploads().size() < maxParallelUploads ?
+               Optional.of(seederDataInfoState.getDataInfo()) :
+               Optional.empty();
     }
 
     @Override

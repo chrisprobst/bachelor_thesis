@@ -31,7 +31,7 @@ public class RecordPeerPeerHandler implements LeecherPeerHandler, SeederPeerHand
         Record end = getEnd();
 
         if (start != null && end != null &&
-                end.getTimeStamp().compareTo(start.getTimeStamp()) < 0) {
+            end.getTimeStamp().compareTo(start.getTimeStamp()) < 0) {
             throw new IllegalStateException("End record before start record");
         }
 
@@ -273,16 +273,16 @@ public class RecordPeerPeerHandler implements LeecherPeerHandler, SeederPeerHand
         @Override
         public String toString() {
             return "Record{" +
-                    "timeStamp=" + timeStamp +
-                    ", recordType=" + recordType +
-                    ", localPeerId=" + localPeerId +
-                    ", remotePeerId=" + remotePeerId +
-                    ", dataInfo=" + dataInfo +
-                    ", addedDataInfo=" + addedDataInfo +
-                    ", completedDataInfo=" + completedDataInfo +
-                    ", transfer=" + transfer +
-                    ", cause=" + cause +
-                    '}';
+                   "timeStamp=" + timeStamp +
+                   ", recordType=" + recordType +
+                   ", localPeerId=" + localPeerId +
+                   ", remotePeerId=" + remotePeerId +
+                   ", dataInfo=" + dataInfo +
+                   ", addedDataInfo=" + addedDataInfo +
+                   ", completedDataInfo=" + completedDataInfo +
+                   ", transfer=" + transfer +
+                   ", cause=" + cause +
+                   '}';
         }
 
         @Override

@@ -146,10 +146,10 @@ public final class TransferManager {
     @Override
     public String toString() {
         return "TransferManager{" +
-                "transfer=" + transfer +
-                ", chunkIndex=" + chunkIndex +
-                ", chunkSize=" + chunkSize +
-                ", offset=" + offset +
-                '}';
+               "transfer=" + transfer +
+               ", chunkIndex=" + chunkIndex +
+               ", chunkSize=" + chunkSize +
+               ", offset=" + offset +
+               '}';
     }
 }

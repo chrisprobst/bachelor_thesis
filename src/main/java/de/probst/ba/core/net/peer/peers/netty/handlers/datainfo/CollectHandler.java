@@ -14,6 +14,7 @@ import io.netty.channel.group.ChannelGroup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -27,12 +28,12 @@ import java.util.stream.IntStream;
 public final class CollectHandler extends SimpleChannelInboundHandler<DataInfoMessage> {
 
     public static Map<PeerId, Map<String, DataInfo>> getRemoteDataInfo(ChannelGroup channelGroup) {
-        return channelGroup.stream()
-                           .map(CollectHandler::get)
-                           .map(CollectHandler::getRemoteDataInfo)
-                           .filter(Optional::isPresent)
-                           .map(Optional::get)
-                           .collect(Collectors.toMap(Tuple::first, Tuple::second));
+        return Collections.unmodifiableMap(channelGroup.stream()
+                                                       .map(CollectHandler::get)
+                                                       .map(CollectHandler::getRemoteDataInfo)
+                                                       .filter(Optional::isPresent)
+                                                       .map(Optional::get)
+                                                       .collect(Collectors.toMap(Tuple::first, Tuple::second)));
     }
 
     public static CollectHandler get(Channel remotePeer) {
@@ -60,19 +61,19 @@ public final class CollectHandler extends SimpleChannelInboundHandler<DataInfoMe
                 remoteDataInfo.values().stream().map(DataInfo::empty).collect(Collectors.toList());
 
         // Try to add interest for all data info
-        List<Boolean> succeeded = leecher.getDataBase()
-                                         .addInterestsIf(dataInfoList,
-                                                         y -> leecher.getDistributionAlgorithm()
-                                                                     .addInterest(leecher, remotePeerId, y));
+        List<Boolean> succeeded = leecher.getDataBase().addInterestsIf(dataInfoList,
+                                                                       y -> leecher.getDistributionAlgorithm()
+                                                                                   .addInterest(leecher,
+                                                                                                remotePeerId,
+                                                                                                y));
 
         IntStream.range(0, succeeded.size())
                  .filter(succeeded::get)
                  .mapToObj(dataInfoList::get)
                  .forEach(addedDataInfo -> {
 
-                     logger.info("Leecher " + leecher.getPeerId() +
-                                         " added interest for " + addedDataInfo +
-                                         " from " + remotePeerId);
+                     logger.info("Leecher " + leecher.getPeerId() + " added interest for " + addedDataInfo + " from " +
+                                 remotePeerId);
 
                      // HANDLER
                      leecher.getPeerHandler().interestAdded(leecher, remotePeerId, addedDataInfo);
@@ -80,10 +81,8 @@ public final class CollectHandler extends SimpleChannelInboundHandler<DataInfoMe
     }
 
     private boolean isDataInfoMessageValid(DataInfoMessage dataInfoMessage) {
-        return dataInfoMessage != null &&
-                dataInfoMessage.getDataInfo() != null &&
-                dataInfoMessage.getDataInfo().isPresent() &&
-                !dataInfoMessage.getDataInfo().get().isEmpty();
+        return dataInfoMessage != null && dataInfoMessage.getDataInfo() != null &&
+               dataInfoMessage.getDataInfo().isPresent() && !dataInfoMessage.getDataInfo().get().isEmpty();
     }
 
     @Override
@@ -107,21 +106,19 @@ public final class CollectHandler extends SimpleChannelInboundHandler<DataInfoMe
                                                                                         Map.Entry::getValue));
 
             // If the remote has only empty data info we cannot load anything
-            remoteDataInfo = filteredRemoteDataInfo.isEmpty() ? Optional.empty() : Optional.of(Tuple.of(peerId,
-                                                                                                        filteredRemoteDataInfo));
+            remoteDataInfo = filteredRemoteDataInfo.isEmpty() ?
+                             Optional.empty() :
+                             Optional.of(Tuple.of(peerId, Collections.unmodifiableMap(filteredRemoteDataInfo)));
         }
 
         Optional<Map<String, DataInfo>> dataInfo = remoteDataInfo.map(Tuple2::second);
 
-        logger.debug("Leecher " + leecher.getPeerId() +
-                             " collected " + dataInfo + " from " + peerId);
+        logger.debug("Leecher " + leecher.getPeerId() + " collected " + dataInfo + " from " + peerId);
 
         // HANDLER
         leecher.getPeerHandler().collected(leecher, peerId, dataInfo);
 
-        // Leech if we received something
-        // which is different from the last
-        // received value
+        // Leech if we received something which is different from the last received value
         dataInfo.filter(m -> !m.isEmpty()).filter(m -> !m.equals(lastRemoteDataInfo)).ifPresent(m -> leecher.leech());
 
         // Save last remote data info

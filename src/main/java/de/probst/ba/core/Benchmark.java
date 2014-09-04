@@ -93,12 +93,12 @@ public class Benchmark {
     private Integer totalSize = 1000 * 1000 * 10;
     @Parameter(names = {"-u", "--upload-rate"},
                description = "The upload rate in bytes per second, " +
-                       "must be less-equal than the download rate (" + TransferRateValidator.MSG + ")",
+                             "must be less-equal than the download rate (" + TransferRateValidator.MSG + ")",
                validateValueWith = TransferRateValidator.class)
     private Integer uploadRate = 1000 * 1000 * 1;
     @Parameter(names = {"-d", "--download-rate"},
                description = "The download rate in bytes per second, " +
-                       "must greater-equal than the upload rate (" + TransferRateValidator.MSG + ")",
+                             "must greater-equal than the upload rate (" + TransferRateValidator.MSG + ")",
                validateValueWith = TransferRateValidator.class)
     private Integer downloadRate = 0;
     @Parameter(names = {"-s", "--seeders"},
@@ -243,11 +243,15 @@ public class Benchmark {
 
         // Create the algorithm factories
         Supplier<SeederDistributionAlgorithm> seederDistributionAlgorithmSupplier =
-                () -> distributionAlgorithmType.equals(DistributionAlgorithmTypeValidator.LOGARITHMIC) ? Algorithms.limitedSeederDistributionAlgorithm(
-                        1) : Algorithms.defaultSeederDistributionAlgorithm();
+                () -> distributionAlgorithmType.equals(DistributionAlgorithmTypeValidator.LOGARITHMIC) ?
+                      Algorithms.limitedSeederDistributionAlgorithm(
+                              1) :
+                      Algorithms.defaultSeederDistributionAlgorithm();
         Supplier<LeecherDistributionAlgorithm> leecherDistributionAlgorithmSupplier =
-                () -> distributionAlgorithmType.equals(DistributionAlgorithmTypeValidator.LOGARITHMIC) ? Algorithms.orderedLogarithmicLeecherDistributionAlgorithm() : Algorithms
-                        .orderedChunkedSwarmLeecherDistributionAlgorithm();
+                () -> distributionAlgorithmType.equals(DistributionAlgorithmTypeValidator.LOGARITHMIC) ?
+                      Algorithms.orderedLogarithmicLeecherDistributionAlgorithm() :
+                      Algorithms
+                              .orderedChunkedSwarmLeecherDistributionAlgorithm();
 
         // Get the peer type
         Peers.Type peerType = Peers.Type.valueOf(peerTypeString);

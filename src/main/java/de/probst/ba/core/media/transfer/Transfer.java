@@ -183,12 +183,12 @@ public final class Transfer implements Serializable {
     @Override
     public String toString() {
         return "Transfer{" +
-                "download=" + download +
-                ", remotePeerId=" + remotePeerId +
-                ", dataInfo=" + dataInfo +
-                ", size=" + size +
-                ", completedSize=" + completedSize +
-                '}';
+               "download=" + download +
+               ", remotePeerId=" + remotePeerId +
+               ", dataInfo=" + dataInfo +
+               ", size=" + size +
+               ", completedSize=" + completedSize +
+               '}';
     }
 
     @Override

@@ -40,9 +40,9 @@ public class PeerId implements Serializable {
     @Override
     public String toString() {
         return "PeerId{" +
-                "address=" + address +
-                ", guid=" + guid +
-                '}';
+               "address=" + address +
+               ", guid=" + guid +
+               '}';
     }
 
     @Override

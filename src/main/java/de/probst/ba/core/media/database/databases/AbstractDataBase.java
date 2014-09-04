@@ -86,7 +86,7 @@ public abstract class AbstractDataBase implements DataBase {
         if (dataInfo == null) {
             String upOrDown = download ? "downloading" : "uploading";
             throw new IllegalArgumentException("Data info for " + upOrDown +
-                                                       " does not exist. Hash: " + hash);
+                                               " does not exist. Hash: " + hash);
         }
 
         if (download && dataInfo.isChunkCompleted(chunkIndex)) {
@@ -108,11 +108,11 @@ public abstract class AbstractDataBase implements DataBase {
         }
 
         if (download && byteBuf.readableBytes() < length) {
-            throw new IllegalArgumentException("" + "download && byteBuf.readableBytes() < length");
+            throw new IllegalArgumentException("download && byteBuf.readableBytes() < length");
         }
 
         if (!download && byteBuf.writableBytes() < length) {
-            throw new IllegalArgumentException("" + "!download && byteBuf.writableBytes() < length");
+            throw new IllegalArgumentException("!download && byteBuf.writableBytes() < length");
         }
 
         if (offset + length > chunkSize) {

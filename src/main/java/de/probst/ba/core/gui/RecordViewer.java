@@ -122,15 +122,20 @@ public class RecordViewer extends Application {
     }
 
     private boolean isValidRecord(RecordPeerPeerHandler.Record record) {
-        return (record.getRecordType() == RecordPeerPeerHandler.RecordType.Collected && collectedCheckBox.isSelected()) ||
-                (record.getRecordType() == RecordPeerPeerHandler.RecordType.DownloadRejected && downloadRejectedCheckBox
+        return (record.getRecordType() == RecordPeerPeerHandler.RecordType.Collected && collectedCheckBox
+                .isSelected()) ||
+               (record.getRecordType() == RecordPeerPeerHandler.RecordType.DownloadRejected && downloadRejectedCheckBox
+                       .isSelected()) ||
+               (record.getRecordType() == RecordPeerPeerHandler.RecordType.DownloadRequested &&
+                downloadRequestedCheckBox
                         .isSelected()) ||
-                (record.getRecordType() == RecordPeerPeerHandler.RecordType.DownloadRequested && downloadRequestedCheckBox
+               (record.getRecordType() == RecordPeerPeerHandler.RecordType.DownloadProgressed &&
+                downloadProgressedCheckBox
                         .isSelected()) ||
-                (record.getRecordType() == RecordPeerPeerHandler.RecordType.DownloadProgressed && downloadProgressedCheckBox
-                        .isSelected()) ||
-                (record.getRecordType() == RecordPeerPeerHandler.RecordType.DownloadStarted && downloadStartedCheckBox.isSelected()) ||
-                (record.getRecordType() == RecordPeerPeerHandler.RecordType.DownloadSucceeded && downloadSucceededCheckBox
+               (record.getRecordType() == RecordPeerPeerHandler.RecordType.DownloadStarted && downloadStartedCheckBox
+                       .isSelected()) ||
+               (record.getRecordType() == RecordPeerPeerHandler.RecordType.DownloadSucceeded &&
+                downloadSucceededCheckBox
                         .isSelected());
     }
 
@@ -336,8 +341,8 @@ public class RecordViewer extends Application {
         Map<SocketAddress, DataInfo> last = null;
         for (RecordPeerPeerHandler.Record record : filteredRecords) {
             if (record.getRecordType() == RecordPeerPeerHandler.RecordType.DownloadStarted ||
-                    record.getRecordType() == RecordPeerPeerHandler.RecordType.DownloadProgressed ||
-                    record.getRecordType() == RecordPeerPeerHandler.RecordType.DownloadSucceeded) {
+                record.getRecordType() == RecordPeerPeerHandler.RecordType.DownloadProgressed ||
+                record.getRecordType() == RecordPeerPeerHandler.RecordType.DownloadSucceeded) {
 
                 if (last != null) {
                     last = new HashMap<>(last);
@@ -348,11 +353,9 @@ public class RecordViewer extends Application {
                 } else {
                     last = new HashMap<>();
                     for (SocketAddress addr : peerPositions.keySet()) {
-                        last.put(addr,
-                                 record.getPeerId().getAddress().equals(addr) ? record.getTransfer()
-                                                                                      .getCompletedDataInfo() : record.getTransfer()
-                                                                                                                      .getDataInfo()
-                                                                                                                      .empty());
+                        last.put(addr, record.getPeerId().getAddress().equals(addr) ?
+                                       record.getTransfer().getCompletedDataInfo() :
+                                       record.getTransfer().getDataInfo().empty());
                     }
 
                     peerDataInfo.add(last);
