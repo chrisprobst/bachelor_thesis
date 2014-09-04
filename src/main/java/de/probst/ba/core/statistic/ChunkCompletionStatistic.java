@@ -11,7 +11,7 @@ import java.util.Queue;
 /**
  * Created by chrisprobst on 22.08.14.
  */
-public final class ChunkCompletionStatistic extends FileStatistic {
+public final class ChunkCompletionStatistic extends AbstractFileStatistic {
 
     private final Queue<Peer> peers;
     private final String dataInfoHash;

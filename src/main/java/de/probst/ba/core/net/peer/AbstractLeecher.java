@@ -7,7 +7,6 @@ import de.probst.ba.core.media.transfer.Transfer;
 import de.probst.ba.core.net.peer.handler.LeecherAdapter;
 import de.probst.ba.core.net.peer.handler.LeecherHandler;
 import de.probst.ba.core.net.peer.state.LeecherDataInfoState;
-import de.probst.ba.core.net.peer.state.LeecherStatisticState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -93,8 +92,6 @@ public abstract class AbstractLeecher extends AbstractPeer implements Leecher {
 
     protected abstract Map<PeerId, Map<String, DataInfo>> getRemoteDataInfo();
 
-    protected abstract long getMaxDownloadRate();
-
     protected AbstractLeecher(PeerId peerId,
                               DataBase dataBase,
                               LeecherDistributionAlgorithm leecherDistributionAlgorithm,
@@ -138,10 +135,5 @@ public abstract class AbstractLeecher extends AbstractPeer implements Leecher {
                 getDataBase().getDataInfo(),
                 getRemoteDataInfo(),
                 downloads);
-    }
-
-    @Override
-    public LeecherStatisticState getStatisticState() {
-        return new LeecherStatisticState(this, getMaxDownloadRate());
     }
 }

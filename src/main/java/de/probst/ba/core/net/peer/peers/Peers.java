@@ -28,41 +28,43 @@ import java.util.concurrent.ExecutionException;
  */
 public final class Peers {
 
-    public enum PeerType {
+    public enum Type {
         Local, TCP
     }
 
     private Peers() {
     }
 
-    public static Seeder seeder(PeerType peerType,
+    public static Seeder seeder(Type type,
                                 long maxUploadRate,
+                                long maxDownloadRate,
                                 PeerId peerId,
                                 DataBase dataBase,
                                 SeederDistributionAlgorithm seederDistributionAlgorithm,
                                 Optional<SeederHandler> seederHandler,
                                 Optional<EventLoopGroup> seederEventLoopGroup) {
-        return peerType == PeerType.TCP ?
-                new TcpNettySeeder(maxUploadRate, peerId, dataBase,
+        return type == Type.TCP ?
+                new TcpNettySeeder(maxUploadRate, maxDownloadRate, peerId, dataBase,
                         seederDistributionAlgorithm, seederHandler,
                         seederEventLoopGroup.orElseGet(NioEventLoopGroup::new)) :
-                new LocalNettySeeder(maxUploadRate, peerId, dataBase,
+                new LocalNettySeeder(maxUploadRate, maxDownloadRate, peerId, dataBase,
                         seederDistributionAlgorithm, seederHandler,
                         seederEventLoopGroup.orElseGet(DefaultEventLoopGroup::new));
     }
 
-    public static Leecher leecher(PeerType peerType,
+    public static Leecher leecher(Type type,
+                                  long maxUploadRate,
                                   long maxDownloadRate,
                                   PeerId peerId,
                                   DataBase dataBase,
                                   LeecherDistributionAlgorithm leecherDistributionAlgorithm,
                                   Optional<LeecherHandler> leecherHandler,
                                   Optional<EventLoopGroup> leecherEventLoopGroup) {
-        return peerType == PeerType.TCP ?
-                new TcpNettyLeecher(maxDownloadRate, peerId, dataBase,
+        return type == Type.TCP ?
+                new TcpNettyLeecher(maxUploadRate, maxDownloadRate, peerId, dataBase,
                         leecherDistributionAlgorithm, leecherHandler,
                         leecherEventLoopGroup.orElseGet(NioEventLoopGroup::new)) :
-                new LocalNettyLeecher(maxDownloadRate, peerId, dataBase,
+                new LocalNettyLeecher(maxUploadRate, maxDownloadRate, peerId, dataBase,
                         leecherDistributionAlgorithm, leecherHandler,
                         leecherEventLoopGroup.orElseGet(DefaultEventLoopGroup::new));
     }

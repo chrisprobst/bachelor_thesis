@@ -5,7 +5,7 @@ import de.probst.ba.core.util.io.CSV;
 /**
  * Created by chrisprobst on 04.09.14.
  */
-public abstract class Statistic {
+public abstract class AbstractStatistic {
 
     protected final CSV csv = new CSV();
 

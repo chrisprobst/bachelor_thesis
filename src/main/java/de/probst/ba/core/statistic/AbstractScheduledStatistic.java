@@ -10,16 +10,16 @@ import java.util.concurrent.TimeUnit;
 /**
  * Created by chrisprobst on 04.09.14.
  */
-public abstract class ScheduledStatistic extends FileStatistic implements Runnable {
+public abstract class AbstractScheduledStatistic extends AbstractFileStatistic implements Runnable {
 
     private final ScheduledExecutorService scheduledExecutorService;
     private final long delay;
 
     private Future<?> schedulation;
 
-    public ScheduledStatistic(Path csvPath,
-                              ScheduledExecutorService scheduledExecutorService,
-                              long delay) {
+    public AbstractScheduledStatistic(Path csvPath,
+                                      ScheduledExecutorService scheduledExecutorService,
+                                      long delay) {
         super(csvPath);
         Objects.requireNonNull(scheduledExecutorService);
         this.scheduledExecutorService = scheduledExecutorService;

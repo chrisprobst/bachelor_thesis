@@ -21,11 +21,12 @@ public final class LocalNettySeeder extends AbstractNettyServerSeeder {
     }
 
     public LocalNettySeeder(long maxUploadRate,
+                            long maxDownloadRate,
                             PeerId peerId,
                             DataBase dataBase,
                             SeederDistributionAlgorithm seederDistributionAlgorithm,
                             Optional<SeederHandler> seederHandler,
                             EventLoopGroup seederEventLoopGroup) {
-        super(maxUploadRate, peerId, dataBase, seederDistributionAlgorithm, seederHandler, seederEventLoopGroup);
+        super(maxUploadRate, maxDownloadRate, peerId, dataBase, seederDistributionAlgorithm, seederHandler, seederEventLoopGroup);
     }
 }

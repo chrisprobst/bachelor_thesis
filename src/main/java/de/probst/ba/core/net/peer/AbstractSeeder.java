@@ -6,7 +6,6 @@ import de.probst.ba.core.media.transfer.Transfer;
 import de.probst.ba.core.net.peer.handler.SeederAdapter;
 import de.probst.ba.core.net.peer.handler.SeederHandler;
 import de.probst.ba.core.net.peer.state.SeederDataInfoState;
-import de.probst.ba.core.net.peer.state.SeederStatisticState;
 import de.probst.ba.core.util.concurrent.AtomicCounter;
 
 import java.util.Map;
@@ -26,14 +25,6 @@ public abstract class AbstractSeeder extends AbstractPeer implements Seeder {
 
     protected abstract Map<PeerId, Transfer> getUploads();
 
-    protected abstract long getMaxUploadRate();
-
-    protected abstract long getAverageUploadRate();
-
-    protected abstract long getCurrentUploadRate();
-
-    protected abstract long getTotalUploaded();
-
     protected AbstractSeeder(PeerId peerId,
                              DataBase dataBase,
                              SeederDistributionAlgorithm seederDistributionAlgorithm,
@@ -49,15 +40,6 @@ public abstract class AbstractSeeder extends AbstractPeer implements Seeder {
     @Override
     public SeederDistributionAlgorithm getDistributionAlgorithm() {
         return (SeederDistributionAlgorithm) super.getDistributionAlgorithm();
-    }
-
-    @Override
-    public SeederStatisticState getStatisticState() {
-        return new SeederStatisticState(this,
-                getMaxUploadRate(),
-                getAverageUploadRate(),
-                getCurrentUploadRate(),
-                getTotalUploaded());
     }
 
     @Override

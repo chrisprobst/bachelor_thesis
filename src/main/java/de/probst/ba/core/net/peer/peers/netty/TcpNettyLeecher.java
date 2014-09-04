@@ -20,12 +20,13 @@ public final class TcpNettyLeecher extends AbstractNettyClientLeecher {
         return NioSocketChannel.class;
     }
 
-    public TcpNettyLeecher(long maxDownloadRate,
+    public TcpNettyLeecher(long maxUploadRate,
+                           long maxDownloadRate,
                            PeerId peerId,
                            DataBase dataBase,
                            LeecherDistributionAlgorithm leecherDistributionAlgorithm,
                            Optional<LeecherHandler> leecherHandler,
                            EventLoopGroup leecherEventLoopGroup) {
-        super(maxDownloadRate, peerId, dataBase, leecherDistributionAlgorithm, leecherHandler, leecherEventLoopGroup);
+        super(maxUploadRate, maxDownloadRate, peerId, dataBase, leecherDistributionAlgorithm, leecherHandler, leecherEventLoopGroup);
     }
 }

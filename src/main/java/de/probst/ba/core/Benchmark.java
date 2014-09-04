@@ -15,10 +15,12 @@ import de.probst.ba.core.media.transfer.TransferManager;
 import de.probst.ba.core.net.peer.Leecher;
 import de.probst.ba.core.net.peer.Peer;
 import de.probst.ba.core.net.peer.PeerId;
+import de.probst.ba.core.net.peer.Seeder;
 import de.probst.ba.core.net.peer.handler.LeecherAdapter;
 import de.probst.ba.core.net.peer.handler.LeecherHandler;
 import de.probst.ba.core.net.peer.peers.Peers;
-import de.probst.ba.core.statistic.UploadBandwidthStatistic;
+import de.probst.ba.core.net.peer.state.BandwidthStatisticState;
+import de.probst.ba.core.statistic.BandwidthStatistic;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -51,7 +53,7 @@ public class Benchmark {
     public static class PeerCountValidator implements IValueValidator<Integer> {
 
         public static final int MIN = 1;
-        public static final int MAX = 16;
+        public static final int MAX = 20;
         public static final String MSG = "Must be between " + MIN + " and " + MAX;
 
         @Override
@@ -328,7 +330,9 @@ public class Benchmark {
                 .toArray(DataInfo[]::new);
 
         // List of peers
-        Queue<Peer> peers = new ConcurrentLinkedQueue<>();
+        Queue<Peer> peerQueue = new ConcurrentLinkedQueue<>();
+        Queue<Peer> seederQueue = new ConcurrentLinkedQueue<>();
+        Queue<Peer> leecherQueue = new ConcurrentLinkedQueue<>();
 
         // The event loop group shared by all peers
         EventLoopGroup eventLoopGroup = new NioEventLoopGroup();
@@ -347,12 +351,19 @@ public class Benchmark {
 
         }
 
-        UploadBandwidthStatistic uploadBandwidthStatistic = null;
+        BandwidthStatistic uploadBandwidthStatistic = null;
+        BandwidthStatistic downloadBandwidthStatistic = null;
 
         // Setup stats
         if (recordStats) {
             Path csvPath = new File(recordsDirectory, distributionAlgorithmType + "TotalUploads.csv").toPath();
-            uploadBandwidthStatistic = new UploadBandwidthStatistic(csvPath, eventLoopGroup, 100, peers, true);
+            Path csvPath2 = new File(recordsDirectory, distributionAlgorithmType + "TotalDownloads.csv").toPath();
+            uploadBandwidthStatistic = new BandwidthStatistic(csvPath, eventLoopGroup, 250, seederQueue,
+                    BandwidthStatisticState::getAverageUploadRate,
+                    BandwidthStatistic.Mode.Peer);
+            downloadBandwidthStatistic = new BandwidthStatistic(csvPath2, eventLoopGroup, 250, leecherQueue,
+                    BandwidthStatisticState::getAverageDownloadRate,
+                    BandwidthStatistic.Mode.Peer);
         }
 
         // Create the algorithm factories
@@ -366,10 +377,10 @@ public class Benchmark {
                         Algorithms.orderedChunkedSwarmLeecherDistributionAlgorithm();
 
         // Get the peer type
-        Peers.PeerType peerType = Peers.PeerType.valueOf(peerTypeString);
+        Peers.Type peerType = Peers.Type.valueOf(peerTypeString);
 
         IntFunction<SocketAddress> seederAddress = i -> {
-            if (peerType == Peers.PeerType.TCP) {
+            if (peerType == Peers.Type.TCP) {
                 return new InetSocketAddress(10000 + i);
             } else {
                 return new LocalAddress("S-" + i);
@@ -377,7 +388,7 @@ public class Benchmark {
         };
 
         IntFunction<SocketAddress> leecherAddress = i -> {
-            if (peerType == Peers.PeerType.TCP) {
+            if (peerType == Peers.Type.TCP) {
                 return new InetSocketAddress(20000 + i);
             } else {
                 return new LocalAddress("L-" + i);
@@ -386,15 +397,19 @@ public class Benchmark {
 
         // Setup all seeders
         for (int i = 0; i < seeders; i++) {
-            peers.add(Peers.seeder(
+            Seeder seeder = Peers.seeder(
                     peerType,
                     uploadRate,
+                    downloadRate,
                     new PeerId(seederAddress.apply(i)),
                     DataBases.fakeDataBase(dataInfo),
                     //DataBases.singleFileDataBase(Paths.get("/Users/chrisprobst/Desktop/data.file"), dataInfo[0]),
                     seederDistributionAlgorithmSupplier.get(),
                     Optional.empty(),
-                    Optional.of(eventLoopGroup)));
+                    Optional.of(eventLoopGroup));
+
+            seederQueue.add(seeder);
+            peerQueue.add(seeder);
         }
 
         // Setup all leechers
@@ -404,33 +419,41 @@ public class Benchmark {
             DataBase dataBase = DataBases.fakeDataBase();
 
             // Add the seeder part
-            peers.add(Peers.seeder(
+            Seeder seeder = Peers.seeder(
                     peerType,
                     uploadRate,
+                    downloadRate,
                     peerId,
                     dataBase,
                     //DataBases.singleFileDataBase(Paths.get("/Users/chrisprobst/Desktop/data.file"), dataInfo[0]),
                     seederDistributionAlgorithmSupplier.get(),
                     Optional.empty(),
-                    Optional.of(eventLoopGroup)));
+                    Optional.of(eventLoopGroup));
+
 
             // Add the leecher part
-            peers.add(Peers.leecher(
+            Leecher leecher = Peers.leecher(
                     peerType,
+                    uploadRate,
                     downloadRate,
                     peerId,
                     dataBase,
                     //DataBases.singleFileDataBase(Paths.get("/Users/chrisprobst/Desktop/data.file"), dataInfo[0]),
                     leecherDistributionAlgorithmSupplier.get(),
                     Optional.of(shutdown),
-                    Optional.of(eventLoopGroup)));
+                    Optional.of(eventLoopGroup));
+
+            seederQueue.add(seeder);
+            leecherQueue.add(leecher);
+            peerQueue.add(seeder);
+            peerQueue.add(leecher);
         }
 
         // Wait for init
-        Peers.waitForInit(peers);
+        Peers.waitForInit(peerQueue);
 
         // Connect every peer to every other peer
-        Peers.connectGrid(peers);
+        Peers.connectGrid(peerQueue);
 
         // Start events
         if (recordEvents) {
@@ -440,6 +463,7 @@ public class Benchmark {
         // Start stats
         if (recordStats) {
             uploadBandwidthStatistic.schedule();
+            downloadBandwidthStatistic.schedule();
         }
 
         // Stop the time
@@ -459,10 +483,14 @@ public class Benchmark {
 
         }
 
-        // Stop  stats
+        // Stop stats
         if (recordStats) {
             if (uploadBandwidthStatistic != null) {
                 uploadBandwidthStatistic.close();
+            }
+
+            if (downloadBandwidthStatistic != null) {
+                downloadBandwidthStatistic.close();
             }
         }
 
@@ -508,7 +536,7 @@ public class Benchmark {
         }
 
         // Wait for close
-        Peers.closeAndWait(peers);
+        Peers.closeAndWait(peerQueue);
 
         Thread.sleep(1000);
     }

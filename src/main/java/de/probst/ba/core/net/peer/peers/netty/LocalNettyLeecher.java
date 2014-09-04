@@ -20,12 +20,13 @@ public final class LocalNettyLeecher extends AbstractNettyClientLeecher {
         return LocalChannel.class;
     }
 
-    public LocalNettyLeecher(long maxDownloadRate,
+    public LocalNettyLeecher(long maxUploadRate,
+                             long maxDownloadRate,
                              PeerId peerId,
                              DataBase dataBase,
                              LeecherDistributionAlgorithm leecherDistributionAlgorithm,
                              Optional<LeecherHandler> leecherHandler,
                              EventLoopGroup leecherEventLoopGroup) {
-        super(maxDownloadRate, peerId, dataBase, leecherDistributionAlgorithm, leecherHandler, leecherEventLoopGroup);
+        super(maxUploadRate, maxDownloadRate, peerId, dataBase, leecherDistributionAlgorithm, leecherHandler, leecherEventLoopGroup);
     }
 }

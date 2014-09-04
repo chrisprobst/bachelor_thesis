@@ -6,10 +6,12 @@ import de.probst.ba.core.media.transfer.Transfer;
 import de.probst.ba.core.net.peer.AbstractSeeder;
 import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.handler.SeederHandler;
+import de.probst.ba.core.net.peer.peers.netty.handlers.bandwidth.BandwidthManager;
 import de.probst.ba.core.net.peer.peers.netty.handlers.codec.SimpleCodec;
 import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.AnnounceHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.group.ChannelGroupHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.UploadHandler;
+import de.probst.ba.core.net.peer.state.BandwidthStatisticState;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -20,8 +22,6 @@ import io.netty.handler.codec.LengthFieldPrepender;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
-import io.netty.handler.traffic.GlobalTrafficShapingHandler;
-import io.netty.handler.traffic.TrafficCounter;
 
 import java.io.IOException;
 import java.util.Map;
@@ -34,8 +34,6 @@ import java.util.concurrent.Future;
  */
 public abstract class AbstractNettySeeder extends AbstractSeeder {
 
-    private final long maxUploadRate;
-
     private final EventLoopGroup seederEventLoopGroup;
 
     private final LoggingHandler seederLogHandler =
@@ -43,9 +41,7 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
 
     private final ChannelGroupHandler seederChannelGroupHandler;
 
-    private final GlobalTrafficShapingHandler globalSeederCurrentUploadRateHandler;
-
-    private final GlobalTrafficShapingHandler globalSeederTrafficShapingHandler;
+    private final BandwidthManager seederBandwidthManager;
 
     private final ChannelInitializer<Channel> seederChannelInitializer = new ChannelInitializer<Channel>() {
         @Override
@@ -54,11 +50,11 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
             // Build pipeline
             ch.pipeline().addLast(
 
-                    // Current upload rate handler
-                    globalSeederCurrentUploadRateHandler,
-
                     // Traffic shaper
-                    globalSeederTrafficShapingHandler,
+                    seederBandwidthManager.getGlobalTrafficShapingHandler(),
+
+                    // Statistic handler
+                    seederBandwidthManager.getGlobalStatisticHandler(),
 
                     // Codec stuff
                     new LengthFieldBasedFrameDecoder(1024 * 1024, 0, 4, 0, 4),
@@ -101,33 +97,6 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
     }
 
     @Override
-    protected long getMaxUploadRate() {
-        return maxUploadRate;
-    }
-
-    @Override
-    protected long getAverageUploadRate() {
-        TrafficCounter trafficCounter = globalSeederCurrentUploadRateHandler.trafficCounter();
-        long bytesWritten = trafficCounter.cumulativeWrittenBytes();
-        double time = (System.currentTimeMillis() - trafficCounter.lastCumulativeTime()) / 1000.0;
-        return time > 0 ? (long) (bytesWritten / time) : 0;
-    }
-
-    @Override
-    protected long getCurrentUploadRate() {
-        return globalSeederCurrentUploadRateHandler
-                .trafficCounter()
-                .lastWriteThroughput();
-    }
-
-    @Override
-    protected long getTotalUploaded() {
-        return globalSeederCurrentUploadRateHandler
-                .trafficCounter()
-                .cumulativeWrittenBytes();
-    }
-
-    @Override
     protected Map<PeerId, Transfer> getUploads() {
         return UploadHandler.getUploads(getSeederChannelGroup());
     }
@@ -137,6 +106,7 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
     protected abstract ChannelFuture createSeederInitFuture();
 
     protected AbstractNettySeeder(long maxUploadRate,
+                                  long maxDownloadRate,
                                   PeerId peerId,
                                   DataBase dataBase,
                                   SeederDistributionAlgorithm seederDistributionAlgorithm,
@@ -148,16 +118,11 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
         Objects.requireNonNull(seederEventLoopGroup);
 
         // Save args
-        this.maxUploadRate = maxUploadRate;
         this.seederEventLoopGroup = seederEventLoopGroup;
 
         // Create internal vars
-        globalSeederTrafficShapingHandler =
-                new GlobalTrafficShapingHandler(
-                        this.seederEventLoopGroup, getMaxUploadRate(), 0, 0);
-        globalSeederCurrentUploadRateHandler =
-                new GlobalTrafficShapingHandler(
-                        this.seederEventLoopGroup, 0, 0, 100);
+        seederBandwidthManager = new BandwidthManager(this,
+                seederEventLoopGroup, maxUploadRate, maxDownloadRate);
         seederChannelGroupHandler = new ChannelGroupHandler(
                 this.seederEventLoopGroup.next());
 
@@ -175,6 +140,11 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
     }
 
     @Override
+    public BandwidthStatisticState getBandwidthStatisticState() {
+        return seederBandwidthManager.getBandwidthStatisticState();
+    }
+
+    @Override
     public Future<?> getCloseFuture() {
         return seederEventLoopGroup.terminationFuture();
     }
@@ -182,7 +152,7 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
     @Override
     public void close() throws IOException {
         seederEventLoopGroup.shutdownGracefully();
-        globalSeederTrafficShapingHandler.release();
+        seederBandwidthManager.close();
         super.close();
     }
 }

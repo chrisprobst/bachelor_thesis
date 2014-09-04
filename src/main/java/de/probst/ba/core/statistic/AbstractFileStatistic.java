@@ -9,11 +9,11 @@ import java.util.Objects;
 /**
  * Created by chrisprobst on 04.09.14.
  */
-public abstract class FileStatistic extends Statistic implements Closeable {
+public abstract class AbstractFileStatistic extends AbstractStatistic implements Closeable {
 
     private final Path csvPath;
 
-    public FileStatistic(Path csvPath) {
+    public AbstractFileStatistic(Path csvPath) {
         Objects.requireNonNull(csvPath);
         this.csvPath = csvPath;
     }

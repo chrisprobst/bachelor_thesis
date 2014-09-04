@@ -70,7 +70,8 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
             LoggerFactory.getLogger(DownloadHandler.class);
 
     private final Leecher leecher;
-    private final AtomicReference<Transfer> transfer = new AtomicReference<>();
+    private final AtomicReference<Transfer> transfer =
+            new AtomicReference<>();
 
     private TransferManager transferManager;
     private boolean receivedBuffer;

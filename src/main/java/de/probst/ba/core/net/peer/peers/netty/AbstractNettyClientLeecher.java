@@ -28,13 +28,14 @@ public abstract class AbstractNettyClientLeecher extends AbstractNettyLeecher {
 
     protected abstract Class<? extends Channel> getLeecherChannelClass();
 
-    protected AbstractNettyClientLeecher(long maxDownloadRate,
+    protected AbstractNettyClientLeecher(long maxUploadRate,
+                                         long maxDownloadRate,
                                          PeerId peerId,
                                          DataBase dataBase,
                                          LeecherDistributionAlgorithm leecherDistributionAlgorithm,
                                          Optional<LeecherHandler> leecherHandler,
                                          EventLoopGroup leecherEventLoopGroup) {
-        super(maxDownloadRate, peerId, dataBase, leecherDistributionAlgorithm, leecherHandler, leecherEventLoopGroup);
+        super(maxUploadRate, maxDownloadRate, peerId, dataBase, leecherDistributionAlgorithm, leecherHandler, leecherEventLoopGroup);
     }
 
     @Override
