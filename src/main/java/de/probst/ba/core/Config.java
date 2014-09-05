@@ -8,7 +8,7 @@ import java.util.concurrent.TimeUnit;
 public final class Config {
 
     private static final TimeUnit DEFAULT_TIME_UNIT = TimeUnit.MILLISECONDS;
-    private static volatile long announceDelay = 75;
+    private static volatile long announceDelay = 100;
 
     private Config() {
     }

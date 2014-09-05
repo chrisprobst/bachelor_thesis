@@ -16,11 +16,14 @@ import de.probst.ba.core.net.peer.Leecher;
 import de.probst.ba.core.net.peer.Peer;
 import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.Seeder;
+import de.probst.ba.core.net.peer.handler.LeecherHandlerList;
 import de.probst.ba.core.net.peer.handler.LeecherPeerAdapter;
 import de.probst.ba.core.net.peer.handler.LeecherPeerHandler;
+import de.probst.ba.core.net.peer.handler.handlers.RecordPeerHandler;
 import de.probst.ba.core.net.peer.peers.Peers;
 import de.probst.ba.core.net.peer.state.BandwidthStatisticState;
 import de.probst.ba.core.statistic.BandwidthStatistic;
+import de.probst.ba.core.util.io.IOUtil;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -211,13 +214,16 @@ public class Benchmark {
         LeecherPeerHandler shutdown = new LeecherPeerAdapter() {
             @Override
             public void dataCompleted(Leecher leecher, DataInfo dataInfo, TransferManager lastTransferManager) {
+
                 countDownLatch.countDown();
             }
         };
 
+        RecordPeerHandler recordPeerHandler = null;
+
         // Setup events
         if (recordEvents) {
-
+            recordPeerHandler = new RecordPeerHandler();
         }
 
         BandwidthStatistic uploadBandwidthStatistic = null;
@@ -232,13 +238,13 @@ public class Benchmark {
                                                               250,
                                                               seederQueue,
                                                               BandwidthStatisticState::getAverageUploadRate,
-                                                              BandwidthStatistic.Mode.Peer);
+                                                              BandwidthStatistic.Mode.TotalMedian);
             downloadBandwidthStatistic = new BandwidthStatistic(csvPath2,
                                                                 eventLoopGroup,
                                                                 250,
                                                                 leecherQueue,
                                                                 BandwidthStatisticState::getAverageDownloadRate,
-                                                                BandwidthStatistic.Mode.Peer);
+                                                                BandwidthStatistic.Mode.TotalMedian);
         }
 
         // Create the algorithm factories
@@ -281,7 +287,7 @@ public class Benchmark {
                                          DataBases.fakeDataBase(dataInfo),
                                          //DataBases.singleFileDataBase(Paths.get("/Users/chrisprobst/Desktop/data.file"), dataInfo[0]),
                                          seederDistributionAlgorithmSupplier.get(),
-                                         Optional.empty(),
+                                         Optional.ofNullable(recordPeerHandler),
                                          Optional.of(eventLoopGroup));
 
             seederQueue.add(seeder);
@@ -300,9 +306,8 @@ public class Benchmark {
                                          downloadRate,
                                          peerId,
                                          dataBase,
-                                         //DataBases.singleFileDataBase(Paths.get("/Users/chrisprobst/Desktop/data.file"), dataInfo[0]),
                                          seederDistributionAlgorithmSupplier.get(),
-                                         Optional.empty(),
+                                         Optional.ofNullable(recordPeerHandler),
                                          Optional.of(eventLoopGroup));
 
 
@@ -312,9 +317,10 @@ public class Benchmark {
                                             downloadRate,
                                             peerId,
                                             dataBase,
-                                            //DataBases.singleFileDataBase(Paths.get("/Users/chrisprobst/Desktop/data.file"), dataInfo[0]),
                                             leecherDistributionAlgorithmSupplier.get(),
-                                            Optional.of(shutdown),
+                                            Optional.of(new LeecherHandlerList().add(Optional.of(shutdown))
+                                                                                .add(Optional.ofNullable(
+                                                                                        recordPeerHandler))),
                                             Optional.of(eventLoopGroup));
 
             seederQueue.add(seeder);
@@ -331,7 +337,7 @@ public class Benchmark {
 
         // Start events
         if (recordEvents) {
-
+            recordPeerHandler.start();
         }
 
         // Start stats
@@ -354,11 +360,15 @@ public class Benchmark {
 
         // Stop events
         if (recordEvents) {
-
+            recordPeerHandler.end();
         }
 
         // Stop stats
         if (recordStats) {
+            // CSV
+            logger.info("[== WRITING STATS ==]");
+            timeStamp = Instant.now();
+
             if (uploadBandwidthStatistic != null) {
                 uploadBandwidthStatistic.close();
             }
@@ -366,47 +376,21 @@ public class Benchmark {
             if (downloadBandwidthStatistic != null) {
                 downloadBandwidthStatistic.close();
             }
-        }
-
-        // Save stats
-        if (recordStats) {
-            /*
-            // CSV
-            logger.info("[== WRITING STATS ==]");
-            timeStamp = Instant.now();
-
-            // Save peer chunks
-            Files.write(new File(recordsDirectory, distributionAlgorithmType + "PeerChunks.csv").toPath(),
-                    peerChunkCompletionCVSDiagnostic.toString().getBytes());
-
-            // Save total chunks
-            Files.write(new File(recordsDirectory, distributionAlgorithmType + "TotalChunks.csv").toPath(),
-                    totalChunkCompletionCVSDiagnostic.toString().getBytes());
-
-            // Save peer upload
-            Files.write(new File(recordsDirectory, distributionAlgorithmType + "PeerUploads.csv").toPath(),
-                    peerUploadCVSDiagnostic.toString().getBytes());
-
-            // Save total upload
-            Files.write(new File(recordsDirectory, distributionAlgorithmType + "TotalUploads.csv").toPath(),
-                    totalUploadCVSDiagnostic.toString().getBytes());
 
             duration = Duration.between(timeStamp, Instant.now());
-            logger.info("[== DONE IN: " + (duration.toMillis() / 1000.0) + " seconds ==]");*/
+            logger.info("[== DONE IN: " + (duration.toMillis() / 1000.0) + " seconds ==]");
         }
 
         // Save events
         if (recordEvents) {
 
-            /*
-            eventRecordDiagnostic.end();
-
             // Get records and serialize
             logger.info("[== WRITING EVENTS ==]");
             timeStamp = Instant.now();
-            IOUtil.serialize(new File(recordsDirectory, distributionAlgorithmType + "Records.dat"), eventRecordDiagnostic.sortAndGetRecords());
+            IOUtil.serialize(new File(recordsDirectory, distributionAlgorithmType + "Records.dat"),
+                             recordPeerHandler.sortAndGetRecords());
             duration = Duration.between(timeStamp, Instant.now());
-            logger.info("[== DONE IN: " + (duration.toMillis() / 1000.0) + " seconds ==]");*/
+            logger.info("[== DONE IN: " + (duration.toMillis() / 1000.0) + " seconds ==]");
         }
 
         // Wait for close

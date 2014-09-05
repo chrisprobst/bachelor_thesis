@@ -1,4 +1,4 @@
-package de.probst.ba.core.net.peer.handler;
+package de.probst.ba.core.net.peer.handler.handlers;
 
 import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.media.transfer.Transfer;
@@ -6,6 +6,8 @@ import de.probst.ba.core.media.transfer.TransferManager;
 import de.probst.ba.core.net.peer.Leecher;
 import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.Seeder;
+import de.probst.ba.core.net.peer.handler.LeecherPeerHandler;
+import de.probst.ba.core.net.peer.handler.SeederPeerHandler;
 
 import java.io.Serializable;
 import java.time.Instant;
@@ -20,7 +22,7 @@ import java.util.stream.Collectors;
 /**
  * Created by chrisprobst on 18.08.14.
  */
-public class RecordPeerPeerHandler implements LeecherPeerHandler, SeederPeerHandler {
+public class RecordPeerHandler implements LeecherPeerHandler, SeederPeerHandler {
 
     private final Queue<Record> records = new ConcurrentLinkedQueue<>();
     private volatile Record start;
