@@ -1,6 +1,5 @@
 package de.probst.ba.core.statistic;
 
-import de.probst.ba.core.Config;
 import de.probst.ba.core.net.peer.Peer;
 import de.probst.ba.core.net.peer.state.BandwidthStatisticState;
 
@@ -35,13 +34,13 @@ public final class BandwidthStatistic extends AbstractScheduledStatistic {
     }
 
     private void writeHeader() {
-        csv.writeElement("Time", Config.getDefaultCVSElementWidth());
+        csv.writeElement("Time");
 
         if (mode != Mode.Peer) {
-            csv.writeElement("Total bandwidth", Config.getDefaultCVSElementWidth());
+            csv.writeElement("Total bandwidth");
         } else {
             peers.stream()
-                 .forEach(peer -> csv.writeElement(peer.getPeerId().getAddress(), Config.getDefaultCVSElementWidth()));
+                 .forEach(peer -> csv.writeElement(peer.getPeerId().getAddress()));
         }
 
         csv.writeLine();
@@ -54,13 +53,12 @@ public final class BandwidthStatistic extends AbstractScheduledStatistic {
         }
         double upload = mode == Mode.TotalMedian ? totalUpload / peers.size() : totalUpload;
 
-        csv.writeElement(upload, Config.getDefaultCVSElementWidth());
+        csv.writeElement(upload);
     }
 
     private void writeIndividualBandwidth() {
         peers.stream()
-             .forEach(peer -> csv.writeElement(bandwidthMapper.apply(peer.getBandwidthStatisticState()).doubleValue(),
-                                               Config.getDefaultCVSElementWidth()));
+             .forEach(peer -> csv.writeElement(bandwidthMapper.apply(peer.getBandwidthStatisticState()).doubleValue()));
     }
 
     @Override
@@ -69,7 +67,7 @@ public final class BandwidthStatistic extends AbstractScheduledStatistic {
             writeHeader();
         }
 
-        csv.writeDuration(Config.getDefaultCVSElementWidth());
+        csv.writeDuration();
 
         if (mode == Mode.Peer) {
             writeIndividualBandwidth();

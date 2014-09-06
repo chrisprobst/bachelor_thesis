@@ -1,6 +1,5 @@
 package de.probst.ba.core.statistic;
 
-import de.probst.ba.core.Config;
 import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.net.peer.Peer;
 
@@ -26,13 +25,13 @@ public final class ChunkCompletionStatistic extends AbstractFileStatistic {
     }
 
     private void writeHeader() {
-        csv.writeElement("Time", Config.getDefaultCVSElementWidth());
+        csv.writeElement("Time");
 
         if (total) {
-            csv.writeElement("Total percentage", Config.getDefaultCVSElementWidth());
+            csv.writeElement("Total percentage");
         } else {
             for (Peer peer : peers) {
-                csv.writeElement(peer.getPeerId().getAddress(), Config.getDefaultCVSElementWidth());
+                csv.writeElement(peer.getPeerId().getAddress());
             }
         }
 
@@ -50,16 +49,16 @@ public final class ChunkCompletionStatistic extends AbstractFileStatistic {
             cnt++;
         }
         totalPercentage /= cnt;
-        csv.writeElement(totalPercentage, Config.getDefaultCVSElementWidth());
+        csv.writeElement(totalPercentage);
     }
 
     private void writeIndividualStatus() {
         for (Peer peer : peers) {
             DataInfo dataInfo = peer.getDataBase().get(dataInfoHash);
             if (dataInfo != null) {
-                csv.writeElement(dataInfo.getPercentage(), Config.getDefaultCVSElementWidth());
+                csv.writeElement(dataInfo.getPercentage());
             } else {
-                csv.writeElement(0.0, Config.getDefaultCVSElementWidth());
+                csv.writeElement(0.0);
             }
         }
     }
@@ -70,7 +69,7 @@ public final class ChunkCompletionStatistic extends AbstractFileStatistic {
             writeHeader();
         }
 
-        csv.writeDuration(Config.getDefaultCVSElementWidth());
+        csv.writeDuration();
 
         if (total) {
             writeTotalStatus();

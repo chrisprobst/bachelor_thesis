@@ -2,6 +2,8 @@ package de.probst.ba.core.media.database.databases;
 
 import de.probst.ba.core.media.database.DataBase;
 import de.probst.ba.core.media.database.DataInfo;
+import de.probst.ba.core.util.collections.Tuple;
+import de.probst.ba.core.util.collections.Tuple2;
 import io.netty.buffer.ByteBuf;
 
 import java.io.IOException;
@@ -9,6 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -30,6 +33,9 @@ public abstract class AbstractDataBase implements DataBase {
     protected void doComplete(DataInfo dataInfo, int chunkIndex, boolean download) throws IOException {
         if (download) {
             this.dataInfo.computeIfPresent(dataInfo.getHash(), (k, v) -> v.withChunk(chunkIndex));
+
+            Map<String, DataInfo> newDataInfo = getDataInfo();
+            listeners.values().forEach(c -> c.accept(newDataInfo));
         }
     }
 
@@ -62,11 +68,20 @@ public abstract class AbstractDataBase implements DataBase {
         return dataInfo.get(hash);
     }
 
-    @Override
-    public synchronized void remove(String hash) throws IOException {
-        Objects.requireNonNull(hash);
+    private long tokens = 0;
+    private final Map<Long, Consumer<Map<String, DataInfo>>> listeners = new HashMap<>();
 
-        dataInfo.remove(hash);
+    @Override
+    public synchronized Tuple2<Long, Map<String, DataInfo>> subscribe(Consumer<Map<String, DataInfo>> consumer) {
+        Objects.requireNonNull(consumer);
+        long token = tokens++;
+        listeners.put(token, consumer);
+        return Tuple.of(token, getDataInfo());
+    }
+
+    @Override
+    public synchronized void cancel(long token) {
+        listeners.remove(token);
     }
 
     @Override

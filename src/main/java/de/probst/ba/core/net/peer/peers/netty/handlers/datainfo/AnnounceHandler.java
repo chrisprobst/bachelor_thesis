@@ -1,11 +1,11 @@
 package de.probst.ba.core.net.peer.peers.netty.handlers.datainfo;
 
-import de.probst.ba.core.Config;
 import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.Seeder;
 import de.probst.ba.core.net.peer.peers.netty.NettyPeerId;
 import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.messages.DataInfoMessage;
+import de.probst.ba.core.util.collections.Tuple2;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
@@ -15,7 +15,6 @@ import java.nio.channels.ClosedChannelException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.ScheduledFuture;
 
 /**
  * Periodically announces the data info from the
@@ -26,71 +25,34 @@ import java.util.concurrent.ScheduledFuture;
  * <p>
  * Created by chrisprobst on 13.08.14.
  */
-public final class AnnounceHandler extends ChannelHandlerAdapter implements Runnable {
+public final class AnnounceHandler extends ChannelHandlerAdapter {
 
     private final Logger logger = LoggerFactory.getLogger(AnnounceHandler.class);
 
     private final Seeder seeder;
+    private long token;
     private ChannelHandlerContext ctx;
-    private ScheduledFuture<?> timer;
     private Map<String, DataInfo> lastTransformedDataInfo = Collections.emptyMap();
 
-    public AnnounceHandler(Seeder seeder) {
-        Objects.requireNonNull(seeder);
-        this.seeder = seeder;
-    }
+    private void doAnnounce(Map<String, DataInfo> dataInfo) {
+        Objects.requireNonNull(dataInfo);
 
-    /**
-     * Schedule the announce task with this
-     * event loop.
-     */
-    private void schedule() {
-        timer = ctx.channel().eventLoop().schedule(this, Config.getAnnounceDelay(), Config.getDefaultTimeUnit());
-    }
-
-    /**
-     * Cancel the running task,
-     * if present.
-     */
-    private void cancel() {
-        if (timer != null) {
-            timer.cancel(false);
-        }
-    }
-
-    @Override
-    public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        this.ctx = ctx;
-        schedule();
-        super.channelActive(ctx);
-    }
-
-    @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        cancel();
-        super.channelInactive(ctx);
-    }
-
-    @Override
-    public void run() {
         // Create the netty seeder id
         PeerId peerId = new NettyPeerId(ctx.channel());
 
         // Transform the data info using the algorithm
         Map<String, DataInfo> transformedDataInfo =
-                seeder.getDistributionAlgorithm().transformUploadDataInfo(seeder, peerId);
+                seeder.getDistributionAlgorithm().transformUploadDataInfo(seeder, dataInfo, peerId);
 
         // This is actually a bug in the algorithm
         if (transformedDataInfo == null) {
             logger.warn(
                     "Seeder " + seeder.getPeerId() + " got null for the transformed data info, check the algorithm");
-            schedule();
             return;
         }
 
         // Do not announce the same data info twice
         if (lastTransformedDataInfo.equals(transformedDataInfo)) {
-            schedule();
             return;
         }
 
@@ -100,20 +62,22 @@ public final class AnnounceHandler extends ChannelHandlerAdapter implements Runn
         // Create a new data info message
         DataInfoMessage dataInfoMessage = new DataInfoMessage(transformedDataInfo);
 
+        if (!dataInfoMessage.isValid()) {
+            logger.warn("Seeder " + seeder.getPeerId() +
+                        " got a transformed data info which is not valid, check the algorithm");
+            return;
+        }
+
         // Write and flush the data info message
         ctx.writeAndFlush(dataInfoMessage).addListener(fut -> {
-            if (fut.isSuccess()) {
-                // Success, lets schedule again
-                schedule();
-            } else {
-                // Close if this exception was not expected
-                if (!(fut.cause() instanceof ClosedChannelException)) {
-                    ctx.close();
 
-                    // log the cause
-                    logger.warn("Seeder " + seeder.getPeerId() + " failed to announce data info, connection closed",
-                                fut.cause());
-                }
+            // Close if this exception was not expected
+            if (!fut.isSuccess() && !(fut.cause() instanceof ClosedChannelException)) {
+                ctx.close();
+
+                // log the cause
+                logger.warn("Seeder " + seeder.getPeerId() + " failed to announce data info, connection closed",
+                            fut.cause());
             }
         });
 
@@ -121,5 +85,36 @@ public final class AnnounceHandler extends ChannelHandlerAdapter implements Runn
 
         // HANDLER
         seeder.getPeerHandler().announced(seeder, peerId, dataInfoMessage.getDataInfo());
+    }
+
+    public AnnounceHandler(Seeder seeder) {
+        Objects.requireNonNull(seeder);
+        this.seeder = seeder;
+    }
+
+    public void announce(Map<String, DataInfo> dataInfo) {
+        Objects.requireNonNull(dataInfo);
+        ctx.channel().eventLoop().execute(() -> doAnnounce(dataInfo));
+    }
+
+    @Override
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        // Subscribe to new data info
+        Tuple2<Long, Map<String, DataInfo>> tuple = seeder.getDataBase().subscribe(this::announce);
+
+        // Init vars
+        this.ctx = ctx;
+        token = tuple.first();
+
+        // Init first state
+        doAnnounce(tuple.second());
+        super.channelActive(ctx);
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        // Cancel subscription
+        seeder.getDataBase().cancel(token);
+        super.channelInactive(ctx);
     }
 }

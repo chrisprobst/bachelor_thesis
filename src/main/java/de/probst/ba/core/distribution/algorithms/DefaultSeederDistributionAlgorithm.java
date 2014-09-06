@@ -13,8 +13,10 @@ import java.util.Map;
 public class DefaultSeederDistributionAlgorithm implements SeederDistributionAlgorithm {
 
     @Override
-    public Map<String, DataInfo> transformUploadDataInfo(Seeder seeder, PeerId remotePeerId) {
-        return seeder.getDataBase().getDataInfo();
+    public Map<String, DataInfo> transformUploadDataInfo(Seeder seeder,
+                                                         Map<String, DataInfo> dataInfo,
+                                                         PeerId remotePeerId) {
+        return dataInfo;
     }
 
     @Override

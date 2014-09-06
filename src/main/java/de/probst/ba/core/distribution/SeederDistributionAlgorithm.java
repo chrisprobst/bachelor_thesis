@@ -25,10 +25,11 @@ public interface SeederDistributionAlgorithm extends DistributionAlgorithm {
      * logarithmic strategy where every peer only uploads data to one other peer.
      *
      * @param seeder
+     * @param dataInfo
      * @param remotePeerId The remote peer id.
      * @return The data info.
      */
-    Map<String, DataInfo> transformUploadDataInfo(Seeder seeder, PeerId remotePeerId);
+    Map<String, DataInfo> transformUploadDataInfo(Seeder seeder, Map<String, DataInfo> dataInfo, PeerId remotePeerId);
 
     /**
      * Returns the maximum number of active uploads running in

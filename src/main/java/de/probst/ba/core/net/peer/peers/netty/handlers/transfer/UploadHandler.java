@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
  */
 public final class UploadHandler extends SimpleChannelInboundHandler<UploadRequestMessage> {
 
-    public static Map<PeerId, Transfer> getUploads(ChannelGroup channelGroup) {
+    public static Map<PeerId, Transfer> collectUploads(ChannelGroup channelGroup) {
         return Collections.unmodifiableMap(channelGroup.stream()
                                                        .map(UploadHandler::get)
                                                        .map(UploadHandler::getTransferManager)

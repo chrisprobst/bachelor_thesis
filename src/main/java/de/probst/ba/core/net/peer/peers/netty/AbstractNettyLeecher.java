@@ -120,12 +120,12 @@ public abstract class AbstractNettyLeecher extends AbstractLeecher {
 
     @Override
     protected Map<PeerId, Transfer> getDownloads() {
-        return DownloadHandler.getDownloads(getLeecherChannelGroup());
+        return DownloadHandler.collectDownloads(getLeecherChannelGroup());
     }
 
     @Override
     protected Map<PeerId, Map<String, DataInfo>> getRemoteDataInfo() {
-        return CollectHandler.getRemoteDataInfo(getLeecherChannelGroup());
+        return CollectHandler.collectRemoteDataInfo(getLeecherChannelGroup());
     }
 
     @Override

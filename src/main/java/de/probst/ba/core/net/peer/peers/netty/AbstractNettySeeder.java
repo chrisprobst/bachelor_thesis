@@ -126,7 +126,7 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
 
     @Override
     protected Map<PeerId, Transfer> getUploads() {
-        return UploadHandler.getUploads(getSeederChannelGroup());
+        return UploadHandler.collectUploads(getSeederChannelGroup());
     }
 
     protected abstract void initSeederBootstrap();

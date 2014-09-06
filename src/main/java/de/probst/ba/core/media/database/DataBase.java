@@ -2,6 +2,7 @@ package de.probst.ba.core.media.database;
 
 import de.probst.ba.core.media.transfer.Transfer;
 import de.probst.ba.core.media.transfer.TransferManager;
+import de.probst.ba.core.util.collections.Tuple2;
 import io.netty.buffer.ByteBuf;
 
 import java.io.Closeable;
@@ -9,6 +10,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 /**
@@ -18,8 +20,12 @@ import java.util.function.Predicate;
  */
 public interface DataBase extends Closeable {
 
+    Tuple2<Long, Map<String, DataInfo>> subscribe(Consumer<Map<String, DataInfo>> consumer);
+
+    void cancel(long token);
+
     /**
-     * @return A snapshot of all registered
+     * @return A snapshot of all existing
      * data info in this data base.
      */
     Map<String, DataInfo> getDataInfo();
@@ -38,17 +44,6 @@ public interface DataBase extends Closeable {
      * @return The data info with the given hash.
      */
     DataInfo get(String hash);
-
-    /**
-     * Removes the data info.
-     * <p>
-     * If the data info does not exist
-     * nothing happens.
-     *
-     * @param hash
-     * @throws IOException
-     */
-    void remove(String hash) throws IOException;
 
     /**
      * Depending on the download flag this method fills the given

@@ -1,6 +1,5 @@
 package de.probst.ba.core.util.io;
 
-import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
@@ -11,6 +10,8 @@ import java.util.stream.Stream;
  */
 public class CSV {
 
+    public static final int DEFAULT_ELEMENT_WIDTH = 30;
+
     private final StringBuilder stringBuilder = new StringBuilder();
     private boolean firstElement = true;
     private Instant timeStamp;
@@ -20,6 +21,10 @@ public class CSV {
             firstElement = false;
         }
         stringBuilder.append(element);
+    }
+
+    public void writeDuration() {
+        writeDuration(DEFAULT_ELEMENT_WIDTH);
     }
 
     public void writeDuration(int elementWidth) {
@@ -42,6 +47,10 @@ public class CSV {
         write(System.lineSeparator());
     }
 
+    public void writeElement(Object element) {
+        writeElement(element, DEFAULT_ELEMENT_WIDTH);
+    }
+
     public void writeElement(Object element, int elementWidth) {
         Objects.requireNonNull(element);
         String s = element.toString();
@@ -56,7 +65,11 @@ public class CSV {
         }
     }
 
-    public void writeElements(Stream<?> elements, int elementWidth) throws IOException {
+    public void writeElements(Stream<?> elements) {
+        writeElements(elements, DEFAULT_ELEMENT_WIDTH);
+    }
+
+    public void writeElements(Stream<?> elements, int elementWidth) {
         for (Object element : (Iterable<?>) elements) {
             writeElement(element, elementWidth);
         }

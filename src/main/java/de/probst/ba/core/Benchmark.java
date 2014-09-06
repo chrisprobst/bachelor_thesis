@@ -53,10 +53,6 @@ import java.util.stream.IntStream;
  */
 public class Benchmark {
 
-    @Parameter(names = {"-ad", "--announce-delay"},
-               description = "The announce delay in millis (" + DelayValidator.MSG + ")",
-               validateValueWith = DelayValidator.class)
-    private Long announceDelay = Config.getAnnounceDelay();
     @Parameter(names = {"-pt", "--peer-type"},
                description = "Peer type (" + PeerTypeValidator.MSG + ")",
                validateValueWith = PeerTypeValidator.class)
@@ -162,9 +158,6 @@ public class Benchmark {
     }
 
     private void start() throws ExecutionException, InterruptedException, IOException {
-
-        // Setup config
-        Config.setAnnounceDelay(announceDelay);
 
         // Setup logging
         System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", verbose ? "info" : "warn");
@@ -421,20 +414,6 @@ public class Benchmark {
 
         @Override
         public void validate(String name, Integer value) throws ParameterException {
-            if (value < MIN || value > MAX) {
-                throw new ParameterException("Parameter " + name + ": " + MSG + " (found: " + value + ")");
-            }
-        }
-    }
-
-    public static class DelayValidator implements IValueValidator<Long> {
-
-        public static final long MIN = 10;
-        public static final long MAX = 100 * 1000;
-        public static final String MSG = "Must be between " + MIN + " and " + MAX;
-
-        @Override
-        public void validate(String name, Long value) throws ParameterException {
             if (value < MIN || value > MAX) {
                 throw new ParameterException("Parameter " + name + ": " + MSG + " (found: " + value + ")");
             }

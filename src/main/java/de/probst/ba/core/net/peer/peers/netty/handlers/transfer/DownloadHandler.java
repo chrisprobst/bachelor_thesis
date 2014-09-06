@@ -31,7 +31,7 @@ import java.util.stream.Collectors;
  */
 public final class DownloadHandler extends ChannelHandlerAdapter {
 
-    public static Map<PeerId, Transfer> getDownloads(ChannelGroup channelGroup) {
+    public static Map<PeerId, Transfer> collectDownloads(ChannelGroup channelGroup) {
         return Collections.unmodifiableMap(channelGroup.stream()
                                                        .map(DownloadHandler::get)
                                                        .map(DownloadHandler::getTransfer)
