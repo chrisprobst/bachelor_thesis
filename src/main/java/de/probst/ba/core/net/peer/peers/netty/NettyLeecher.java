@@ -13,6 +13,7 @@ import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.CollectHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.group.ChannelGroupHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.DownloadHandler;
 import de.probst.ba.core.net.peer.state.BandwidthStatisticState;
+import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelId;
 import io.netty.channel.ChannelInitializer;
@@ -26,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.net.SocketAddress;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -34,18 +36,15 @@ import java.util.concurrent.Future;
 /**
  * Created by chrisprobst on 01.09.14.
  */
-public abstract class AbstractNettyLeecher extends AbstractLeecher {
+public final class NettyLeecher extends AbstractLeecher {
 
-    private final Logger logger = LoggerFactory.getLogger(AbstractNettyLeecher.class);
-
+    private final Logger logger = LoggerFactory.getLogger(NettyLeecher.class);
     private final EventLoopGroup leecherEventLoopGroup;
-
     private final ChannelGroupHandler leecherChannelGroupHandler;
-
     private final BandwidthManager leecherBandwidthManager;
-
     private final LoggingHandler leecherLogHandler = new LoggingHandler(LogLevel.TRACE);
-
+    private final Bootstrap leecherBootstrap;
+    private final Class<? extends Channel> leecherChannelClass;
     private final ChannelInitializer<Channel> leecherChannelInitializer = new ChannelInitializer<Channel>() {
         @Override
         public void initChannel(Channel ch) {
@@ -69,53 +68,13 @@ public abstract class AbstractNettyLeecher extends AbstractLeecher {
                     leecherChannelGroupHandler,
 
                     // Logic
-                    new DownloadHandler(AbstractNettyLeecher.this),
-                    new CollectHandler(AbstractNettyLeecher.this));
-
-            initLeecherChannel(ch);
+                    new DownloadHandler(NettyLeecher.this),
+                    new CollectHandler(NettyLeecher.this));
         }
     };
 
-    protected AbstractNettyLeecher(long maxUploadRate,
-                                   long maxDownloadRate,
-                                   PeerId peerId,
-                                   DataBase dataBase,
-                                   LeecherDistributionAlgorithm leecherDistributionAlgorithm,
-                                   Optional<LeecherPeerHandler> leecherHandler,
-                                   EventLoopGroup leecherEventLoopGroup) {
-
-        super(peerId, dataBase, leecherDistributionAlgorithm, leecherHandler, leecherEventLoopGroup.next());
-
-        Objects.requireNonNull(leecherEventLoopGroup);
-
-        // Save args
-        this.leecherEventLoopGroup = leecherEventLoopGroup;
-
-        // Create internal vars
-        leecherBandwidthManager = new BandwidthManager(this, leecherEventLoopGroup, maxUploadRate, maxDownloadRate);
-        leecherChannelGroupHandler = new ChannelGroupHandler(this.leecherEventLoopGroup.next());
-
-        // Init bootstrap
-        initLeecherBootstrap();
-
-        // Set init future
-        getInitFuture().complete(null);
-    }
-
-    protected void initLeecherChannel(Channel ch) {
-
-    }
-
-    protected ChannelInitializer<Channel> getLeecherChannelInitializer() {
-        return leecherChannelInitializer;
-    }
-
-    protected ChannelGroup getLeecherChannelGroup() {
+    private ChannelGroup getLeecherChannelGroup() {
         return leecherChannelGroupHandler.getChannelGroup();
-    }
-
-    protected EventLoopGroup getLeecherEventLoopGroup() {
-        return leecherEventLoopGroup;
     }
 
     @Override
@@ -145,7 +104,40 @@ public abstract class AbstractNettyLeecher extends AbstractLeecher {
         }
     }
 
-    protected abstract void initLeecherBootstrap();
+    private Bootstrap initLeecherBootstrap() {
+        return new Bootstrap().group(leecherEventLoopGroup)
+                              .channel(leecherChannelClass)
+                              .handler(leecherChannelInitializer);
+    }
+
+    public NettyLeecher(long maxUploadRate,
+                        long maxDownloadRate,
+                        PeerId peerId,
+                        DataBase dataBase,
+                        LeecherDistributionAlgorithm leecherDistributionAlgorithm,
+                        Optional<LeecherPeerHandler> leecherHandler,
+                        EventLoopGroup leecherEventLoopGroup,
+                        Class<? extends Channel> leecherChannelClass) {
+
+        super(peerId, dataBase, leecherDistributionAlgorithm, leecherHandler, leecherEventLoopGroup.next());
+
+        Objects.requireNonNull(leecherEventLoopGroup);
+        Objects.requireNonNull(leecherChannelClass);
+
+        // Save args
+        this.leecherEventLoopGroup = leecherEventLoopGroup;
+        this.leecherChannelClass = leecherChannelClass;
+
+        // Create internal vars
+        leecherBandwidthManager = new BandwidthManager(this, leecherEventLoopGroup, maxUploadRate, maxDownloadRate);
+        leecherChannelGroupHandler = new ChannelGroupHandler(this.leecherEventLoopGroup.next());
+
+        // Init bootstrap
+        leecherBootstrap = initLeecherBootstrap();
+
+        // Set init future
+        getInitFuture().complete(null);
+    }
 
     @Override
     public BandwidthStatisticState getBandwidthStatisticState() {
@@ -155,6 +147,11 @@ public abstract class AbstractNettyLeecher extends AbstractLeecher {
     @Override
     public Future<?> getCloseFuture() {
         return leecherEventLoopGroup.terminationFuture();
+    }
+
+    @Override
+    public void connect(SocketAddress socketAddress) {
+        leecherBootstrap.connect(socketAddress);
     }
 
     @Override

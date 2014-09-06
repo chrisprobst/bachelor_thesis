@@ -18,18 +18,18 @@ public abstract class AbstractSeeder extends AbstractPeer implements Seeder {
 
     private final AtomicCounter parallelUploads = new AtomicCounter();
 
-    protected AbstractSeeder(PeerId peerId,
-                             DataBase dataBase,
-                             SeederDistributionAlgorithm seederDistributionAlgorithm,
-                             Optional<SeederPeerHandler> seederHandler) {
-        super(peerId, dataBase, seederDistributionAlgorithm, seederHandler.orElseGet(SeederPeerAdapter::new));
-    }
-
     protected AtomicCounter getParallelUploads() {
         return parallelUploads;
     }
 
     protected abstract Map<PeerId, Transfer> getUploads();
+
+    public AbstractSeeder(PeerId peerId,
+                          DataBase dataBase,
+                          SeederDistributionAlgorithm seederDistributionAlgorithm,
+                          Optional<SeederPeerHandler> seederHandler) {
+        super(peerId, dataBase, seederDistributionAlgorithm, seederHandler.orElseGet(SeederPeerAdapter::new));
+    }
 
     @Override
     public SeederPeerHandler getPeerHandler() {

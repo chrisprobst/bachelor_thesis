@@ -7,13 +7,11 @@ import de.probst.ba.core.util.collections.Tuple2;
 import io.netty.buffer.ByteBuf;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 /**
  * Created by chrisprobst on 15.08.14.
@@ -41,26 +39,7 @@ public abstract class AbstractDataBase implements DataBase {
 
     @Override
     public synchronized Map<String, DataInfo> getDataInfo() {
-        return new HashMap<>(dataInfo);
-    }
-
-    @Override
-    public synchronized List<Boolean> addInterestsIf(List<DataInfo> dataInfo, Predicate<? super DataInfo> predicate) {
-        Objects.requireNonNull(dataInfo);
-        Objects.requireNonNull(predicate);
-
-        return dataInfo.stream().map(x -> {
-            if (!x.isEmpty()) {
-                throw new IllegalArgumentException("!x.isEmpty()");
-            }
-
-            if (!this.dataInfo.containsKey(x.getHash()) && predicate.test(x)) {
-                this.dataInfo.put(x.getHash(), x);
-                return true;
-            }
-
-            return false;
-        }).collect(Collectors.toList());
+        return Collections.unmodifiableMap(new HashMap<>(dataInfo));
     }
 
     @Override
@@ -85,23 +64,22 @@ public abstract class AbstractDataBase implements DataBase {
     }
 
     @Override
-    public synchronized void processBuffer(String hash,
+    public synchronized void processBuffer(DataInfo processDataInfo,
                                            int chunkIndex,
                                            long offset,
                                            ByteBuf byteBuf,
                                            int length,
                                            boolean download) throws IOException {
 
-        Objects.requireNonNull(hash);
+        Objects.requireNonNull(processDataInfo);
         Objects.requireNonNull(byteBuf);
+        DataInfo dataInfo = this.dataInfo.get(processDataInfo.getHash());
 
-        // Try to find the data info first
-        DataInfo dataInfo = this.dataInfo.get(hash);
-
-        if (dataInfo == null) {
-            String upOrDown = download ? "downloading" : "uploading";
-            throw new IllegalArgumentException("Data info for " + upOrDown +
-                                               " does not exist. Hash: " + hash);
+        if (!download && dataInfo == null) {
+            throw new IllegalArgumentException("Data info for uploading does not exist: " + processDataInfo);
+        } else if (dataInfo == null) {
+            dataInfo = processDataInfo.empty();
+            this.dataInfo.put(dataInfo.getHash(), dataInfo);
         }
 
         if (download && dataInfo.isChunkCompleted(chunkIndex)) {
@@ -139,7 +117,7 @@ public abstract class AbstractDataBase implements DataBase {
     }
 
     @Override
-    public synchronized void processBufferAndComplete(String hash,
+    public synchronized void processBufferAndComplete(DataInfo dataInfo,
                                                       int chunkIndex,
                                                       long offset,
                                                       ByteBuf byteBuf,
@@ -147,9 +125,9 @@ public abstract class AbstractDataBase implements DataBase {
                                                       boolean download) throws IOException {
 
         // Process buffer as usual
-        processBuffer(hash, chunkIndex, offset, byteBuf, length, download);
+        processBuffer(dataInfo, chunkIndex, offset, byteBuf, length, download);
 
         // Complete the chunk
-        doComplete(dataInfo.get(hash), chunkIndex, download);
+        doComplete(dataInfo, chunkIndex, download);
     }
 }

@@ -3,9 +3,7 @@ package de.probst.ba.core.net.peer.state;
 import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.net.peer.Peer;
 
-import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -22,7 +20,7 @@ public class DataInfoState extends PeerState {
     public DataInfoState(Peer peer, Map<String, DataInfo> dataInfo) {
         super(peer);
         Objects.requireNonNull(dataInfo);
-        this.dataInfo = Collections.unmodifiableMap(new HashMap<>(dataInfo));
+        this.dataInfo = dataInfo;
     }
 
     /**

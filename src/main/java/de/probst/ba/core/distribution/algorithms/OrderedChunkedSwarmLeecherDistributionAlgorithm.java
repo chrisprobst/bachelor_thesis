@@ -72,7 +72,7 @@ public class OrderedChunkedSwarmLeecherDistributionAlgorithm implements LeecherD
     }
 
     @Override
-    public boolean addInterest(Leecher leecher, PeerId remotePeerId, DataInfo newDataInfo) {
+    public boolean allowLookingFor(Leecher leecher, DataInfo newDataInfo) {
         return true;
     }
 }

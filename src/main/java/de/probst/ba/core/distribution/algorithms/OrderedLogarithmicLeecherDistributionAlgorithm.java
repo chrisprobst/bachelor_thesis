@@ -66,7 +66,7 @@ public class OrderedLogarithmicLeecherDistributionAlgorithm implements LeecherDi
     }
 
     @Override
-    public boolean addInterest(Leecher leecher, PeerId remotePeerId, DataInfo newDataInfo) {
+    public boolean allowLookingFor(Leecher leecher, DataInfo newDataInfo) {
         return true;
     }
 }

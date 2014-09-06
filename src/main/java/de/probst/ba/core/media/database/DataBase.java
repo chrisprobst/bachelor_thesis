@@ -5,39 +5,30 @@ import de.probst.ba.core.media.transfer.TransferManager;
 import de.probst.ba.core.util.collections.Tuple2;
 import io.netty.buffer.ByteBuf;
 
-import java.io.Closeable;
+import java.io.Flushable;
 import java.io.IOException;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
-import java.util.function.Predicate;
 
 /**
  * A data base manages data info and the content.
  * <p>
  * Created by chrisprobst on 13.08.14.
  */
-public interface DataBase extends Closeable {
+public interface DataBase extends Flushable {
+
+    void flush() throws IOException;
 
     Tuple2<Long, Map<String, DataInfo>> subscribe(Consumer<Map<String, DataInfo>> consumer);
 
     void cancel(long token);
 
     /**
-     * @return A snapshot of all existing
+     * @return An immutable snapshot of all existing
      * data info in this data base.
      */
     Map<String, DataInfo> getDataInfo();
-
-    /**
-     * Adds interests.
-     *
-     * @param dataInfo
-     * @param predicate
-     * @return
-     */
-    List<Boolean> addInterestsIf(List<DataInfo> dataInfo, Predicate<? super DataInfo> predicate);
 
     /**
      * @param hash
@@ -59,7 +50,7 @@ public interface DataBase extends Closeable {
      * This method also verify any hash sum checks. If a check fails
      * this chunk will not be marked as completed.
      *
-     * @param hash
+     * @param dataInfo
      * @param chunkIndex
      * @param offset
      * @param byteBuf
@@ -67,7 +58,7 @@ public interface DataBase extends Closeable {
      * @param download
      * @throws IOException
      */
-    void processBufferAndComplete(String hash,
+    void processBufferAndComplete(DataInfo dataInfo,
                                   int chunkIndex,
                                   long offset,
                                   ByteBuf byteBuf,
@@ -78,7 +69,7 @@ public interface DataBase extends Closeable {
      * Depending on the download flag this method fills the given
      * buffer or reads from it.
      *
-     * @param hash
+     * @param dataInfo
      * @param chunkIndex
      * @param offset
      * @param byteBuf
@@ -86,7 +77,7 @@ public interface DataBase extends Closeable {
      * @param download
      * @throws IOException
      */
-    void processBuffer(String hash,
+    void processBuffer(DataInfo dataInfo,
                        int chunkIndex,
                        long offset,
                        ByteBuf byteBuf,
@@ -98,8 +89,8 @@ public interface DataBase extends Closeable {
         Objects.requireNonNull(transfer);
 
         DataInfo existingDataInfo = get(transfer.getDataInfo().getHash());
-        if (existingDataInfo == null) {
-            throw new IllegalArgumentException("Data info does not exist");
+        if (transfer.isUpload() && existingDataInfo == null) {
+            throw new IllegalArgumentException("transfer.isUpload() && existingDataInfo == null");
         }
 
         if (transfer.isUpload() && !existingDataInfo.contains(transfer.getDataInfo())) {

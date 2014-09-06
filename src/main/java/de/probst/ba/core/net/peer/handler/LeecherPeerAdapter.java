@@ -18,8 +18,8 @@ public class LeecherPeerAdapter implements LeecherPeerHandler {
     }
 
     @Override
-    public void interestAdded(Leecher leecher, PeerId remotePeerId, DataInfo addedDataInfo) {
-
+    public void lookingFor(Leecher leecher, DataInfo addedDataInfo) {
+        
     }
 
     @Override

@@ -3,7 +3,6 @@ package de.probst.ba.core.distribution;
 import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.media.transfer.Transfer;
 import de.probst.ba.core.net.peer.Leecher;
-import de.probst.ba.core.net.peer.PeerId;
 
 import java.util.List;
 
@@ -35,9 +34,8 @@ public interface LeecherDistributionAlgorithm extends DistributionAlgorithm {
      * interest set.
      *
      * @param leecher
-     * @param remotePeerId
      * @param newDataInfo
      * @return
      */
-    boolean addInterest(Leecher leecher, PeerId remotePeerId, DataInfo newDataInfo);
+    boolean allowLookingFor(Leecher leecher, DataInfo newDataInfo);
 }

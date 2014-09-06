@@ -111,7 +111,7 @@ public final class TransferManager {
 
         if (chunkCompleted) {
             // We can complete the chunk
-            dataBase.processBufferAndComplete(getTransfer().getDataInfo().getHash(),
+            dataBase.processBufferAndComplete(getTransfer().getDataInfo(),
                                               chunkIndex,
                                               offset,
                                               byteBuf,
@@ -120,7 +120,7 @@ public final class TransferManager {
 
         } else {
             // Fill the chunk
-            dataBase.processBuffer(getTransfer().getDataInfo().getHash(),
+            dataBase.processBuffer(getTransfer().getDataInfo(),
                                    chunkIndex,
                                    offset,
                                    byteBuf,

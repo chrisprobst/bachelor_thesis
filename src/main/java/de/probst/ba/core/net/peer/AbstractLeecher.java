@@ -10,13 +10,17 @@ import de.probst.ba.core.net.peer.state.LeecherDataInfoState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -26,21 +30,22 @@ public abstract class AbstractLeecher extends AbstractPeer implements Leecher {
 
     private final Logger logger = LoggerFactory.getLogger(AbstractLeecher.class);
     private final LeecherDistributionAlgorithmWorker leecherDistributionAlgorithmWorker;
-
-    protected AbstractLeecher(PeerId peerId,
-                              DataBase dataBase,
-                              LeecherDistributionAlgorithm leecherDistributionAlgorithm,
-                              Optional<LeecherPeerHandler> leecherHandler,
-                              Executor executor) {
-        super(peerId, dataBase, leecherDistributionAlgorithm, leecherHandler.orElseGet(LeecherPeerAdapter::new));
-        leecherDistributionAlgorithmWorker = new LeecherDistributionAlgorithmWorker(executor);
-    }
+    private final ConcurrentMap<String, DataInfo> lookingFor = new ConcurrentHashMap<>();
 
     protected abstract void requestDownload(Transfer transfer);
 
     protected abstract Map<PeerId, Transfer> getDownloads();
 
     protected abstract Map<PeerId, Map<String, DataInfo>> getRemoteDataInfo();
+
+    public AbstractLeecher(PeerId peerId,
+                           DataBase dataBase,
+                           LeecherDistributionAlgorithm leecherDistributionAlgorithm,
+                           Optional<LeecherPeerHandler> leecherHandler,
+                           Executor executor) {
+        super(peerId, dataBase, leecherDistributionAlgorithm, leecherHandler.orElseGet(LeecherPeerAdapter::new));
+        leecherDistributionAlgorithmWorker = new LeecherDistributionAlgorithmWorker(executor);
+    }
 
     @Override
     public LeecherPeerHandler getPeerHandler() {
@@ -58,6 +63,30 @@ public abstract class AbstractLeecher extends AbstractPeer implements Leecher {
     }
 
     @Override
+    public void lookFor(Set<DataInfo> remoteDataInfo) {
+        Objects.requireNonNull(remoteDataInfo);
+        remoteDataInfo.stream()
+                      .filter(DataInfo::isEmpty)
+                      .forEach(addedDataInfo -> {
+                          Objects.requireNonNull(addedDataInfo);
+
+                          // The allow function
+                          Function<String, DataInfo> allow =
+                                  hash -> getDistributionAlgorithm().allowLookingFor(this, addedDataInfo) ?
+                                          addedDataInfo :
+                                          null;
+
+                          // Compute if the data info does not exist yet
+                          if (lookingFor.computeIfAbsent(addedDataInfo.getHash(), allow) == addedDataInfo) {
+                              logger.info("Leecher " + getPeerId() + " looking for " + addedDataInfo + " now");
+
+                              // HANDLER
+                              getPeerHandler().lookingFor(this, addedDataInfo);
+                          }
+                      });
+    }
+
+    @Override
     public LeecherDataInfoState getDataInfoState() {
         // IMPORTANT:
         // Collect downloads first, so that
@@ -72,7 +101,11 @@ public abstract class AbstractLeecher extends AbstractPeer implements Leecher {
         // -> Not in local data info AND not in downloads -> download same chunk twice -> error!
         Map<PeerId, Transfer> downloads = getDownloads();
 
-        return new LeecherDataInfoState(this, getDataBase().getDataInfo(), getRemoteDataInfo(), downloads);
+        // Add data info if we are looking for them but do not exist in the data base yet
+        Map<String, DataInfo> dataInfo = new HashMap<>(getDataBase().getDataInfo());
+        lookingFor.forEach(dataInfo::putIfAbsent);
+
+        return new LeecherDataInfoState(this, dataInfo, getRemoteDataInfo(), downloads);
     }
 
     private final class LeecherDistributionAlgorithmWorker implements Runnable {

@@ -52,7 +52,7 @@ public final class SingleFileDataBase extends AbstractDataBase {
     }
 
     @Override
-    public void close() throws IOException {
+    public void flush() throws IOException {
         fileChannel.close();
     }
 }

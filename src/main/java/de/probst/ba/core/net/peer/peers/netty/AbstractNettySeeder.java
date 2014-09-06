@@ -16,6 +16,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.ServerChannel;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
@@ -35,10 +36,10 @@ import java.util.concurrent.Future;
 public abstract class AbstractNettySeeder extends AbstractSeeder {
 
     private final EventLoopGroup seederEventLoopGroup;
-
-    private final LoggingHandler seederLogHandler = new LoggingHandler(LogLevel.TRACE);
-
     private final ChannelGroupHandler seederChannelGroupHandler;
+    private final BandwidthManager seederBandwidthManager;
+    private final LoggingHandler seederLogHandler = new LoggingHandler(LogLevel.TRACE);
+    private final Class<? extends Channel> seederChannelClass;
     private final ChannelInitializer<Channel> seederChannelInitializer = new ChannelInitializer<Channel>() {
         @Override
         public void initChannel(Channel ch) {
@@ -69,47 +70,11 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
                     // Logic
                     new UploadHandler(AbstractNettySeeder.this, getParallelUploads()),
                     new AnnounceHandler(AbstractNettySeeder.this));
-
-            // Initialize seeder channel
-            initSeederChannel(ch);
         }
     };
-    private final BandwidthManager seederBandwidthManager;
 
-    protected AbstractNettySeeder(long maxUploadRate,
-                                  long maxDownloadRate,
-                                  PeerId peerId,
-                                  DataBase dataBase,
-                                  SeederDistributionAlgorithm seederDistributionAlgorithm,
-                                  Optional<SeederPeerHandler> seederHandler,
-                                  EventLoopGroup seederEventLoopGroup) {
-
-        super(peerId, dataBase, seederDistributionAlgorithm, seederHandler);
-
-        Objects.requireNonNull(seederEventLoopGroup);
-
-        // Save args
-        this.seederEventLoopGroup = seederEventLoopGroup;
-
-        // Create internal vars
-        seederBandwidthManager = new BandwidthManager(this, seederEventLoopGroup, maxUploadRate, maxDownloadRate);
-        seederChannelGroupHandler = new ChannelGroupHandler(this.seederEventLoopGroup.next());
-
-        // Init bootstrap
-        initSeederBootstrap();
-
-        // Set init future
-        createSeederInitFuture().addListener(fut -> {
-            if (fut.isSuccess()) {
-                getInitFuture().complete(null);
-            } else {
-                getInitFuture().completeExceptionally(fut.cause());
-            }
-        });
-    }
-
-    protected void initSeederChannel(Channel ch) {
-
+    protected Class<? extends Channel> getSeederChannelClass() {
+        return seederChannelClass;
     }
 
     protected ChannelInitializer<Channel> getSeederChannelInitializer() {
@@ -129,9 +94,39 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
         return UploadHandler.collectUploads(getSeederChannelGroup());
     }
 
-    protected abstract void initSeederBootstrap();
+    protected abstract ChannelFuture initSeederBootstrap();
 
-    protected abstract ChannelFuture createSeederInitFuture();
+    public AbstractNettySeeder(long maxUploadRate,
+                               long maxDownloadRate,
+                               PeerId peerId,
+                               DataBase dataBase,
+                               SeederDistributionAlgorithm seederDistributionAlgorithm,
+                               Optional<SeederPeerHandler> seederHandler,
+                               EventLoopGroup seederEventLoopGroup,
+                               Class<? extends ServerChannel> seederChannelClass) {
+
+        super(peerId, dataBase, seederDistributionAlgorithm, seederHandler);
+
+        Objects.requireNonNull(seederEventLoopGroup);
+        Objects.requireNonNull(seederChannelClass);
+
+        // Save args
+        this.seederEventLoopGroup = seederEventLoopGroup;
+        this.seederChannelClass = seederChannelClass;
+
+        // Create internal vars
+        seederBandwidthManager = new BandwidthManager(this, seederEventLoopGroup, maxUploadRate, maxDownloadRate);
+        seederChannelGroupHandler = new ChannelGroupHandler(this.seederEventLoopGroup.next());
+
+        // Init bootstrap
+        initSeederBootstrap().addListener(fut -> {
+            if (fut.isSuccess()) {
+                getInitFuture().complete(null);
+            } else {
+                getInitFuture().completeExceptionally(fut.cause());
+            }
+        });
+    }
 
     @Override
     public BandwidthStatisticState getBandwidthStatisticState() {

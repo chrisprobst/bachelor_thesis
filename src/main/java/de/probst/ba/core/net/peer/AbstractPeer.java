@@ -28,10 +28,18 @@ public abstract class AbstractPeer implements Peer {
 
     private final CompletableFuture<?> initFuture = new CompletableFuture<>();
 
-    protected AbstractPeer(PeerId peerId,
-                           DataBase dataBase,
-                           DistributionAlgorithm distributionAlgorithm,
-                           PeerHandler peerHandler) {
+    protected void silentClose() {
+        try {
+            close();
+        } catch (IOException e) {
+            logger.error("Failed to close peer", e);
+        }
+    }
+
+    public AbstractPeer(PeerId peerId,
+                        DataBase dataBase,
+                        DistributionAlgorithm distributionAlgorithm,
+                        PeerHandler peerHandler) {
 
         Objects.requireNonNull(peerId);
         Objects.requireNonNull(dataBase);
@@ -45,13 +53,6 @@ public abstract class AbstractPeer implements Peer {
         this.peerHandler = peerHandler;
     }
 
-    protected void silentClose() {
-        try {
-            close();
-        } catch (IOException e) {
-            logger.error("Failed to close peer", e);
-        }
-    }
 
     @Override
     public PeerId getPeerId() {
@@ -80,7 +81,7 @@ public abstract class AbstractPeer implements Peer {
 
     @Override
     public void close() throws IOException {
-        getDataBase().close();
+        getDataBase().flush();
     }
 
     @Override

@@ -98,8 +98,8 @@ public class RecordPeerHandler implements LeecherPeerHandler, SeederPeerHandler 
     }
 
     @Override
-    public void interestAdded(Leecher leecher, PeerId remotePeerId, DataInfo addedDataInfo) {
-        records.add(Record.interestAdded(leecher.getPeerId(), remotePeerId, addedDataInfo));
+    public void lookingFor(Leecher leecher, DataInfo addedDataInfo) {
+        records.add(Record.lookingFor(leecher.getPeerId(), addedDataInfo));
     }
 
     @Override
@@ -134,7 +134,7 @@ public class RecordPeerHandler implements LeecherPeerHandler, SeederPeerHandler 
 
     public enum RecordType {
         Start, End,
-        Announced, Collected, InterestAdded,
+        Announced, Collected, LookingFor,
         UploadStarted, UploadRejected, UploadSucceeded,
         DownloadRequested, DownloadRejected, DownloadStarted, DownloadProgressed, DownloadSucceeded,
         DataCompleted
@@ -184,8 +184,8 @@ public class RecordPeerHandler implements LeecherPeerHandler, SeederPeerHandler 
             return new Record(RecordType.Collected, peerId, remotePeerId, dataInfo, null, null, null, null);
         }
 
-        public static Record interestAdded(PeerId peerId, PeerId remotePeerId, DataInfo addedDataInfo) {
-            return new Record(RecordType.InterestAdded, peerId, remotePeerId, null, addedDataInfo, null, null, null);
+        public static Record lookingFor(PeerId peerId, DataInfo addedDataInfo) {
+            return new Record(RecordType.LookingFor, peerId, null, null, addedDataInfo, null, null, null);
         }
 
         public static Record downloadRequested(PeerId peerId, Transfer transfer) {

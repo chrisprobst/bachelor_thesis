@@ -1,10 +1,12 @@
 package de.probst.ba.core.net.peer;
 
 import de.probst.ba.core.distribution.LeecherDistributionAlgorithm;
+import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.net.peer.handler.LeecherPeerHandler;
 import de.probst.ba.core.net.peer.state.LeecherDataInfoState;
 
 import java.net.SocketAddress;
+import java.util.Set;
 
 /**
  * A leecher is a peer which is connected
@@ -31,6 +33,14 @@ public interface Leecher extends Peer {
      * is not for free.
      */
     void leech();
+
+    /**
+     * After calling this method the leecher will look for the
+     * given data info to download.
+     *
+     * @param remoteDataInfo
+     */
+    void lookFor(Set<DataInfo> remoteDataInfo);
 
     /**
      * @return The leecher data info state.

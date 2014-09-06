@@ -40,7 +40,7 @@ public final class FakeDataBase extends AbstractDataBase {
     }
 
     @Override
-    public void close() throws IOException {
-        // Do nothing
+    public void flush() throws IOException {
+        
     }
 }
