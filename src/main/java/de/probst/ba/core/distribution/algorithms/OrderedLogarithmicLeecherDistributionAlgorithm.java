@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,13 +23,13 @@ public class OrderedLogarithmicLeecherDistributionAlgorithm implements LeecherDi
     private final Logger logger = LoggerFactory.getLogger(OrderedLogarithmicLeecherDistributionAlgorithm.class);
 
     @Override
-    public Optional<List<Transfer>> requestDownloads(Leecher leecher) {
+    public List<Transfer> requestDownloads(Leecher leecher) {
         // Get the leecher state
         LeecherDataInfoState leecherDataInfoState = leecher.getDataInfoState();
 
         if (!leecherDataInfoState.getDownloads().isEmpty()) {
             logger.debug("Leecher algorithm of " + leecher.getPeerId() + " is already downloading");
-            return Optional.empty();
+            return Collections.emptyList();
         }
 
         // Get lowest id
@@ -37,7 +38,7 @@ public class OrderedLogarithmicLeecherDistributionAlgorithm implements LeecherDi
         // This brain has no missing data info
         if (!lowestId.isPresent()) {
             logger.debug("Leecher algorithm of " + leecher.getPeerId() + " has nothing to download right now");
-            return Optional.empty();
+            return Collections.emptyList();
         }
 
         // We are only interested in the first data info
@@ -47,7 +48,7 @@ public class OrderedLogarithmicLeecherDistributionAlgorithm implements LeecherDi
 
         if (remoteDataInfo.isEmpty()) {
             logger.debug("Leecher algorithm of " + leecher.getPeerId() + " pending, check later again");
-            return Optional.empty();
+            return Collections.emptyList();
         }
 
         // Get the last entry (most chunks!)
@@ -55,13 +56,13 @@ public class OrderedLogarithmicLeecherDistributionAlgorithm implements LeecherDi
 
         if (!lastEntry.second().isCompleted()) {
             logger.debug("Leecher algorithm of " + leecher.getPeerId() + " does not download incomplete data info");
-            return Optional.empty();
+            return Collections.emptyList();
         }
 
         logger.debug("Leecher algorithm of " + leecher.getPeerId() + " requesting " + lastEntry.second());
 
         // Request this as download
-        return Optional.of(Arrays.asList(Transfer.download(lastEntry.first(), lastEntry.second())));
+        return Arrays.asList(Transfer.download(lastEntry.first(), lastEntry.second()));
     }
 
     @Override

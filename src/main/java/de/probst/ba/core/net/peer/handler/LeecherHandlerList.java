@@ -24,7 +24,7 @@ public class LeecherHandlerList extends PeerHandlerList implements LeecherPeerHa
     }
 
     @Override
-    public void collected(Leecher leecher, PeerId remotePeerId, Optional<Map<String, DataInfo>> dataInfo) {
+    public void collected(Leecher leecher, PeerId remotePeerId, Map<String, DataInfo> dataInfo) {
         peerHandlers.stream()
                     .filter(ph -> ph instanceof LeecherPeerHandler)
                     .forEach(ph -> ((LeecherPeerHandler) ph).collected(

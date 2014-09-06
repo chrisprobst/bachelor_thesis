@@ -24,7 +24,7 @@ public class SeederHandlerList extends PeerHandlerList implements SeederPeerHand
     }
 
     @Override
-    public void announced(Seeder seeder, PeerId remotePeerId, Optional<Map<String, DataInfo>> dataInfo) {
+    public void announced(Seeder seeder, PeerId remotePeerId, Map<String, DataInfo> dataInfo) {
         peerHandlers.stream()
                     .filter(ph -> ph instanceof SeederPeerHandler)
                     .forEach(ph -> ((SeederPeerHandler) ph).announced(seeder,

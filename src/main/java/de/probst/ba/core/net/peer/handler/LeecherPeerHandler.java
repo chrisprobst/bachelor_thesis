@@ -6,14 +6,13 @@ import de.probst.ba.core.net.peer.Leecher;
 import de.probst.ba.core.net.peer.PeerId;
 
 import java.util.Map;
-import java.util.Optional;
 
 /**
  * Created by chrisprobst on 01.09.14.
  */
 public interface LeecherPeerHandler extends PeerHandler {
 
-    void collected(Leecher leecher, PeerId remotePeerId, Optional<Map<String, DataInfo>> dataInfo);
+    void collected(Leecher leecher, PeerId remotePeerId, Map<String, DataInfo> dataInfo);
 
     void interestAdded(Leecher leecher, PeerId remotePeerId, DataInfo addedDataInfo);
 

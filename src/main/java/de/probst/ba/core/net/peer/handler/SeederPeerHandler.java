@@ -6,14 +6,13 @@ import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.Seeder;
 
 import java.util.Map;
-import java.util.Optional;
 
 /**
  * Created by chrisprobst on 01.09.14.
  */
 public interface SeederPeerHandler extends PeerHandler {
 
-    void announced(Seeder seeder, PeerId remotePeerId, Optional<Map<String, DataInfo>> dataInfo);
+    void announced(Seeder seeder, PeerId remotePeerId, Map<String, DataInfo> dataInfo);
 
     void uploadRejected(Seeder seeder, TransferManager transferManager, Throwable cause);
 

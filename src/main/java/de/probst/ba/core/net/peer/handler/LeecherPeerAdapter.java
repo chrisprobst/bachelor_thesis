@@ -6,7 +6,6 @@ import de.probst.ba.core.net.peer.Leecher;
 import de.probst.ba.core.net.peer.PeerId;
 
 import java.util.Map;
-import java.util.Optional;
 
 /**
  * Created by chrisprobst on 03.09.14.
@@ -14,7 +13,7 @@ import java.util.Optional;
 public class LeecherPeerAdapter implements LeecherPeerHandler {
 
     @Override
-    public void collected(Leecher leecher, PeerId remotePeerId, Optional<Map<String, DataInfo>> dataInfo) {
+    public void collected(Leecher leecher, PeerId remotePeerId, Map<String, DataInfo> dataInfo) {
 
     }
 

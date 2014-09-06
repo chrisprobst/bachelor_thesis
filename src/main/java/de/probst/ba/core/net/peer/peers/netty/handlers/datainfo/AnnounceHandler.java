@@ -12,9 +12,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.channels.ClosedChannelException;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.ScheduledFuture;
 
 /**
@@ -33,6 +33,7 @@ public final class AnnounceHandler extends ChannelHandlerAdapter implements Runn
     private final Seeder seeder;
     private ChannelHandlerContext ctx;
     private ScheduledFuture<?> timer;
+    private Map<String, DataInfo> lastTransformedDataInfo = Collections.emptyMap();
 
     public AnnounceHandler(Seeder seeder) {
         Objects.requireNonNull(seeder);
@@ -76,7 +77,7 @@ public final class AnnounceHandler extends ChannelHandlerAdapter implements Runn
         PeerId peerId = new NettyPeerId(ctx.channel());
 
         // Transform the data info using the brain
-        Optional<Map<String, DataInfo>> transformedDataInfo =
+        Map<String, DataInfo> transformedDataInfo =
                 seeder.getDistributionAlgorithm().transformUploadDataInfo(seeder, peerId);
 
         // This is actually a bug in the brain
@@ -86,6 +87,15 @@ public final class AnnounceHandler extends ChannelHandlerAdapter implements Runn
             schedule();
             return;
         }
+
+        // Do not announce the same data info twice
+        if (lastTransformedDataInfo.equals(transformedDataInfo)) {
+            schedule();
+            return;
+        }
+
+        // Set last transformed data info
+        lastTransformedDataInfo = transformedDataInfo;
 
         // Create a new data info message
         DataInfoMessage dataInfoMessage = new DataInfoMessage(transformedDataInfo);

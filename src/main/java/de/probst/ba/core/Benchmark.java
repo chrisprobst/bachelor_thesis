@@ -402,7 +402,7 @@ public class Benchmark {
     public static class PeerCountValidator implements IValueValidator<Integer> {
 
         public static final int MIN = 1;
-        public static final int MAX = 20;
+        public static final int MAX = 64;
         public static final String MSG = "Must be between " + MIN + " and " + MAX;
 
         @Override

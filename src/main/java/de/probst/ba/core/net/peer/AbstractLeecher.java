@@ -92,7 +92,7 @@ public abstract class AbstractLeecher extends AbstractPeer implements Leecher {
         public synchronized void run() {
             try {
                 // Let the algorithm generate transfers
-                Optional<List<Transfer>> transfers = getDistributionAlgorithm().requestDownloads(AbstractLeecher.this);
+                List<Transfer> transfers = getDistributionAlgorithm().requestDownloads(AbstractLeecher.this);
 
                 // This is most likely a bug
                 if (transfers == null) {
@@ -102,7 +102,7 @@ public abstract class AbstractLeecher extends AbstractPeer implements Leecher {
 
                 // The algorithm do not want to
                 // download anything
-                if (!transfers.isPresent() || transfers.get().isEmpty()) {
+                if (transfers.isEmpty()) {
                     return;
                 }
 
@@ -115,8 +115,7 @@ public abstract class AbstractLeecher extends AbstractPeer implements Leecher {
 
                 // Create a list of transfers with distinct remote peer ids
                 // and request them to download
-                transfers.get()
-                         .stream()
+                transfers.stream()
                          .filter(t -> !downloads.containsKey(t.getRemotePeerId()))
                          .filter(t -> requestedDataInfo.add(t.getDataInfo()))
                          .collect(Collectors.groupingBy(Transfer::getRemotePeerId))

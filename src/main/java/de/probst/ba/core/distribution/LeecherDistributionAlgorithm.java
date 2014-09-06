@@ -6,7 +6,6 @@ import de.probst.ba.core.net.peer.Leecher;
 import de.probst.ba.core.net.peer.PeerId;
 
 import java.util.List;
-import java.util.Optional;
 
 /**
  * Created by chrisprobst on 01.09.14.
@@ -24,11 +23,11 @@ public interface LeecherDistributionAlgorithm extends DistributionAlgorithm {
      * In other words: To request downloads in the most effective way.
      *
      * @param leecher
-     * @return An optional list of download transfers.
+     * @return A list of download transfers.
      * The framework will take care that you do not download
      * from the same peer in parallel different chunks.
      */
-    Optional<List<Transfer>> requestDownloads(Leecher leecher);
+    List<Transfer> requestDownloads(Leecher leecher);
 
     /**
      * This method is called by the framework when there is need to decide

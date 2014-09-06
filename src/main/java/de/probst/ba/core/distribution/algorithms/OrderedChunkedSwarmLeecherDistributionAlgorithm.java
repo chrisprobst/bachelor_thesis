@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,7 +23,7 @@ public class OrderedChunkedSwarmLeecherDistributionAlgorithm implements LeecherD
     private final Logger logger = LoggerFactory.getLogger(OrderedChunkedSwarmLeecherDistributionAlgorithm.class);
 
     @Override
-    public Optional<List<Transfer>> requestDownloads(Leecher leecher) {
+    public List<Transfer> requestDownloads(Leecher leecher) {
         // Get the leecher state
         LeecherDataInfoState leecherDataInfoState = leecher.getDataInfoState();
 
@@ -32,7 +33,7 @@ public class OrderedChunkedSwarmLeecherDistributionAlgorithm implements LeecherD
         // This brain has no missing data info
         if (!lowestId.isPresent()) {
             logger.debug("Leecher algorithm of " + leecher.getPeerId() + " has nothing to download right now");
-            return Optional.empty();
+            return Collections.emptyList();
         }
 
         // We are only interested in the first data info
@@ -42,7 +43,7 @@ public class OrderedChunkedSwarmLeecherDistributionAlgorithm implements LeecherD
 
         if (remoteDataInfo.isEmpty()) {
             logger.debug("Leecher algorithm of " + leecher.getPeerId() + " pending, check later again");
-            return Optional.empty();
+            return Collections.emptyList();
         }
 
         // We will generate a few downloads now
@@ -67,7 +68,7 @@ public class OrderedChunkedSwarmLeecherDistributionAlgorithm implements LeecherD
         logger.debug("Leecher algorithm of " + leecher.getPeerId() + " requesting " + transfers);
 
         // Request this as download
-        return Optional.of(transfers);
+        return transfers;
     }
 
     @Override

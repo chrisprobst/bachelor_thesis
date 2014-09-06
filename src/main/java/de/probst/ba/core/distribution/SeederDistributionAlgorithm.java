@@ -5,7 +5,6 @@ import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.Seeder;
 
 import java.util.Map;
-import java.util.Optional;
 
 /**
  * Created by chrisprobst on 01.09.14.
@@ -27,9 +26,9 @@ public interface SeederDistributionAlgorithm extends DistributionAlgorithm {
      *
      * @param seeder
      * @param remotePeerId The remote peer id.
-     * @return An optional data info.
+     * @return The data info.
      */
-    Optional<Map<String, DataInfo>> transformUploadDataInfo(Seeder seeder, PeerId remotePeerId);
+    Map<String, DataInfo> transformUploadDataInfo(Seeder seeder, PeerId remotePeerId);
 
     /**
      * Returns the maximum number of active uploads running in

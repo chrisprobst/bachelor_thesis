@@ -6,7 +6,6 @@ import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.Seeder;
 
 import java.util.Map;
-import java.util.Optional;
 
 /**
  * Created by chrisprobst on 01.09.14.
@@ -14,8 +13,8 @@ import java.util.Optional;
 public class DefaultSeederDistributionAlgorithm implements SeederDistributionAlgorithm {
 
     @Override
-    public Optional<Map<String, DataInfo>> transformUploadDataInfo(Seeder seeder, PeerId remotePeerId) {
-        return Optional.of(seeder.getDataBase().getDataInfo());
+    public Map<String, DataInfo> transformUploadDataInfo(Seeder seeder, PeerId remotePeerId) {
+        return seeder.getDataBase().getDataInfo();
     }
 
     @Override

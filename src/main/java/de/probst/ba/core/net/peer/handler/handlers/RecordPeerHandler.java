@@ -14,7 +14,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.stream.Collectors;
@@ -70,8 +69,8 @@ public class RecordPeerHandler implements LeecherPeerHandler, SeederPeerHandler 
     }
 
     @Override
-    public void announced(Seeder seeder, PeerId remotePeerId, Optional<Map<String, DataInfo>> dataInfo) {
-        records.add(Record.announced(seeder.getPeerId(), remotePeerId, dataInfo.orElse(null)));
+    public void announced(Seeder seeder, PeerId remotePeerId, Map<String, DataInfo> dataInfo) {
+        records.add(Record.announced(seeder.getPeerId(), remotePeerId, dataInfo));
     }
 
     @Override
@@ -94,8 +93,8 @@ public class RecordPeerHandler implements LeecherPeerHandler, SeederPeerHandler 
     }
 
     @Override
-    public void collected(Leecher leecher, PeerId remotePeerId, Optional<Map<String, DataInfo>> dataInfo) {
-        records.add(Record.collected(leecher.getPeerId(), remotePeerId, dataInfo.orElse(null)));
+    public void collected(Leecher leecher, PeerId remotePeerId, Map<String, DataInfo> dataInfo) {
+        records.add(Record.collected(leecher.getPeerId(), remotePeerId, dataInfo));
     }
 
     @Override

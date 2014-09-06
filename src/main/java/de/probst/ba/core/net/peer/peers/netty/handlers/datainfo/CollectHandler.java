@@ -42,8 +42,12 @@ public final class CollectHandler extends SimpleChannelInboundHandler<DataInfoMe
 
     private final Logger logger = LoggerFactory.getLogger(CollectHandler.class);
     private final Leecher leecher;
-    private Optional<Map<String, DataInfo>> lastRemoteDataInfo = Optional.empty();
-    private volatile Optional<Tuple2<PeerId, Map<String, DataInfo>>> remoteDataInfo = Optional.empty();
+
+    private Map<String, DataInfo> lastRemoteDataInfo = Collections.emptyMap();
+    private Map<String, DataInfo> lastFilteredRemoteDataInfo = Collections.emptyMap();
+    private Map<String, DataInfo> remoteDataInfo;
+
+    private volatile Optional<Tuple2<PeerId, Map<String, DataInfo>>> externalRemoteDataInfo = Optional.empty();
 
     public CollectHandler(Leecher leecher) {
         Objects.requireNonNull(leecher);
@@ -52,7 +56,7 @@ public final class CollectHandler extends SimpleChannelInboundHandler<DataInfoMe
 
 
     private Optional<Tuple2<PeerId, Map<String, DataInfo>>> getRemoteDataInfo() {
-        return remoteDataInfo;
+        return externalRemoteDataInfo;
     }
 
     private void updateInterests(PeerId remotePeerId, Map<String, DataInfo> remoteDataInfo) {
@@ -81,47 +85,63 @@ public final class CollectHandler extends SimpleChannelInboundHandler<DataInfoMe
     }
 
     private boolean isDataInfoMessageValid(DataInfoMessage dataInfoMessage) {
-        return dataInfoMessage != null && dataInfoMessage.getDataInfo() != null &&
-               dataInfoMessage.getDataInfo().isPresent() && !dataInfoMessage.getDataInfo().get().isEmpty();
+        return dataInfoMessage != null && dataInfoMessage.getDataInfo() != null;
     }
 
     @Override
     protected void messageReceived(ChannelHandlerContext ctx, DataInfoMessage msg) throws Exception {
-        PeerId peerId = new NettyPeerId(ctx.channel());
-
+        // An invalid message is kind of a bug or
+        // shows that the remote peer can not be trusted
         if (!isDataInfoMessageValid(msg)) {
-            // Not a valid message, we cannot load anything
-            remoteDataInfo = Optional.empty();
-        } else {
-            // Update interests
-            updateInterests(peerId, msg.getDataInfo().get());
-
-            // Get map without empty data info
-            Map<String, DataInfo> filteredRemoteDataInfo = msg.getDataInfo()
-                                                              .get()
-                                                              .entrySet()
-                                                              .stream()
-                                                              .filter(p -> !p.getValue().isEmpty())
-                                                              .collect(Collectors.toMap(Map.Entry::getKey,
-                                                                                        Map.Entry::getValue));
-
-            // If the remote has only empty data info we cannot load anything
-            remoteDataInfo = filteredRemoteDataInfo.isEmpty() ?
-                             Optional.empty() :
-                             Optional.of(Tuple.of(peerId, Collections.unmodifiableMap(filteredRemoteDataInfo)));
+            ctx.close();
+            logger.warn("Leecher " + leecher.getPeerId() + " received invalid data info message, connection closed");
+            return;
         }
 
-        Optional<Map<String, DataInfo>> dataInfo = remoteDataInfo.map(Tuple2::second);
+        PeerId peerId = new NettyPeerId(ctx.channel());
+        remoteDataInfo = msg.getDataInfo();
 
-        logger.debug("Leecher " + leecher.getPeerId() + " collected " + dataInfo + " from " + peerId);
+        // Ignore identical remote data info
+        if (lastRemoteDataInfo.equals(remoteDataInfo)) {
+            return;
+        }
+
+        // Set last remote data info
+        lastRemoteDataInfo = remoteDataInfo;
+
+        // Check new interests
+        if (!remoteDataInfo.isEmpty()) {
+            updateInterests(peerId, msg.getDataInfo());
+        }
+
+        // Get map without empty data info
+        Map<String, DataInfo> filteredRemoteDataInfo = remoteDataInfo.entrySet()
+                                                                     .stream()
+                                                                     .filter(p -> !p.getValue().isEmpty())
+                                                                     .collect(Collectors.toMap(Map.Entry::getKey,
+                                                                                               Map.Entry::getValue));
+
+        // Ignore identical filtered remote data info
+        if (lastFilteredRemoteDataInfo.equals(filteredRemoteDataInfo)) {
+            return;
+        }
+
+        // Set last filtered remote data info
+        lastFilteredRemoteDataInfo = filteredRemoteDataInfo;
+
+        // Update external remote data info
+        externalRemoteDataInfo = filteredRemoteDataInfo.isEmpty() ?
+                                 Optional.empty() :
+                                 Optional.of(Tuple.of(peerId, Collections.unmodifiableMap(filteredRemoteDataInfo)));
+
+        // Suggest leeching if there are new non empty data info
+        if (!filteredRemoteDataInfo.isEmpty()) {
+            leecher.leech();
+        }
+
+        logger.debug("Leecher " + leecher.getPeerId() + " collected " + remoteDataInfo + " from " + peerId);
 
         // HANDLER
-        leecher.getPeerHandler().collected(leecher, peerId, dataInfo);
-
-        // Leech if we received something which is different from the last received value
-        dataInfo.filter(m -> !m.isEmpty()).filter(m -> !m.equals(lastRemoteDataInfo)).ifPresent(m -> leecher.leech());
-
-        // Save last remote data info
-        lastRemoteDataInfo = dataInfo;
+        leecher.getPeerHandler().collected(leecher, peerId, remoteDataInfo);
     }
 }

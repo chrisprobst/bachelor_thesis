@@ -6,8 +6,8 @@ import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.Seeder;
 import de.probst.ba.core.net.peer.state.SeederDataInfoState;
 
+import java.util.Collections;
 import java.util.Map;
-import java.util.Optional;
 
 /**
  * Created by chrisprobst on 01.09.14.
@@ -24,11 +24,11 @@ public class LimitedSeederDistributionAlgorithm implements SeederDistributionAlg
     }
 
     @Override
-    public Optional<Map<String, DataInfo>> transformUploadDataInfo(Seeder seeder, PeerId remotePeerId) {
+    public Map<String, DataInfo> transformUploadDataInfo(Seeder seeder, PeerId remotePeerId) {
         SeederDataInfoState seederDataInfoState = seeder.getDataInfoState();
         return seederDataInfoState.getUploads().size() < maxParallelUploads ?
-               Optional.of(seederDataInfoState.getDataInfo()) :
-               Optional.empty();
+               seederDataInfoState.getDataInfo() :
+               Collections.emptyMap();
     }
 
     @Override

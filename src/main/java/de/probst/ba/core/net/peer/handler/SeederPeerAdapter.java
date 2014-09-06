@@ -6,7 +6,6 @@ import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.Seeder;
 
 import java.util.Map;
-import java.util.Optional;
 
 /**
  * Created by chrisprobst on 03.09.14.
@@ -14,7 +13,7 @@ import java.util.Optional;
 public class SeederPeerAdapter implements SeederPeerHandler {
 
     @Override
-    public void announced(Seeder seeder, PeerId remotePeerId, Optional<Map<String, DataInfo>> dataInfo) {
+    public void announced(Seeder seeder, PeerId remotePeerId, Map<String, DataInfo> dataInfo) {
 
     }
 
