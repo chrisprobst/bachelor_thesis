@@ -30,7 +30,7 @@ public class OrderedChunkedSwarmLeecherDistributionAlgorithm implements LeecherD
         // Get lowest id
         Optional<Long> lowestId = leecherDataInfoState.getLowestUncompletedDataInfoId();
 
-        // This brain has no missing data info
+        // This algorithm has no missing data info
         if (!lowestId.isPresent()) {
             logger.debug("Leecher algorithm of " + leecher.getPeerId() + " has nothing to download right now");
             return Collections.emptyList();

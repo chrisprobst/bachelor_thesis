@@ -175,20 +175,20 @@ public class Benchmark {
         double timePerTransfer = totalSize / uploadRate;
 
         // Server/Client like
-        double dumbBrainTime = timePerTransfer / seeders * leechers;
+        double dumbTime = timePerTransfer / seeders * leechers;
 
         // ~ who knows ?!
-        double intelligentBrainTime = timePerTransfer / seeders * 1.3;
+        double chunkSwarmTime = timePerTransfer / seeders * 1.3;
 
         // log(n) - log(s) = log(n / s) = log((s + l) / s) = log(1 + l/s)
-        double logarithmicBrainTime =
+        double logarithmicTime =
                 timePerTransfer * Math.ceil(Math.log(1 + leechers / (double) seeders) / Math.log(2));
 
         // A small info for all waiters
         logger.info("[== One transfer needs approx.: " + timePerTransfer + " seconds ==]");
-        logger.info("[== A dumb brain needs approx.: " + dumbBrainTime + " seconds ==]");
-        logger.info("[== A logarithmic brain needs approx.: " + logarithmicBrainTime + " seconds ==]");
-        logger.info("[== An intelligent brain needs approx.: " + intelligentBrainTime + " seconds ==]");
+        logger.info("[== A dumb algorithm needs approx.: " + dumbTime + " seconds ==]");
+        logger.info("[== A logarithmic algorithm needs approx.: " + logarithmicTime + " seconds ==]");
+        logger.info("[== A chunked-swarm algorithm needs approx.: " + chunkSwarmTime + " seconds ==]");
 
         // Benchmark data
         DataInfo[] dataInfo = IntStream.range(0, parts)

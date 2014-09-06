@@ -76,11 +76,11 @@ public final class AnnounceHandler extends ChannelHandlerAdapter implements Runn
         // Create the netty seeder id
         PeerId peerId = new NettyPeerId(ctx.channel());
 
-        // Transform the data info using the brain
+        // Transform the data info using the algorithm
         Map<String, DataInfo> transformedDataInfo =
                 seeder.getDistributionAlgorithm().transformUploadDataInfo(seeder, peerId);
 
-        // This is actually a bug in the brain
+        // This is actually a bug in the algorithm
         if (transformedDataInfo == null) {
             logger.warn(
                     "Seeder " + seeder.getPeerId() + " got null for the transformed data info, check the algorithm");
