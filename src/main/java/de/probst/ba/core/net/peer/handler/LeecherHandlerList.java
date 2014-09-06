@@ -34,13 +34,6 @@ public class LeecherHandlerList extends PeerHandlerList implements LeecherPeerHa
     }
 
     @Override
-    public void lookingFor(Leecher leecher, DataInfo addedDataInfo) {
-        peerHandlers.stream()
-                    .filter(ph -> ph instanceof LeecherPeerHandler)
-                    .forEach(ph -> ((LeecherPeerHandler) ph).lookingFor(leecher, addedDataInfo));
-    }
-
-    @Override
     public void downloadRequested(Leecher leecher, TransferManager transferManager) {
         peerHandlers.stream()
                     .filter(ph -> ph instanceof LeecherPeerHandler)

@@ -18,11 +18,6 @@ public class LeecherPeerAdapter implements LeecherPeerHandler {
     }
 
     @Override
-    public void lookingFor(Leecher leecher, DataInfo addedDataInfo) {
-        
-    }
-
-    @Override
     public void downloadRequested(Leecher leecher, TransferManager transferManager) {
 
     }

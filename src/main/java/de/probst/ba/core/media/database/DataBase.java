@@ -25,7 +25,7 @@ public interface DataBase extends Flushable {
     void cancel(long token);
 
     /**
-     * @return An immutable snapshot of all existing
+     * @return A snapshot of all existing
      * data info in this data base.
      */
     Map<String, DataInfo> getDataInfo();

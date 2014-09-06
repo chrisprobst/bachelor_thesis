@@ -11,9 +11,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
+import java.util.OptionalLong;
 
 /**
  * Created by chrisprobst on 01.09.14.
@@ -28,7 +30,13 @@ public class OrderedChunkedSwarmLeecherDistributionAlgorithm implements LeecherD
         LeecherDataInfoState leecherDataInfoState = leecher.getDataInfoState();
 
         // Get lowest id
-        Optional<Long> lowestId = leecherDataInfoState.getLowestUncompletedDataInfoId();
+        OptionalLong lowestId = leecherDataInfoState.getEstimatedMissingRemoteDataInfo()
+                                                    .values()
+                                                    .stream()
+                                                    .map(Map::values)
+                                                    .flatMap(Collection::stream)
+                                                    .mapToLong(DataInfo::getId)
+                                                    .min();
 
         // This algorithm has no missing data info
         if (!lowestId.isPresent()) {
@@ -39,7 +47,7 @@ public class OrderedChunkedSwarmLeecherDistributionAlgorithm implements LeecherD
         // We are only interested in the first data info
         List<Tuple2<PeerId, DataInfo>> remoteDataInfo =
                 Transform.findFirstByIdAndSort(leecherDataInfoState.getEstimatedMissingRemoteDataInfo(),
-                                               lowestId.get());
+                                               lowestId.getAsLong());
 
         if (remoteDataInfo.isEmpty()) {
             logger.debug("Leecher algorithm of " + leecher.getPeerId() + " pending, check later again");
@@ -69,10 +77,5 @@ public class OrderedChunkedSwarmLeecherDistributionAlgorithm implements LeecherD
 
         // Request this as download
         return transfers;
-    }
-
-    @Override
-    public boolean allowLookingFor(Leecher leecher, DataInfo newDataInfo) {
-        return true;
     }
 }

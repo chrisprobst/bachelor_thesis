@@ -98,11 +98,6 @@ public class RecordPeerHandler implements LeecherPeerHandler, SeederPeerHandler 
     }
 
     @Override
-    public void lookingFor(Leecher leecher, DataInfo addedDataInfo) {
-        records.add(Record.lookingFor(leecher.getPeerId(), addedDataInfo));
-    }
-
-    @Override
     public void downloadRequested(Leecher leecher, TransferManager transferManager) {
         records.add(Record.downloadRequested(leecher.getPeerId(), transferManager.getTransfer()));
     }
@@ -134,7 +129,7 @@ public class RecordPeerHandler implements LeecherPeerHandler, SeederPeerHandler 
 
     public enum RecordType {
         Start, End,
-        Announced, Collected, LookingFor,
+        Announced, Collected,
         UploadStarted, UploadRejected, UploadSucceeded,
         DownloadRequested, DownloadRejected, DownloadStarted, DownloadProgressed, DownloadSucceeded,
         DataCompleted
@@ -147,7 +142,6 @@ public class RecordPeerHandler implements LeecherPeerHandler, SeederPeerHandler 
         private final PeerId localPeerId;
         private final PeerId remotePeerId;
         private final Map<String, DataInfo> dataInfo;
-        private final DataInfo addedDataInfo;
         private final DataInfo completedDataInfo;
         private final Transfer transfer;
         private final Throwable cause;
@@ -156,7 +150,6 @@ public class RecordPeerHandler implements LeecherPeerHandler, SeederPeerHandler 
                        PeerId localPeerId,
                        PeerId remotePeerId,
                        Map<String, DataInfo> dataInfo,
-                       DataInfo addedDataInfo,
                        DataInfo completedDataInfo,
                        Transfer transfer,
                        Throwable cause) {
@@ -166,73 +159,61 @@ public class RecordPeerHandler implements LeecherPeerHandler, SeederPeerHandler 
                     remotePeerId != null ? remotePeerId : (transfer != null ? transfer.getRemotePeerId() : null);
             this.recordType = recordType;
             this.dataInfo = dataInfo;
-            this.addedDataInfo = addedDataInfo;
             this.completedDataInfo = completedDataInfo;
             this.transfer = transfer;
             this.cause = cause;
         }
 
         private static Record start() {
-            return new Record(RecordType.Start, null, null, null, null, null, null, null);
+            return new Record(RecordType.Start, null, null, null, null, null, null);
         }
 
         private static Record end() {
-            return new Record(RecordType.End, null, null, null, null, null, null, null);
+            return new Record(RecordType.End, null, null, null, null, null, null);
         }
 
         public static Record collected(PeerId peerId, PeerId remotePeerId, Map<String, DataInfo> dataInfo) {
-            return new Record(RecordType.Collected, peerId, remotePeerId, dataInfo, null, null, null, null);
-        }
-
-        public static Record lookingFor(PeerId peerId, DataInfo addedDataInfo) {
-            return new Record(RecordType.LookingFor, peerId, null, null, addedDataInfo, null, null, null);
+            return new Record(RecordType.Collected, peerId, remotePeerId, dataInfo, null, null, null);
         }
 
         public static Record downloadRequested(PeerId peerId, Transfer transfer) {
-            return new Record(RecordType.DownloadRequested, peerId, null, null, null, null, transfer, null);
+            return new Record(RecordType.DownloadRequested, peerId, null, null, null, transfer, null);
         }
 
         public static Record downloadRejected(PeerId peerId, Transfer transfer, Throwable cause) {
-            return new Record(RecordType.DownloadRejected, peerId, null, null, null, null, transfer, cause);
+            return new Record(RecordType.DownloadRejected, peerId, null, null, null, transfer, cause);
         }
 
         public static Record downloadStarted(PeerId peerId, Transfer transfer) {
-            return new Record(RecordType.DownloadStarted, peerId, null, null, null, null, transfer, null);
+            return new Record(RecordType.DownloadStarted, peerId, null, null, null, transfer, null);
         }
 
         public static Record downloadProgressed(PeerId peerId, Transfer transfer) {
-            return new Record(RecordType.DownloadProgressed, peerId, null, null, null, null, transfer, null);
+            return new Record(RecordType.DownloadProgressed, peerId, null, null, null, transfer, null);
         }
 
         public static Record downloadSucceeded(PeerId peerId, Transfer transfer) {
-            return new Record(RecordType.DownloadSucceeded, peerId, null, null, null, null, transfer, null);
+            return new Record(RecordType.DownloadSucceeded, peerId, null, null, null, transfer, null);
         }
 
         public static Record dataCompleted(PeerId peerId, DataInfo completedDataInfo, Transfer lastTransfer) {
-            return new Record(RecordType.DataCompleted,
-                              peerId,
-                              null,
-                              null,
-                              null,
-                              completedDataInfo,
-                              lastTransfer,
-                              null);
+            return new Record(RecordType.DataCompleted, peerId, null, null, completedDataInfo, lastTransfer, null);
         }
 
         public static Record announced(PeerId peerId, PeerId remotePeerId, Map<String, DataInfo> dataInfo) {
-            return new Record(RecordType.Announced, peerId, remotePeerId, dataInfo, null, null, null, null);
+            return new Record(RecordType.Announced, peerId, remotePeerId, dataInfo, null, null, null);
         }
 
         public static Record uploadStarted(PeerId peerId, Transfer transfer) {
-            return new Record(RecordType.UploadStarted, peerId, null, null, null, null, transfer, null);
+            return new Record(RecordType.UploadStarted, peerId, null, null, null, transfer, null);
         }
 
         public static Record uploadRejected(PeerId peerId, Transfer transfer, Throwable cause) {
-            return new Record(RecordType.UploadRejected, peerId, null, null, null, null, transfer, cause);
+            return new Record(RecordType.UploadRejected, peerId, null, null, null, transfer, cause);
         }
 
         public static Record uploadSucceeded(PeerId peerId, Transfer transfer) {
-            return new Record(RecordType.UploadSucceeded, peerId, null, null, null, null, transfer, null);
+            return new Record(RecordType.UploadSucceeded, peerId, null, null, null, transfer, null);
         }
 
         public Instant getTimeStamp() {
@@ -255,10 +236,6 @@ public class RecordPeerHandler implements LeecherPeerHandler, SeederPeerHandler 
             return dataInfo;
         }
 
-        public DataInfo getAddedDataInfo() {
-            return addedDataInfo;
-        }
-
         public DataInfo getCompletedDataInfo() {
             return completedDataInfo;
         }
@@ -279,7 +256,6 @@ public class RecordPeerHandler implements LeecherPeerHandler, SeederPeerHandler 
                    ", localPeerId=" + localPeerId +
                    ", remotePeerId=" + remotePeerId +
                    ", dataInfo=" + dataInfo +
-                   ", addedDataInfo=" + addedDataInfo +
                    ", completedDataInfo=" + completedDataInfo +
                    ", transfer=" + transfer +
                    ", cause=" + cause +

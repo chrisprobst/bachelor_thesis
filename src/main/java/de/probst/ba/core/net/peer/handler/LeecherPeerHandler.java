@@ -14,8 +14,6 @@ public interface LeecherPeerHandler extends PeerHandler {
 
     void collected(Leecher leecher, PeerId remotePeerId, Map<String, DataInfo> dataInfo);
 
-    void lookingFor(Leecher leecher, DataInfo addedDataInfo);
-
     void downloadRequested(Leecher leecher, TransferManager transferManager);
 
     void downloadRejected(Leecher leecher, TransferManager transferManager, Throwable cause);

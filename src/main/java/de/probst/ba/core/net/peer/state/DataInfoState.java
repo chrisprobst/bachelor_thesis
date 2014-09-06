@@ -3,10 +3,8 @@ package de.probst.ba.core.net.peer.state;
 import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.net.peer.Peer;
 
-import java.util.Comparator;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 
 /**
  * Created by chrisprobst on 03.09.14.
@@ -21,19 +19,6 @@ public class DataInfoState extends PeerState {
         super(peer);
         Objects.requireNonNull(dataInfo);
         this.dataInfo = dataInfo;
-    }
-
-    /**
-     * @return The lowest id of all uncompleted
-     * data info.
-     */
-    public Optional<Long> getLowestUncompletedDataInfoId() {
-        return getDataInfo().entrySet()
-                            .stream()
-                            .filter(p -> !p.getValue().isCompleted())
-                            .sorted(Comparator.comparing(p -> p.getValue().getId()))
-                            .findFirst()
-                            .map(p -> p.getValue().getId());
     }
 
     /**

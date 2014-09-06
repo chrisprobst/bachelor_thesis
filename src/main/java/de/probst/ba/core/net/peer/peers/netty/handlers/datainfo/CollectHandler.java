@@ -43,7 +43,6 @@ public final class CollectHandler extends SimpleChannelInboundHandler<DataInfoMe
 
     private Map<String, DataInfo> lastRemoteDataInfo = Collections.emptyMap();
     private Map<String, DataInfo> lastNonEmptyRemoteDataInfo = Collections.emptyMap();
-    private Map<String, DataInfo> remoteDataInfo;
 
     private volatile Optional<Tuple2<PeerId, Map<String, DataInfo>>> externalRemoteDataInfo = Optional.empty();
 
@@ -67,16 +66,11 @@ public final class CollectHandler extends SimpleChannelInboundHandler<DataInfoMe
         }
 
         PeerId peerId = new NettyPeerId(ctx.channel());
-        remoteDataInfo = msg.getDataInfo();
+        Map<String, DataInfo> remoteDataInfo = msg.getDataInfo();
 
         // Ignore identical remote data info
         if (lastRemoteDataInfo.equals(remoteDataInfo)) {
             return;
-        }
-
-        // Look for new data info if the key sets differ
-        if (!lastRemoteDataInfo.keySet().equals(remoteDataInfo.keySet())) {
-            leecher.lookFor(remoteDataInfo.values().stream().map(DataInfo::empty).collect(Collectors.toSet()));
         }
 
         // Set last remote data info
