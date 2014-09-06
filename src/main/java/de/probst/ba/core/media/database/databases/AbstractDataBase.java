@@ -39,7 +39,13 @@ public abstract class AbstractDataBase implements DataBase {
 
     @Override
     public synchronized Map<String, DataInfo> getDataInfo() {
-        return Collections.unmodifiableMap(new HashMap<>(dataInfo));
+        Map<String, DataInfo> copy = new HashMap<>(dataInfo);
+        dataInfo.forEach((k, v) -> {
+            if (v.isEmpty()) {
+                copy.remove(k);
+            }
+        });
+        return Collections.unmodifiableMap(copy);
     }
 
     @Override

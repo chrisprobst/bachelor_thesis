@@ -79,6 +79,13 @@ public final class LeecherDataInfoState extends DataInfoState {
 
                                       for (String key : new ArrayList<>(remoteDataInfo.keySet())) {
                                           DataInfo remote = remoteDataInfo.get(key);
+
+                                          // Stop early
+                                          if (remote.isEmpty()) {
+                                              remoteDataInfo.remove(key);
+                                              continue;
+                                          }
+
                                           DataInfo estimated = getEstimatedDataInfo().get(key);
 
                                           if (estimated != null) {
