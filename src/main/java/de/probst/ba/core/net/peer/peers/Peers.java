@@ -57,6 +57,7 @@ public final class Peers {
                                   DataBase dataBase,
                                   LeecherDistributionAlgorithm leecherDistributionAlgorithm,
                                   Optional<LeecherPeerHandler> leecherHandler,
+                                  boolean autoConnect,
                                   Optional<EventLoopGroup> leecherEventLoopGroup,
                                   Optional<PeerId> announcePeerId) {
         return new NettyLeecher(maxUploadRate,
@@ -65,6 +66,7 @@ public final class Peers {
                                 dataBase,
                                 leecherDistributionAlgorithm,
                                 leecherHandler,
+                                autoConnect,
                                 leecherEventLoopGroup.orElseGet(NioEventLoopGroup::new),
                                 type == Type.TCP ? SocketChannel.class : LocalChannel.class,
                                 announcePeerId);

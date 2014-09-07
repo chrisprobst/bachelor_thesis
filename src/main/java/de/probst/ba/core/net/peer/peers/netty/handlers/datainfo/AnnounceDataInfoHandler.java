@@ -62,7 +62,6 @@ public final class AnnounceDataInfoHandler extends ChannelHandlerAdapter {
             if (!fut.isSuccess() && !(fut.cause() instanceof ClosedChannelException)) {
                 ctx.close();
 
-                // log the cause
                 logger.warn("Seeder " + seeder.getPeerId() + " failed to announce data info, connection closed",
                             fut.cause());
             }

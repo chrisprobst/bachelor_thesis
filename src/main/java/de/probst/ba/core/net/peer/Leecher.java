@@ -4,6 +4,8 @@ import de.probst.ba.core.distribution.LeecherDistributionAlgorithm;
 import de.probst.ba.core.net.peer.handler.LeecherPeerHandler;
 import de.probst.ba.core.net.peer.state.LeecherDataInfoState;
 
+import java.util.concurrent.CompletableFuture;
+
 /**
  * A leecher is a peer which is connected
  * to a specific number of seeders and tries to
@@ -13,7 +15,13 @@ import de.probst.ba.core.net.peer.state.LeecherDataInfoState;
  */
 public interface Leecher extends Peer {
 
-    void connect(PeerId peerId);
+    /**
+     * Try to connect to the given peer.
+     *
+     * @param peerId
+     * @return
+     */
+    CompletableFuture<?> connect(PeerId peerId);
 
     /**
      * This method runs the distribution algorithm
@@ -29,6 +37,12 @@ public interface Leecher extends Peer {
      * is not for free.
      */
     void leech();
+
+    /**
+     * @return True if this leecher automatically connects to
+     * new discovered peers or not.
+     */
+    boolean isAutoConnect();
 
     /**
      * @return The leecher data info state.

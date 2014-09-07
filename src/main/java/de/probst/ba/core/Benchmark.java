@@ -197,6 +197,7 @@ public class Benchmark {
         // List of peers
         Queue<Peer> peerQueue = new ConcurrentLinkedQueue<>();
         Queue<Peer> seederQueue = new ConcurrentLinkedQueue<>();
+        Queue<Peer> allSeederQueue = new ConcurrentLinkedQueue<>();
         Queue<Peer> leecherQueue = new ConcurrentLinkedQueue<>();
 
         // The event loop group shared by all peers
@@ -229,7 +230,7 @@ public class Benchmark {
             uploadBandwidthStatistic = new BandwidthStatistic(csvPath,
                                                               eventLoopGroup,
                                                               250,
-                                                              seederQueue,
+                                                              allSeederQueue,
                                                               BandwidthStatisticState::getAverageUploadRate,
                                                               BandwidthStatistic.Mode.TotalMedian);
             downloadBandwidthStatistic = new BandwidthStatistic(csvPath2,
@@ -283,6 +284,7 @@ public class Benchmark {
                                          Optional.of(eventLoopGroup));
 
             seederQueue.add(seeder);
+            allSeederQueue.add(seeder);
             peerQueue.add(seeder);
         }
 
@@ -313,10 +315,12 @@ public class Benchmark {
                                             Optional.of(new LeecherHandlerList().add(Optional.of(shutdown))
                                                                                 .add(Optional.ofNullable(
                                                                                         recordPeerHandler))),
+                                            true,
                                             Optional.of(eventLoopGroup),
                                             Optional.of(peerId));
 
             leecherQueue.add(leecher);
+            allSeederQueue.add(seeder);
             peerQueue.add(seeder);
             peerQueue.add(leecher);
         }

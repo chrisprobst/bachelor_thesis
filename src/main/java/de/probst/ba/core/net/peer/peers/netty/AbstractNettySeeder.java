@@ -68,7 +68,7 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
                     new ChunkedWriteHandler(),
 
                     // Logic
-                    new PeerIdDiscoveryHandler(getSeederChannelGroup()),
+                    new PeerIdDiscoveryHandler(AbstractNettySeeder.this, getSeederChannelGroup()),
                     new UploadHandler(AbstractNettySeeder.this, getParallelUploads()),
                     new AnnounceDataInfoHandler(AbstractNettySeeder.this));
         }

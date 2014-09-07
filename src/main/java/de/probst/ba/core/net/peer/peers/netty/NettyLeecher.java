@@ -33,6 +33,7 @@ import java.net.SocketAddress;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -122,11 +123,17 @@ public final class NettyLeecher extends AbstractLeecher {
                         DataBase dataBase,
                         LeecherDistributionAlgorithm leecherDistributionAlgorithm,
                         Optional<LeecherPeerHandler> leecherHandler,
+                        boolean autoConnect,
                         EventLoopGroup leecherEventLoopGroup,
                         Class<? extends Channel> leecherChannelClass,
                         Optional<PeerId> announcePeerId) {
 
-        super(peerId, dataBase, leecherDistributionAlgorithm, leecherHandler, leecherEventLoopGroup.next());
+        super(peerId,
+              dataBase,
+              leecherDistributionAlgorithm,
+              leecherHandler,
+              autoConnect,
+              leecherEventLoopGroup.next());
 
         Objects.requireNonNull(leecherEventLoopGroup);
         Objects.requireNonNull(leecherChannelClass);
@@ -163,19 +170,22 @@ public final class NettyLeecher extends AbstractLeecher {
     }
 
     @Override
-    public void connect(PeerId peerId) {
+    public CompletableFuture<?> connect(PeerId peerId) {
         Objects.requireNonNull(peerId);
         if (!peerId.isConnectable()) {
             throw new IllegalArgumentException("!peerId.isConnectable()");
         }
+        CompletableFuture<?> connectionFuture = new CompletableFuture<>();
         SocketAddress socketAddress = peerId.getAddress().get();
-        if (connecting.putIfAbsent(socketAddress, false) == null) {
+        Boolean previous;
+        if ((previous = connecting.putIfAbsent(socketAddress, false)) == null) {
             logger.info("Leecher " + getPeerId() + " connecting to " + peerId);
             leecherBootstrap.connect(socketAddress).addListener((ChannelFutureListener) future -> {
                 if (!future.isSuccess()) {
                     connecting.remove(socketAddress);
                     logger.warn("Leecher " + getPeerId() + " failed to connect to " + peerId,
                                 future.cause());
+                    connectionFuture.completeExceptionally(future.cause());
                 } else {
                     connecting.put(socketAddress, true);
                     logger.info("Leecher " + getPeerId() + " connected to " + peerId);
@@ -183,9 +193,16 @@ public final class NettyLeecher extends AbstractLeecher {
                         connecting.remove(socketAddress);
                         logger.info("Leecher " + getPeerId() + " disconnected from " + peerId);
                     });
+                    connectionFuture.complete(null);
                 }
             });
+        } else {
+            connectionFuture.completeExceptionally(new IllegalStateException(previous ?
+                                                                             "Already connected to " + peerId :
+                                                                             "Already connecting to " + peerId));
         }
+
+        return connectionFuture;
     }
 
     @Override

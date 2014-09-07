@@ -26,6 +26,7 @@ public abstract class AbstractLeecher extends AbstractPeer implements Leecher {
 
     private final Logger logger = LoggerFactory.getLogger(AbstractLeecher.class);
     private final LeecherDistributionAlgorithmWorker leecherDistributionAlgorithmWorker;
+    private final boolean autoConnect;
 
     protected abstract void requestDownload(Transfer transfer);
 
@@ -37,14 +38,24 @@ public abstract class AbstractLeecher extends AbstractPeer implements Leecher {
                            DataBase dataBase,
                            LeecherDistributionAlgorithm leecherDistributionAlgorithm,
                            Optional<LeecherPeerHandler> leecherHandler,
+                           boolean autoConnect,
                            Executor executor) {
-        super(peerId, dataBase, leecherDistributionAlgorithm, leecherHandler.orElseGet(LeecherPeerAdapter::new));
+        super(peerId,
+              dataBase,
+              leecherDistributionAlgorithm,
+              Optional.of(leecherHandler.orElseGet(LeecherPeerAdapter::new)));
         leecherDistributionAlgorithmWorker = new LeecherDistributionAlgorithmWorker(executor);
+        this.autoConnect = autoConnect;
     }
 
     @Override
     public LeecherPeerHandler getPeerHandler() {
         return (LeecherPeerHandler) super.getPeerHandler();
+    }
+
+    @Override
+    public boolean isAutoConnect() {
+        return autoConnect;
     }
 
     @Override

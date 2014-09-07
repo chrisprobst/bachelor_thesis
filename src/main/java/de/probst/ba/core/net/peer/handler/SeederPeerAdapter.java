@@ -13,6 +13,11 @@ import java.util.Map;
 public class SeederPeerAdapter implements SeederPeerHandler {
 
     @Override
+    public void discoveredPeer(Seeder seeder, PeerId remotePeerId) {
+
+    }
+
+    @Override
     public void announced(Seeder seeder, PeerId remotePeerId, Map<String, DataInfo> dataInfo) {
 
     }

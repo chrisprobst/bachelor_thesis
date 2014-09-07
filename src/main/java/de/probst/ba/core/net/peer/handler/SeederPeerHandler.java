@@ -12,6 +12,8 @@ import java.util.Map;
  */
 public interface SeederPeerHandler extends PeerHandler {
 
+    void discoveredPeer(Seeder seeder, PeerId remotePeerId);
+
     void announced(Seeder seeder, PeerId remotePeerId, Map<String, DataInfo> dataInfo);
 
     void uploadRejected(Seeder seeder, TransferManager transferManager, Throwable cause);

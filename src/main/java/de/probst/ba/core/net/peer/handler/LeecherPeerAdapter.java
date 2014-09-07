@@ -6,11 +6,17 @@ import de.probst.ba.core.net.peer.Leecher;
 import de.probst.ba.core.net.peer.PeerId;
 
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Created by chrisprobst on 03.09.14.
  */
 public class LeecherPeerAdapter implements LeecherPeerHandler {
+
+    @Override
+    public void discoveredPeers(Leecher leecher, Set<PeerId> peerIds) {
+
+    }
 
     @Override
     public void collected(Leecher leecher, PeerId remotePeerId, Map<String, DataInfo> dataInfo) {

@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.stream.Collectors;
 
@@ -69,6 +70,11 @@ public class RecordPeerHandler implements LeecherPeerHandler, SeederPeerHandler 
     }
 
     @Override
+    public void discoveredPeer(Seeder seeder, PeerId remotePeerId) {
+
+    }
+
+    @Override
     public void announced(Seeder seeder, PeerId remotePeerId, Map<String, DataInfo> dataInfo) {
         records.add(Record.announced(seeder.getPeerId(), remotePeerId, dataInfo));
     }
@@ -78,10 +84,6 @@ public class RecordPeerHandler implements LeecherPeerHandler, SeederPeerHandler 
         records.add(Record.uploadRejected(seeder.getPeerId(), transferManager.getTransfer(), cause));
     }
 
-    ////
-    //// HANDLER METHODS
-    ////
-
     @Override
     public void uploadStarted(Seeder seeder, TransferManager transferManager) {
         records.add(Record.uploadStarted(seeder.getPeerId(), transferManager.getTransfer()));
@@ -90,6 +92,11 @@ public class RecordPeerHandler implements LeecherPeerHandler, SeederPeerHandler 
     @Override
     public void uploadSucceeded(Seeder seeder, TransferManager transferManager) {
         records.add(Record.uploadSucceeded(seeder.getPeerId(), transferManager.getTransfer()));
+    }
+
+    @Override
+    public void discoveredPeers(Leecher leecher, Set<PeerId> peerIds) {
+
     }
 
     @Override

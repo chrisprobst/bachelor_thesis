@@ -3,12 +3,14 @@ package de.probst.ba.core.net.peer;
 import de.probst.ba.core.distribution.DistributionAlgorithm;
 import de.probst.ba.core.media.database.DataBase;
 import de.probst.ba.core.net.peer.handler.PeerHandler;
+import de.probst.ba.core.net.peer.handler.PeerHandlerAdapter;
 import de.probst.ba.core.net.peer.state.DataInfoState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -41,7 +43,7 @@ public abstract class AbstractPeer implements Peer {
     public AbstractPeer(PeerId peerId,
                         DataBase dataBase,
                         DistributionAlgorithm distributionAlgorithm,
-                        PeerHandler peerHandler) {
+                        Optional<PeerHandler> peerHandler) {
 
         Objects.requireNonNull(peerId);
         Objects.requireNonNull(dataBase);
@@ -52,7 +54,7 @@ public abstract class AbstractPeer implements Peer {
         this.peerId = peerId;
         this.dataBase = dataBase;
         this.distributionAlgorithm = distributionAlgorithm;
-        this.peerHandler = peerHandler;
+        this.peerHandler = peerHandler.orElseGet(PeerHandlerAdapter::new);
     }
 
 

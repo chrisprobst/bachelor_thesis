@@ -28,7 +28,10 @@ public abstract class AbstractSeeder extends AbstractPeer implements Seeder {
                           DataBase dataBase,
                           SeederDistributionAlgorithm seederDistributionAlgorithm,
                           Optional<SeederPeerHandler> seederHandler) {
-        super(peerId, dataBase, seederDistributionAlgorithm, seederHandler.orElseGet(SeederPeerAdapter::new));
+        super(peerId,
+              dataBase,
+              seederDistributionAlgorithm,
+              Optional.of(seederHandler.orElseGet(SeederPeerAdapter::new)));
         if (!peerId.isConnectable()) {
             throw new IllegalArgumentException("!peerId.isConnectable() " + peerId);
         }

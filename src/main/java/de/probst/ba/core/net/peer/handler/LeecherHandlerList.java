@@ -7,6 +7,7 @@ import de.probst.ba.core.net.peer.PeerId;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Created by chrisprobst on 05.09.14.
@@ -21,6 +22,15 @@ public class LeecherHandlerList extends PeerHandlerList implements LeecherPeerHa
     @Override
     public LeecherHandlerList remove(Optional<PeerHandler> peerHandler) {
         return (LeecherHandlerList) super.remove(peerHandler);
+    }
+
+    @Override
+    public void discoveredPeers(Leecher leecher, Set<PeerId> peerIds) {
+        peerHandlers.stream()
+                    .filter(ph -> ph instanceof LeecherPeerHandler)
+                    .forEach(ph -> ((LeecherPeerHandler) ph).discoveredPeers(
+                            leecher,
+                            peerIds));
     }
 
     @Override
