@@ -278,7 +278,6 @@ public class Benchmark {
                                          downloadRate,
                                          new PeerId(seederAddress.apply(i)),
                                          DataBases.fakeDataBase(dataInfo),
-                                         //DataBases.singleFileDataBase(Paths.get("/Users/chrisprobst/Desktop/data.file"), dataInfo[0]),
                                          seederDistributionAlgorithmSupplier.get(),
                                          Optional.ofNullable(recordPeerHandler),
                                          Optional.of(eventLoopGroup));
@@ -314,7 +313,8 @@ public class Benchmark {
                                             Optional.of(new LeecherHandlerList().add(Optional.of(shutdown))
                                                                                 .add(Optional.ofNullable(
                                                                                         recordPeerHandler))),
-                                            Optional.of(eventLoopGroup));
+                                            Optional.of(eventLoopGroup),
+                                            Optional.of(peerId));
 
             seederQueue.add(seeder);
             leecherQueue.add(leecher);
@@ -326,7 +326,7 @@ public class Benchmark {
         Peers.waitForInit(peerQueue);
 
         // Connect every peer to every other peer
-        Peers.connectGrid(peerQueue);
+        seederQueue.stream().map(Peer::getPeerId).forEach(p -> Peers.connectTo(leecherQueue, p));
 
         // Start events
         if (recordEvents) {

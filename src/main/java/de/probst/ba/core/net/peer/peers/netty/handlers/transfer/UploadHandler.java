@@ -75,11 +75,6 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
         return Optional.ofNullable(transferManager);
     }
 
-    private boolean isUploadRequestMessageValid(UploadRequestMessage uploadRequestMessage) {
-        return uploadRequestMessage != null && uploadRequestMessage.getDataInfo() != null &&
-               !uploadRequestMessage.getDataInfo().isEmpty();
-    }
-
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         ctx.close();
@@ -89,8 +84,8 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
     @Override
     protected void messageReceived(ChannelHandlerContext ctx, UploadRequestMessage msg) throws Exception {
 
-        if (!isUploadRequestMessageValid(msg)) {
-            Exception cause = new IllegalArgumentException("Upload request message null or empty");
+        if (msg.getDataInfo().isEmpty()) {
+            Exception cause = new IllegalArgumentException("Requested empty data info upload");
 
             logger.info("Seeder " + seeder.getPeerId() + " rejected upload " + transferManager, cause);
 

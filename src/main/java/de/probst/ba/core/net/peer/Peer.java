@@ -8,7 +8,6 @@ import de.probst.ba.core.net.peer.state.DataInfoState;
 
 import java.io.Closeable;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Future;
 
 /**
  * A peer is the base for a seeder or a leecher.
@@ -30,10 +29,10 @@ public interface Peer extends Closeable {
     CompletableFuture<?> getInitFuture();
 
     /**
-     * @return A future which can be used to wait for
-     * the complete close of this peer.
+     * @return A completable future which is triggered
+     * when this peer is completely closed.
      */
-    Future<?> getCloseFuture();
+    CompletableFuture<?> getCloseFuture();
 
     /**
      * @return The data info state created

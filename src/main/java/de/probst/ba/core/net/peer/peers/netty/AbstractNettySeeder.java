@@ -8,7 +8,8 @@ import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.handler.SeederPeerHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.bandwidth.BandwidthManager;
 import de.probst.ba.core.net.peer.peers.netty.handlers.codec.SimpleCodec;
-import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.AnnounceHandler;
+import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.AnnounceDataInfoHandler;
+import de.probst.ba.core.net.peer.peers.netty.handlers.discovery.PeerIdDiscoveryHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.group.ChannelGroupHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.UploadHandler;
 import de.probst.ba.core.net.peer.state.BandwidthStatisticState;
@@ -28,7 +29,6 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.Future;
 
 /**
  * Created by chrisprobst on 01.09.14.
@@ -68,8 +68,9 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
                     new ChunkedWriteHandler(),
 
                     // Logic
+                    new PeerIdDiscoveryHandler(getSeederChannelGroup()),
                     new UploadHandler(AbstractNettySeeder.this, getParallelUploads()),
-                    new AnnounceHandler(AbstractNettySeeder.this));
+                    new AnnounceDataInfoHandler(AbstractNettySeeder.this));
         }
     };
 
@@ -114,6 +115,15 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
         this.seederEventLoopGroup = seederEventLoopGroup;
         this.seederChannelClass = seederChannelClass;
 
+        // Connect close future
+        seederEventLoopGroup.terminationFuture().addListener(fut -> {
+            if (fut.isSuccess()) {
+                getCloseFuture().complete(null);
+            } else {
+                getCloseFuture().completeExceptionally(fut.cause());
+            }
+        });
+
         // Create internal vars
         seederBandwidthManager = new BandwidthManager(this, seederEventLoopGroup, maxUploadRate, maxDownloadRate);
         seederChannelGroupHandler = new ChannelGroupHandler(this.seederEventLoopGroup.next());
@@ -131,11 +141,6 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
     @Override
     public BandwidthStatisticState getBandwidthStatisticState() {
         return seederBandwidthManager.getBandwidthStatisticState();
-    }
-
-    @Override
-    public Future<?> getCloseFuture() {
-        return seederEventLoopGroup.terminationFuture();
     }
 
     @Override

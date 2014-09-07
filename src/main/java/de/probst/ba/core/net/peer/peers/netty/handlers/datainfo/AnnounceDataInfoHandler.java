@@ -25,9 +25,9 @@ import java.util.Objects;
  * <p>
  * Created by chrisprobst on 13.08.14.
  */
-public final class AnnounceHandler extends ChannelHandlerAdapter {
+public final class AnnounceDataInfoHandler extends ChannelHandlerAdapter {
 
-    private final Logger logger = LoggerFactory.getLogger(AnnounceHandler.class);
+    private final Logger logger = LoggerFactory.getLogger(AnnounceDataInfoHandler.class);
 
     private final Seeder seeder;
     private long token;
@@ -44,15 +44,8 @@ public final class AnnounceHandler extends ChannelHandlerAdapter {
         Map<String, DataInfo> transformedDataInfo =
                 seeder.getDistributionAlgorithm().transformUploadDataInfo(seeder, dataInfo, peerId);
 
-        // This is actually a bug in the algorithm
-        if (transformedDataInfo == null) {
-            logger.warn(
-                    "Seeder " + seeder.getPeerId() + " got null for the transformed data info, check the algorithm");
-            return;
-        }
-
         // Do not announce the same data info twice
-        if (lastTransformedDataInfo.equals(transformedDataInfo)) {
+        if (transformedDataInfo.equals(lastTransformedDataInfo)) {
             return;
         }
 
@@ -61,12 +54,6 @@ public final class AnnounceHandler extends ChannelHandlerAdapter {
 
         // Create a new data info message
         DataInfoMessage dataInfoMessage = new DataInfoMessage(transformedDataInfo);
-
-        if (!dataInfoMessage.isValid()) {
-            logger.warn("Seeder " + seeder.getPeerId() +
-                        " got a transformed data info which is not valid, check the algorithm");
-            return;
-        }
 
         // Write and flush the data info message
         ctx.writeAndFlush(dataInfoMessage).addListener(fut -> {
@@ -87,7 +74,7 @@ public final class AnnounceHandler extends ChannelHandlerAdapter {
         seeder.getPeerHandler().announced(seeder, peerId, dataInfoMessage.getDataInfo());
     }
 
-    public AnnounceHandler(Seeder seeder) {
+    public AnnounceDataInfoHandler(Seeder seeder) {
         Objects.requireNonNull(seeder);
         this.seeder = seeder;
     }

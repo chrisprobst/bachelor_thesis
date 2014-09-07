@@ -9,12 +9,15 @@ import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.handler.LeecherPeerHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.bandwidth.BandwidthManager;
 import de.probst.ba.core.net.peer.peers.netty.handlers.codec.SimpleCodec;
-import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.CollectHandler;
+import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.CollectDataInfoHandler;
+import de.probst.ba.core.net.peer.peers.netty.handlers.discovery.PeerIdAnnounceHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.group.ChannelGroupHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.DownloadHandler;
 import de.probst.ba.core.net.peer.state.BandwidthStatisticState;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelId;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
@@ -31,7 +34,8 @@ import java.net.SocketAddress;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.Future;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * Created by chrisprobst on 01.09.14.
@@ -41,10 +45,12 @@ public final class NettyLeecher extends AbstractLeecher {
     private final Logger logger = LoggerFactory.getLogger(NettyLeecher.class);
     private final EventLoopGroup leecherEventLoopGroup;
     private final ChannelGroupHandler leecherChannelGroupHandler;
+    private final Optional<PeerId> announcePeerId;
     private final BandwidthManager leecherBandwidthManager;
     private final LoggingHandler leecherLogHandler = new LoggingHandler(LogLevel.TRACE);
     private final Bootstrap leecherBootstrap;
     private final Class<? extends Channel> leecherChannelClass;
+    private final ConcurrentMap<SocketAddress, Boolean> connecting = new ConcurrentHashMap<>();
     private final ChannelInitializer<Channel> leecherChannelInitializer = new ChannelInitializer<Channel>() {
         @Override
         public void initChannel(Channel ch) {
@@ -68,8 +74,9 @@ public final class NettyLeecher extends AbstractLeecher {
                     leecherChannelGroupHandler,
 
                     // Logic
+                    new PeerIdAnnounceHandler(NettyLeecher.this, announcePeerId),
                     new DownloadHandler(NettyLeecher.this),
-                    new CollectHandler(NettyLeecher.this));
+                    new CollectDataInfoHandler(NettyLeecher.this));
         }
     };
 
@@ -84,7 +91,7 @@ public final class NettyLeecher extends AbstractLeecher {
 
     @Override
     protected Map<PeerId, Map<String, DataInfo>> getRemoteDataInfo() {
-        return CollectHandler.collectRemoteDataInfo(getLeecherChannelGroup());
+        return CollectDataInfoHandler.collectRemoteDataInfo(getLeecherChannelGroup());
     }
 
     @Override
@@ -94,12 +101,12 @@ public final class NettyLeecher extends AbstractLeecher {
         Channel remotePeer = getLeecherChannelGroup().find((ChannelId) transfer.getRemotePeerId().getGuid());
 
         if (remotePeer == null) {
-            logger.warn("The algorithm requested to download from a dead peer");
+            logger.warn("Leecher " + getPeerId() + " has a algorithm which requested to download from a dead peer");
         } else {
             try {
                 DownloadHandler.download(remotePeer, transfer);
             } catch (Exception e) {
-                logger.warn("Failed to request download", e);
+                logger.warn("Leecher " + getPeerId() + " failed to request download", e);
             }
         }
     }
@@ -117,16 +124,28 @@ public final class NettyLeecher extends AbstractLeecher {
                         LeecherDistributionAlgorithm leecherDistributionAlgorithm,
                         Optional<LeecherPeerHandler> leecherHandler,
                         EventLoopGroup leecherEventLoopGroup,
-                        Class<? extends Channel> leecherChannelClass) {
+                        Class<? extends Channel> leecherChannelClass,
+                        Optional<PeerId> announcePeerId) {
 
         super(peerId, dataBase, leecherDistributionAlgorithm, leecherHandler, leecherEventLoopGroup.next());
 
         Objects.requireNonNull(leecherEventLoopGroup);
         Objects.requireNonNull(leecherChannelClass);
+        Objects.requireNonNull(announcePeerId);
 
         // Save args
         this.leecherEventLoopGroup = leecherEventLoopGroup;
         this.leecherChannelClass = leecherChannelClass;
+        this.announcePeerId = announcePeerId;
+
+        // Connect close future
+        leecherEventLoopGroup.terminationFuture().addListener(fut -> {
+            if (fut.isSuccess()) {
+                getCloseFuture().complete(null);
+            } else {
+                getCloseFuture().completeExceptionally(fut.cause());
+            }
+        });
 
         // Create internal vars
         leecherBandwidthManager = new BandwidthManager(this, leecherEventLoopGroup, maxUploadRate, maxDownloadRate);
@@ -145,13 +164,27 @@ public final class NettyLeecher extends AbstractLeecher {
     }
 
     @Override
-    public Future<?> getCloseFuture() {
-        return leecherEventLoopGroup.terminationFuture();
-    }
-
-    @Override
     public void connect(SocketAddress socketAddress) {
-        leecherBootstrap.connect(socketAddress);
+        if (connecting.putIfAbsent(socketAddress, false) == null) {
+            logger.info("Leecher " + getPeerId() + " connecting to " + socketAddress);
+            leecherBootstrap.connect(socketAddress).addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    if (!future.isSuccess()) {
+                        connecting.remove(socketAddress);
+                        logger.warn("Leecher " + getPeerId() + " failed to connect to " + socketAddress,
+                                    future.cause());
+                    } else {
+                        connecting.put(socketAddress, true);
+                        logger.info("Leecher " + getPeerId() + " connected to " + socketAddress);
+                        future.channel().closeFuture().addListener(fut -> {
+                            connecting.remove(socketAddress);
+                            logger.info("Leecher " + getPeerId() + " disconnected from " + socketAddress);
+                        });
+                    }
+                }
+            });
+        }
     }
 
     @Override

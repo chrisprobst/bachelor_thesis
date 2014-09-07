@@ -96,7 +96,8 @@ public abstract class AbstractLeecher extends AbstractPeer implements Leecher {
 
                 // This is most likely a bug
                 if (transfers == null) {
-                    logger.warn("Algorithm returned null for optional list of transfers");
+                    logger.warn("Leecher " + getPeerId() +
+                                " got null for the optional list of transfers from the algorithm");
                     return;
                 }
 
@@ -126,7 +127,7 @@ public abstract class AbstractLeecher extends AbstractPeer implements Leecher {
                          .forEach(AbstractLeecher.this::requestDownload);
 
             } catch (Exception e) {
-                logger.error("The algorithm is dead, shutting leecher down", e);
+                logger.error("Leecher " + getPeerId() + " has a dead algorithm, shutting leecher down", e);
                 silentClose();
             }
         }

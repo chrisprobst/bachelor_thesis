@@ -23,22 +23,22 @@ import java.util.stream.Collectors;
 /**
  * Created by chrisprobst on 11.08.14.
  */
-public final class CollectHandler extends SimpleChannelInboundHandler<DataInfoMessage> {
+public final class CollectDataInfoHandler extends SimpleChannelInboundHandler<DataInfoMessage> {
 
     public static Map<PeerId, Map<String, DataInfo>> collectRemoteDataInfo(ChannelGroup channelGroup) {
         return Collections.unmodifiableMap(channelGroup.stream()
-                                                       .map(CollectHandler::get)
-                                                       .map(CollectHandler::getRemoteDataInfo)
+                                                       .map(CollectDataInfoHandler::get)
+                                                       .map(CollectDataInfoHandler::getRemoteDataInfo)
                                                        .filter(Optional::isPresent)
                                                        .map(Optional::get)
                                                        .collect(Collectors.toMap(Tuple::first, Tuple::second)));
     }
 
-    public static CollectHandler get(Channel remotePeer) {
-        return remotePeer.pipeline().get(CollectHandler.class);
+    public static CollectDataInfoHandler get(Channel remotePeer) {
+        return remotePeer.pipeline().get(CollectDataInfoHandler.class);
     }
 
-    private final Logger logger = LoggerFactory.getLogger(CollectHandler.class);
+    private final Logger logger = LoggerFactory.getLogger(CollectDataInfoHandler.class);
     private final AbstractLeecher leecher;
 
     private Map<String, DataInfo> lastRemoteDataInfo = Collections.emptyMap();
@@ -46,7 +46,7 @@ public final class CollectHandler extends SimpleChannelInboundHandler<DataInfoMe
 
     private volatile Optional<Tuple2<PeerId, Map<String, DataInfo>>> externalRemoteDataInfo = Optional.empty();
 
-    public CollectHandler(AbstractLeecher leecher) {
+    public CollectDataInfoHandler(AbstractLeecher leecher) {
         Objects.requireNonNull(leecher);
         this.leecher = leecher;
     }
@@ -57,19 +57,11 @@ public final class CollectHandler extends SimpleChannelInboundHandler<DataInfoMe
 
     @Override
     protected void messageReceived(ChannelHandlerContext ctx, DataInfoMessage msg) throws Exception {
-        // An invalid message is kind of a bug or
-        // shows that the remote peer can not be trusted
-        if (msg == null || !msg.isValid()) {
-            ctx.close();
-            logger.warn("Leecher " + leecher.getPeerId() + " received invalid data info message, connection closed");
-            return;
-        }
-
         PeerId peerId = new NettyPeerId(ctx.channel());
         Map<String, DataInfo> remoteDataInfo = msg.getDataInfo();
 
         // Ignore identical remote data info
-        if (lastRemoteDataInfo.equals(remoteDataInfo)) {
+        if (remoteDataInfo.equals(lastRemoteDataInfo)) {
             return;
         }
 
@@ -87,7 +79,7 @@ public final class CollectHandler extends SimpleChannelInboundHandler<DataInfoMe
                                                                                                Map.Entry::getValue));
 
         // Suggest leeching if there are new non empty data info
-        if (!lastNonEmptyRemoteDataInfo.equals(nonEmptyRemoteDataInfo)) {
+        if (!nonEmptyRemoteDataInfo.equals(lastNonEmptyRemoteDataInfo)) {
             leecher.leech();
         }
 

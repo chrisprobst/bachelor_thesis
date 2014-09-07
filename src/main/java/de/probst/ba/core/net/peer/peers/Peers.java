@@ -57,7 +57,8 @@ public final class Peers {
                                   DataBase dataBase,
                                   LeecherDistributionAlgorithm leecherDistributionAlgorithm,
                                   Optional<LeecherPeerHandler> leecherHandler,
-                                  Optional<EventLoopGroup> leecherEventLoopGroup) {
+                                  Optional<EventLoopGroup> leecherEventLoopGroup,
+                                  Optional<PeerId> announcePeerId) {
         return new NettyLeecher(maxUploadRate,
                                 maxDownloadRate,
                                 peerId,
@@ -65,7 +66,8 @@ public final class Peers {
                                 leecherDistributionAlgorithm,
                                 leecherHandler,
                                 leecherEventLoopGroup.orElseGet(NioEventLoopGroup::new),
-                                type == Type.TCP ? SocketChannel.class : LocalChannel.class);
+                                type == Type.TCP ? SocketChannel.class : LocalChannel.class,
+                                announcePeerId);
     }
 
     public static void waitForInit(Collection<Peer> peers) throws ExecutionException, InterruptedException {
@@ -92,15 +94,9 @@ public final class Peers {
         }
     }
 
-    public static void connectGrid(Collection<Peer> peers) {
-        Objects.requireNonNull(peers);
-        peers.stream()
-             .filter(leecher -> leecher instanceof Leecher)
-             .forEach(leecher -> peers.stream()
-                                      .filter(seeder -> seeder instanceof Seeder)
-                                      .filter(seeder -> seeder != leecher)
-                                      .filter(seeder -> !seeder.getPeerId().equals(leecher.getPeerId()))
-                                      .forEach(seeder -> ((Leecher) leecher).connect(seeder.getPeerId().getAddress())));
+    public static void connectTo(Collection<Peer> leechers, PeerId peerId) {
+        Objects.requireNonNull(leechers);
+        leechers.forEach(l -> ((Leecher) l).connect(peerId.getAddress()));
     }
 
     public enum Type {

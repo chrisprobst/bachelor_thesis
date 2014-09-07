@@ -15,12 +15,7 @@ public final class DataInfoMessage implements Serializable {
     public DataInfoMessage(Map<String, DataInfo> dataInfo) {
         this.dataInfo = dataInfo;
     }
-
-    public boolean isValid() {
-        return dataInfo != null && dataInfo.entrySet().stream().allMatch(p -> p.getKey() != null &&
-                                                                              p.getValue() != null);
-    }
-
+    
     public Map<String, DataInfo> getDataInfo() {
         return dataInfo;
     }

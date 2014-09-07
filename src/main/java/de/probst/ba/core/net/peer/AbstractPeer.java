@@ -28,11 +28,13 @@ public abstract class AbstractPeer implements Peer {
 
     private final CompletableFuture<?> initFuture = new CompletableFuture<>();
 
+    private final CompletableFuture<?> closeFuture = new CompletableFuture<>();
+
     protected void silentClose() {
         try {
             close();
         } catch (IOException e) {
-            logger.error("Failed to close peer", e);
+            logger.error("Peer " + getPeerId() + " failed to silently close", e);
         }
     }
 
@@ -62,6 +64,11 @@ public abstract class AbstractPeer implements Peer {
     @Override
     public CompletableFuture<?> getInitFuture() {
         return initFuture;
+    }
+
+    @Override
+    public CompletableFuture<?> getCloseFuture() {
+        return closeFuture;
     }
 
     @Override
