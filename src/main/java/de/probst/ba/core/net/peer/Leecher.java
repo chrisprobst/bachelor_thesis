@@ -4,8 +4,6 @@ import de.probst.ba.core.distribution.LeecherDistributionAlgorithm;
 import de.probst.ba.core.net.peer.handler.LeecherPeerHandler;
 import de.probst.ba.core.net.peer.state.LeecherDataInfoState;
 
-import java.net.SocketAddress;
-
 /**
  * A leecher is a peer which is connected
  * to a specific number of seeders and tries to
@@ -15,7 +13,7 @@ import java.net.SocketAddress;
  */
 public interface Leecher extends Peer {
 
-    void connect(SocketAddress remoteSocketAddress);
+    void connect(PeerId peerId);
 
     /**
      * This method runs the distribution algorithm

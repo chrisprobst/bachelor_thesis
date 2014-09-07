@@ -96,7 +96,7 @@ public final class Peers {
 
     public static void connectTo(Collection<Peer> leechers, PeerId peerId) {
         Objects.requireNonNull(leechers);
-        leechers.forEach(l -> ((Leecher) l).connect(peerId.getAddress()));
+        leechers.forEach(l -> ((Leecher) l).connect(peerId));
     }
 
     public enum Type {

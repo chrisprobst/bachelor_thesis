@@ -316,7 +316,6 @@ public class Benchmark {
                                             Optional.of(eventLoopGroup),
                                             Optional.of(peerId));
 
-            seederQueue.add(seeder);
             leecherQueue.add(leecher);
             peerQueue.add(seeder);
             peerQueue.add(leecher);

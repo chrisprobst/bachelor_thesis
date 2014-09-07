@@ -3,6 +3,7 @@ package de.probst.ba.core.net.peer;
 import java.io.Serializable;
 import java.net.SocketAddress;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -17,20 +18,31 @@ public class PeerId implements Serializable {
     private final SocketAddress address;
     private final Object guid;
 
+    public PeerId() {
+        this(Optional.empty());
+    }
+
     public PeerId(SocketAddress address) {
+        this(Optional.of(address));
+    }
+
+    public PeerId(Optional<SocketAddress> address) {
         this(address, UUID.randomUUID());
     }
 
-    public PeerId(SocketAddress address, Object guid) {
+    public PeerId(Optional<SocketAddress> address, Object guid) {
         Objects.requireNonNull(address);
         Objects.requireNonNull(guid);
-
-        this.address = address;
+        this.address = address.orElse(null);
         this.guid = guid;
     }
 
-    public SocketAddress getAddress() {
-        return address;
+    public boolean isConnectable() {
+        return address != null;
+    }
+
+    public Optional<SocketAddress> getAddress() {
+        return Optional.ofNullable(address);
     }
 
     public Object getGuid() {

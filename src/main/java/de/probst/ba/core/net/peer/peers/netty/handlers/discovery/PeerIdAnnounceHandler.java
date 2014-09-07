@@ -16,18 +16,26 @@ import java.util.Optional;
 public final class PeerIdAnnounceHandler extends SimpleChannelInboundHandler<PeerIdDiscoveryMessage> {
 
     private final Leecher leecher;
-    private final Optional<PeerId> peerId;
+    private final Optional<PeerId> announcePeerId;
     private volatile ChannelHandlerContext ctx;
 
-    public PeerIdAnnounceHandler(Leecher leecher, Optional<PeerId> peerId) {
+    @Override
+    protected void messageReceived(ChannelHandlerContext ctx, PeerIdDiscoveryMessage msg) throws Exception {
+        msg.getPeerIds()
+           .stream()
+           .filter(peerId -> !announcePeerId.isPresent() || !announcePeerId.get().equals(peerId))
+           .forEach(leecher::connect);
+    }
+
+    public PeerIdAnnounceHandler(Leecher leecher, Optional<PeerId> announcePeerId) {
         Objects.requireNonNull(leecher);
-        Objects.requireNonNull(peerId);
+        Objects.requireNonNull(announcePeerId);
         this.leecher = leecher;
-        this.peerId = peerId;
+        this.announcePeerId = announcePeerId;
     }
 
     public void writePeerId() {
-        peerId.map(PeerIdAnnounceMessage::new).ifPresent(ctx::writeAndFlush);
+        announcePeerId.map(PeerIdAnnounceMessage::new).ifPresent(ctx::writeAndFlush);
     }
 
     @Override
@@ -35,10 +43,5 @@ public final class PeerIdAnnounceHandler extends SimpleChannelInboundHandler<Pee
         this.ctx = ctx;
         writePeerId();
         super.channelActive(ctx);
-    }
-
-    @Override
-    protected void messageReceived(ChannelHandlerContext ctx, PeerIdDiscoveryMessage msg) throws Exception {
-        msg.getPeerIds().stream().map(PeerId::getAddress).forEach(leecher::connect);
     }
 }

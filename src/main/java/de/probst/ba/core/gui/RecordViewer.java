@@ -116,7 +116,7 @@ public class RecordViewer extends Application {
             double x = originX + Math.sin(angle) * (WIDTH - 240) / 2;
             double y = originY + Math.cos(angle) * (HEIGHT - 120) / 2;
 
-            peerPositions.put(nextPeerId.getAddress(), new Point2D(x, y));
+            peerPositions.put(nextPeerId.getAddress().get(), new Point2D(x, y));
             angle += step;
         }
     }
@@ -346,7 +346,7 @@ public class RecordViewer extends Application {
 
                 if (last != null) {
                     last = new HashMap<>(last);
-                    last.merge(record.getPeerId().getAddress(),
+                    last.merge(record.getPeerId().getAddress().get(),
                                record.getTransfer().getCompletedDataInfo(),
                                DataInfo::union);
                     peerDataInfo.add(last);

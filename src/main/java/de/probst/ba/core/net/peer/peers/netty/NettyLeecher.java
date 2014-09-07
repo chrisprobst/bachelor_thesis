@@ -16,7 +16,6 @@ import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.DownloadHandler;
 import de.probst.ba.core.net.peer.state.BandwidthStatisticState;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelId;
 import io.netty.channel.ChannelInitializer;
@@ -164,24 +163,26 @@ public final class NettyLeecher extends AbstractLeecher {
     }
 
     @Override
-    public void connect(SocketAddress socketAddress) {
+    public void connect(PeerId peerId) {
+        Objects.requireNonNull(peerId);
+        if (!peerId.isConnectable()) {
+            throw new IllegalArgumentException("!peerId.isConnectable()");
+        }
+        SocketAddress socketAddress = peerId.getAddress().get();
         if (connecting.putIfAbsent(socketAddress, false) == null) {
-            logger.info("Leecher " + getPeerId() + " connecting to " + socketAddress);
-            leecherBootstrap.connect(socketAddress).addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    if (!future.isSuccess()) {
+            logger.info("Leecher " + getPeerId() + " connecting to " + peerId);
+            leecherBootstrap.connect(socketAddress).addListener((ChannelFutureListener) future -> {
+                if (!future.isSuccess()) {
+                    connecting.remove(socketAddress);
+                    logger.warn("Leecher " + getPeerId() + " failed to connect to " + peerId,
+                                future.cause());
+                } else {
+                    connecting.put(socketAddress, true);
+                    logger.info("Leecher " + getPeerId() + " connected to " + peerId);
+                    future.channel().closeFuture().addListener(fut -> {
                         connecting.remove(socketAddress);
-                        logger.warn("Leecher " + getPeerId() + " failed to connect to " + socketAddress,
-                                    future.cause());
-                    } else {
-                        connecting.put(socketAddress, true);
-                        logger.info("Leecher " + getPeerId() + " connected to " + socketAddress);
-                        future.channel().closeFuture().addListener(fut -> {
-                            connecting.remove(socketAddress);
-                            logger.info("Leecher " + getPeerId() + " disconnected from " + socketAddress);
-                        });
-                    }
+                        logger.info("Leecher " + getPeerId() + " disconnected from " + peerId);
+                    });
                 }
             });
         }

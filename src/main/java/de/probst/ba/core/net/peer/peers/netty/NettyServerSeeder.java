@@ -21,7 +21,7 @@ public final class NettyServerSeeder extends AbstractNettySeeder {
         return new ServerBootstrap().group(getSeederEventLoopGroup())
                                     .channel(getSeederChannelClass())
                                     .childHandler(getSeederChannelInitializer())
-                                    .bind(getPeerId().getAddress());
+                                    .bind(getPeerId().getAddress().get());
     }
 
     @SuppressWarnings("unchecked")
