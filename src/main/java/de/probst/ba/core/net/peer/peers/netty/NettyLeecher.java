@@ -170,11 +170,6 @@ public final class NettyLeecher extends AbstractLeecher {
     }
 
     @Override
-    public int getSeederCount() {
-        return connections.size();
-    }
-
-    @Override
     public CompletableFuture<?> connect(PeerId peerId) {
         Objects.requireNonNull(peerId);
         if (!peerId.isConnectable()) {

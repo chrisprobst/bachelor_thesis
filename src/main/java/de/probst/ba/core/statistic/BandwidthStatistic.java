@@ -4,8 +4,8 @@ import de.probst.ba.core.net.peer.Peer;
 import de.probst.ba.core.net.peer.state.BandwidthStatisticState;
 
 import java.nio.file.Path;
+import java.util.Collection;
 import java.util.Objects;
-import java.util.Queue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 
@@ -14,14 +14,14 @@ import java.util.function.Function;
  */
 public final class BandwidthStatistic extends AbstractScheduledStatistic {
 
-    private final Queue<Peer> peers;
+    private final Collection<Peer> peers;
     private final Function<BandwidthStatisticState, Number> bandwidthMapper;
     private final Mode mode;
 
     public BandwidthStatistic(Path csvPath,
                               ScheduledExecutorService scheduledExecutorService,
                               long delay,
-                              Queue<Peer> peers,
+                              Collection<Peer> peers,
                               Function<BandwidthStatisticState, Number> bandwidthMapper,
                               Mode mode) {
         super(csvPath, scheduledExecutorService, delay);

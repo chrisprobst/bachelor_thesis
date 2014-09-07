@@ -15,7 +15,6 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 
@@ -30,10 +29,14 @@ import java.util.concurrent.ExecutionException;
  */
 public final class Peers {
 
+    public enum PeerType {
+        Local, TCP
+    }
+
     private Peers() {
     }
 
-    public static Seeder seeder(Type type,
+    public static Seeder seeder(PeerType peerType,
                                 long maxUploadRate,
                                 long maxDownloadRate,
                                 PeerId peerId,
@@ -48,10 +51,10 @@ public final class Peers {
                                      seederDistributionAlgorithm,
                                      seederHandler,
                                      seederEventLoopGroup.orElseGet(NioEventLoopGroup::new),
-                                     type == Type.TCP ? NioServerSocketChannel.class : LocalServerChannel.class);
+                                     peerType == PeerType.TCP ? NioServerSocketChannel.class : LocalServerChannel.class);
     }
 
-    public static Leecher leecher(Type type,
+    public static Leecher leecher(PeerType peerType,
                                   long maxUploadRate,
                                   long maxDownloadRate,
                                   PeerId peerId,
@@ -69,7 +72,7 @@ public final class Peers {
                                 leecherHandler,
                                 autoConnect,
                                 leecherEventLoopGroup.orElseGet(NioEventLoopGroup::new),
-                                type == Type.TCP ? NioSocketChannel.class : LocalChannel.class,
+                                peerType == PeerType.TCP ? NioSocketChannel.class : LocalChannel.class,
                                 announcePeerId);
     }
 
@@ -102,7 +105,4 @@ public final class Peers {
         leechers.forEach(l -> ((Leecher) l).connect(peerId));
     }
 
-    public enum Type {
-        Local, TCP
-    }
 }

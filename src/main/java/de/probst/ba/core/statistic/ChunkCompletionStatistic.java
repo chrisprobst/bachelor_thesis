@@ -4,19 +4,19 @@ import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.net.peer.Peer;
 
 import java.nio.file.Path;
+import java.util.Collection;
 import java.util.Objects;
-import java.util.Queue;
 
 /**
  * Created by chrisprobst on 22.08.14.
  */
 public final class ChunkCompletionStatistic extends AbstractFileStatistic {
 
-    private final Queue<Peer> peers;
+    private final Collection<Peer> peers;
     private final String dataInfoHash;
     private final boolean total;
 
-    public ChunkCompletionStatistic(Path csvPath, Queue<Peer> peers, String dataInfoHash, boolean total) {
+    public ChunkCompletionStatistic(Path csvPath, Collection<Peer> peers, String dataInfoHash, boolean total) {
         super(csvPath);
         Objects.requireNonNull(peers);
         this.peers = peers;

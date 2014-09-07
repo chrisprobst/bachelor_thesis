@@ -49,6 +49,15 @@ public abstract class AbstractDataBase implements DataBase {
     }
 
     @Override
+    public synchronized void update(DataInfo dataInfo) {
+        DataInfo old = this.dataInfo.put(dataInfo.getHash(), dataInfo);
+        if (!dataInfo.equals(old)) {
+            Map<String, DataInfo> newDataInfo = getDataInfo();
+            listeners.values().forEach(c -> c.accept(newDataInfo));
+        }
+    }
+
+    @Override
     public synchronized DataInfo get(String hash) {
         return dataInfo.get(hash);
     }

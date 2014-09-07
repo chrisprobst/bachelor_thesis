@@ -8,22 +8,22 @@ import de.probst.ba.core.distribution.SeederDistributionAlgorithm;
  */
 public final class Algorithms {
 
+    public enum AlgorithmType {
+        Logarithmic, ChunkedSwarm
+    }
+
     private Algorithms() {
     }
 
-    public static SeederDistributionAlgorithm defaultSeederDistributionAlgorithm() {
-        return new DefaultSeederDistributionAlgorithm();
+    public static LeecherDistributionAlgorithm getLeecherDistributionAlgorithm(AlgorithmType algorithmType) {
+        return algorithmType == AlgorithmType.Logarithmic ?
+               new OrderedLogarithmicLeecherDistributionAlgorithm() :
+               new OrderedChunkedSwarmLeecherDistributionAlgorithm();
     }
 
-    public static SeederDistributionAlgorithm limitedSeederDistributionAlgorithm(int maxParallelUploads) {
-        return new LimitedSeederDistributionAlgorithm(maxParallelUploads);
-    }
-
-    public static LeecherDistributionAlgorithm orderedChunkedSwarmLeecherDistributionAlgorithm() {
-        return new OrderedChunkedSwarmLeecherDistributionAlgorithm();
-    }
-
-    public static LeecherDistributionAlgorithm orderedLogarithmicLeecherDistributionAlgorithm() {
-        return new OrderedLogarithmicLeecherDistributionAlgorithm();
+    public static SeederDistributionAlgorithm getSeederDistributionAlgorithm(AlgorithmType algorithmType) {
+        return algorithmType == AlgorithmType.Logarithmic ?
+               new LimitedSeederDistributionAlgorithm(1) :
+               new DefaultSeederDistributionAlgorithm();
     }
 }

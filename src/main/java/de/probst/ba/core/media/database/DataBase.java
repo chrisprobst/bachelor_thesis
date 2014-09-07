@@ -30,6 +30,8 @@ public interface DataBase extends Flushable {
      */
     Map<String, DataInfo> getDataInfo();
 
+    void update(DataInfo dataInfo);
+
     /**
      * @param hash
      * @return The data info with the given hash.
