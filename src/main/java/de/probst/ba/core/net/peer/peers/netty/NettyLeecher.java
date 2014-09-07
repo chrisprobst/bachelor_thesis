@@ -50,7 +50,7 @@ public final class NettyLeecher extends AbstractLeecher {
     private final LoggingHandler leecherLogHandler = new LoggingHandler(LogLevel.TRACE);
     private final Bootstrap leecherBootstrap;
     private final Class<? extends Channel> leecherChannelClass;
-    private final ConcurrentMap<SocketAddress, Boolean> connecting = new ConcurrentHashMap<>();
+    private final ConcurrentMap<SocketAddress, Boolean> connections = new ConcurrentHashMap<>();
     private final ChannelInitializer<Channel> leecherChannelInitializer = new ChannelInitializer<Channel>() {
         @Override
         public void initChannel(Channel ch) {
@@ -170,6 +170,11 @@ public final class NettyLeecher extends AbstractLeecher {
     }
 
     @Override
+    public int getSeederCount() {
+        return connections.size();
+    }
+
+    @Override
     public CompletableFuture<?> connect(PeerId peerId) {
         Objects.requireNonNull(peerId);
         if (!peerId.isConnectable()) {
@@ -178,19 +183,19 @@ public final class NettyLeecher extends AbstractLeecher {
         CompletableFuture<?> connectionFuture = new CompletableFuture<>();
         SocketAddress socketAddress = peerId.getAddress().get();
         Boolean previous;
-        if ((previous = connecting.putIfAbsent(socketAddress, false)) == null) {
-            logger.info("Leecher " + getPeerId() + " connecting to " + peerId);
+        if ((previous = connections.putIfAbsent(socketAddress, false)) == null) {
+            logger.debug("Leecher " + getPeerId() + " connecting to " + peerId);
             leecherBootstrap.connect(socketAddress).addListener((ChannelFutureListener) future -> {
                 if (!future.isSuccess()) {
-                    connecting.remove(socketAddress);
+                    connections.remove(socketAddress);
                     logger.warn("Leecher " + getPeerId() + " failed to connect to " + peerId,
                                 future.cause());
                     connectionFuture.completeExceptionally(future.cause());
                 } else {
-                    connecting.put(socketAddress, true);
+                    connections.put(socketAddress, true);
                     logger.info("Leecher " + getPeerId() + " connected to " + peerId);
                     future.channel().closeFuture().addListener(fut -> {
-                        connecting.remove(socketAddress);
+                        connections.remove(socketAddress);
                         logger.info("Leecher " + getPeerId() + " disconnected from " + peerId);
                     });
                     connectionFuture.complete(null);

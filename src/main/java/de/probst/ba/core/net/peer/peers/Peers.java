@@ -17,6 +17,7 @@ import io.netty.channel.local.LocalServerChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.channel.socket.nio.NioSocketChannel;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -68,7 +69,7 @@ public final class Peers {
                                 leecherHandler,
                                 autoConnect,
                                 leecherEventLoopGroup.orElseGet(NioEventLoopGroup::new),
-                                type == Type.TCP ? SocketChannel.class : LocalChannel.class,
+                                type == Type.TCP ? NioSocketChannel.class : LocalChannel.class,
                                 announcePeerId);
     }
 

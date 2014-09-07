@@ -6,6 +6,7 @@ import de.probst.ba.core.net.peer.peers.netty.handlers.discovery.messages.PeerId
 import de.probst.ba.core.net.peer.peers.netty.handlers.discovery.messages.PeerIdDiscoveryMessage;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.util.concurrent.ScheduledFuture;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -17,23 +18,25 @@ import java.util.concurrent.TimeUnit;
 /**
  * Created by chrisprobst on 06.09.14.
  */
-public final class PeerIdAnnounceHandler extends SimpleChannelInboundHandler<PeerIdDiscoveryMessage>
-        implements Runnable {
+public final class PeerIdAnnounceHandler extends SimpleChannelInboundHandler<PeerIdDiscoveryMessage> {
 
     public static final long RECONNECT_DELAY = 15000;
 
     private final Leecher leecher;
     private final Optional<PeerId> announcePeerId;
-    private boolean firstDiscovery = true;
+    private ScheduledFuture<?> reconnectFuture;
     private Set<PeerId> lastPeerIds = Collections.emptySet();
     private volatile ChannelHandlerContext ctx;
 
-    private void connectTo(Set<PeerId> peerIds) {
+    private void connect(Set<PeerId> peerIds) {
         peerIds.forEach(leecher::connect);
     }
 
-    private void schedule() {
-        ctx.channel().eventLoop().schedule(this, RECONNECT_DELAY, TimeUnit.MILLISECONDS);
+    private ScheduledFuture<?> scheduleReconnect() {
+        return ctx.channel().eventLoop().scheduleWithFixedDelay(() -> connect(lastPeerIds),
+                                                                RECONNECT_DELAY,
+                                                                RECONNECT_DELAY,
+                                                                TimeUnit.MILLISECONDS);
     }
 
     private void writePeerId() {
@@ -51,17 +54,16 @@ public final class PeerIdAnnounceHandler extends SimpleChannelInboundHandler<Pee
         if (!peerIds.equals(lastPeerIds)) {
             lastPeerIds = peerIds;
 
-            // HANDLER
-            leecher.getPeerHandler().discoveredPeers(leecher, peerIds);
-
             if (leecher.isAutoConnect()) {
-                connectTo(peerIds);
+                connect(peerIds);
 
-                if (firstDiscovery) {
-                    firstDiscovery = false;
-                    schedule();
+                if (reconnectFuture == null) {
+                    reconnectFuture = scheduleReconnect();
                 }
             }
+
+            // HANDLER
+            leecher.getPeerHandler().discoveredPeers(leecher, peerIds);
         }
     }
 
@@ -77,11 +79,5 @@ public final class PeerIdAnnounceHandler extends SimpleChannelInboundHandler<Pee
         this.ctx = ctx;
         writePeerId();
         super.channelActive(ctx);
-    }
-
-    @Override
-    public void run() {
-        connectTo(lastPeerIds);
-        schedule();
     }
 }

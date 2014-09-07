@@ -345,6 +345,10 @@ public class Benchmark {
         // Stop the time
         Instant timeStamp = Instant.now();
 
+        Thread.sleep(2000);
+
+        leecherQueue.forEach(p -> System.out.println(((Leecher) p).getSeederCount()));
+
         // Await the count down latch to finish
         countDownLatch.await();
 

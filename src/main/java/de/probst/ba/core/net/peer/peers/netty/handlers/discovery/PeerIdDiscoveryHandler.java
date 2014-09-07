@@ -24,8 +24,7 @@ import java.util.stream.Collectors;
 /**
  * Created by chrisprobst on 06.09.14.
  */
-public final class PeerIdDiscoveryHandler extends SimpleChannelInboundHandler<PeerIdAnnounceMessage>
-        implements Runnable {
+public final class PeerIdDiscoveryHandler extends SimpleChannelInboundHandler<PeerIdAnnounceMessage> {
 
     /**
      * This delay determines in milliseconds how often the discovered
@@ -82,7 +81,7 @@ public final class PeerIdDiscoveryHandler extends SimpleChannelInboundHandler<Pe
     }
 
     private void schedule() {
-        ctx.channel().eventLoop().schedule(this, DISCOVERY_EXCHANGE_DELAY, TimeUnit.MILLISECONDS);
+        ctx.channel().eventLoop().schedule(this::writePeerIds, DISCOVERY_EXCHANGE_DELAY, TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -115,10 +114,5 @@ public final class PeerIdDiscoveryHandler extends SimpleChannelInboundHandler<Pe
 
     public Optional<PeerId> getPeerId() {
         return peerId;
-    }
-
-    @Override
-    public void run() {
-        writePeerIds();
     }
 }

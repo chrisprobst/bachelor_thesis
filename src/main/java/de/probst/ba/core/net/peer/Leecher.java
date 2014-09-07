@@ -24,6 +24,12 @@ public interface Leecher extends Peer {
     CompletableFuture<?> connect(PeerId peerId);
 
     /**
+     *
+     * @return
+     */
+    int getSeederCount();
+
+    /**
      * This method runs the distribution algorithm
      * to request new downloads.
      * <p>
