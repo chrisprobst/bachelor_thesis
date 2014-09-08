@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 
@@ -34,16 +35,18 @@ public abstract class AbstractLeecher extends AbstractPeer implements Leecher {
 
     protected abstract Map<PeerId, Map<String, DataInfo>> getRemoteDataInfo();
 
-    public AbstractLeecher(PeerId peerId,
+    public AbstractLeecher(Optional<PeerId> peerId,
                            DataBase dataBase,
                            LeecherDistributionAlgorithm leecherDistributionAlgorithm,
                            Optional<LeecherPeerHandler> leecherHandler,
                            boolean autoConnect,
                            Executor executor) {
-        super(peerId,
+        super(Optional.of(peerId.orElseGet(PeerId::new)),
               dataBase,
               leecherDistributionAlgorithm,
               Optional.of(leecherHandler.orElseGet(LeecherPeerAdapter::new)));
+
+        // Save args
         leecherDistributionAlgorithmWorker = new LeecherDistributionAlgorithmWorker(executor);
         this.autoConnect = autoConnect;
     }
@@ -66,6 +69,18 @@ public abstract class AbstractLeecher extends AbstractPeer implements Leecher {
     @Override
     public void leech() {
         leecherDistributionAlgorithmWorker.execute();
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public CompletableFuture<Leecher> getInitFuture() {
+        return (CompletableFuture<Leecher>) super.getInitFuture();
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public CompletableFuture<Leecher> getCloseFuture() {
+        return (CompletableFuture<Leecher>) super.getCloseFuture();
     }
 
     @Override

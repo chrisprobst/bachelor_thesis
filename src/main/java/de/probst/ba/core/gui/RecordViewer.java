@@ -116,7 +116,7 @@ public class RecordViewer extends Application {
             double x = originX + Math.sin(angle) * (WIDTH - 240) / 2;
             double y = originY + Math.cos(angle) * (HEIGHT - 120) / 2;
 
-            peerPositions.put(nextPeerId.getAddress().get(), new Point2D(x, y));
+            peerPositions.put(nextPeerId.getSocketAddress().get(), new Point2D(x, y));
             angle += step;
         }
     }
@@ -168,8 +168,8 @@ public class RecordViewer extends Application {
         gc.setStroke(Color.GREEN);
         gc.setLineWidth(1);
 
-        Point2D remote = peerPositions.get(record.getRemotePeerId().getAddress());
-        Point2D local = peerPositions.get(record.getPeerId().getAddress());
+        Point2D remote = peerPositions.get(record.getRemotePeerId().getSocketAddress().get());
+        Point2D local = peerPositions.get(record.getPeerId().getSocketAddress().get());
         renderArrow(gc, remote, local, PEER_RADIUS, PEER_RADIUS);
     }
 
@@ -177,8 +177,8 @@ public class RecordViewer extends Application {
         gc.setStroke(Color.BLUE);
         gc.setLineWidth(3);
 
-        Point2D local = peerPositions.get(record.getPeerId().getAddress());
-        Point2D remote = peerPositions.get(record.getTransfer().getRemotePeerId().getAddress());
+        Point2D local = peerPositions.get(record.getPeerId().getSocketAddress().get());
+        Point2D remote = peerPositions.get(record.getTransfer().getRemotePeerId().getSocketAddress().get());
         renderArrow(gc, local, remote, PEER_RADIUS, PEER_RADIUS);
     }
 
@@ -186,8 +186,8 @@ public class RecordViewer extends Application {
         gc.setStroke(Color.RED);
         gc.setLineWidth(3);
 
-        Point2D local = peerPositions.get(record.getPeerId().getAddress());
-        Point2D remote = peerPositions.get(record.getTransfer().getRemotePeerId().getAddress());
+        Point2D local = peerPositions.get(record.getPeerId().getSocketAddress().get());
+        Point2D remote = peerPositions.get(record.getTransfer().getRemotePeerId().getSocketAddress().get());
         renderArrow(gc, remote, local, PEER_RADIUS, PEER_RADIUS);
     }
 
@@ -195,8 +195,8 @@ public class RecordViewer extends Application {
         gc.setStroke(Color.DARKCYAN);
         gc.setLineWidth(3);
 
-        Point2D local = peerPositions.get(record.getPeerId().getAddress());
-        Point2D remote = peerPositions.get(record.getTransfer().getRemotePeerId().getAddress());
+        Point2D local = peerPositions.get(record.getPeerId().getSocketAddress().get());
+        Point2D remote = peerPositions.get(record.getTransfer().getRemotePeerId().getSocketAddress().get());
         renderArrow(gc, remote, local, PEER_RADIUS, PEER_RADIUS);
     }
 
@@ -204,8 +204,8 @@ public class RecordViewer extends Application {
         gc.setStroke(Color.ORANGE);
         gc.setLineWidth(3);
 
-        Point2D local = peerPositions.get(record.getPeerId().getAddress());
-        Point2D remote = peerPositions.get(record.getTransfer().getRemotePeerId().getAddress());
+        Point2D local = peerPositions.get(record.getPeerId().getSocketAddress().get());
+        Point2D remote = peerPositions.get(record.getTransfer().getRemotePeerId().getSocketAddress().get());
         renderArrow(gc, remote, local, PEER_RADIUS, PEER_RADIUS);
     }
 
@@ -213,8 +213,8 @@ public class RecordViewer extends Application {
         gc.setStroke(Color.DARKGREEN);
         gc.setLineWidth(6);
 
-        Point2D local = peerPositions.get(record.getPeerId().getAddress());
-        Point2D remote = peerPositions.get(record.getTransfer().getRemotePeerId().getAddress());
+        Point2D local = peerPositions.get(record.getPeerId().getSocketAddress().get());
+        Point2D remote = peerPositions.get(record.getTransfer().getRemotePeerId().getSocketAddress().get());
         renderArrow(gc, remote, local, PEER_RADIUS, PEER_RADIUS + 6);
         double radius = PEER_RADIUS + 3;
 
@@ -346,14 +346,14 @@ public class RecordViewer extends Application {
 
                 if (last != null) {
                     last = new HashMap<>(last);
-                    last.merge(record.getPeerId().getAddress().get(),
+                    last.merge(record.getPeerId().getSocketAddress().get(),
                                record.getTransfer().getCompletedDataInfo(),
                                DataInfo::union);
                     peerDataInfo.add(last);
                 } else {
                     last = new HashMap<>();
                     for (SocketAddress addr : peerPositions.keySet()) {
-                        last.put(addr, record.getPeerId().getAddress().equals(addr) ?
+                        last.put(addr, record.getPeerId().getSocketAddress().get().equals(addr) ?
                                        record.getTransfer().getCompletedDataInfo() :
                                        record.getTransfer().getDataInfo().empty());
                     }

@@ -5,6 +5,7 @@ import de.probst.ba.core.media.transfer.TransferManager;
 import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.Seeder;
 
+import java.net.SocketAddress;
 import java.util.Map;
 
 /**
@@ -12,7 +13,7 @@ import java.util.Map;
  */
 public interface SeederPeerHandler extends PeerHandler {
 
-    void discoveredPeer(Seeder seeder, PeerId remotePeerId);
+    void discoveredSocketAddress(Seeder seeder, SocketAddress remoteSocketAddress);
 
     void announced(Seeder seeder, PeerId remotePeerId, Map<String, DataInfo> dataInfo);
 

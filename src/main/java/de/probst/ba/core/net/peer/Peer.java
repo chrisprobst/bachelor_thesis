@@ -26,13 +26,13 @@ public interface Peer extends Closeable {
      * @return A completable future which is triggered
      * when this peer is ready for work.
      */
-    CompletableFuture<?> getInitFuture();
+    CompletableFuture<? extends Peer> getInitFuture();
 
     /**
      * @return A completable future which is triggered
      * when this peer is completely closed.
      */
-    CompletableFuture<?> getCloseFuture();
+    CompletableFuture<? extends Peer> getCloseFuture();
 
     /**
      * @return The data info state created

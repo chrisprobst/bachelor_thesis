@@ -9,6 +9,7 @@ import com.beust.jcommander.converters.FileConverter;
 import de.probst.ba.core.distribution.LeecherDistributionAlgorithm;
 import de.probst.ba.core.distribution.SeederDistributionAlgorithm;
 import de.probst.ba.core.distribution.algorithms.Algorithms;
+import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.net.peer.Peer;
 import de.probst.ba.core.net.peer.handler.handlers.RecordPeerHandler;
 import de.probst.ba.core.net.peer.peers.Peers;
@@ -27,16 +28,22 @@ import java.net.UnknownHostException;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Optional;
 import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.stream.IntStream;
 
 /**
  * Created by chrisprobst on 07.09.14.
  */
 public abstract class AbstractPeerApp {
 
-    public static final int STATISTIC_INTERVAL = 250;
+    public static final int STATISTIC_INTERVAL = 100;
 
     @Parameter(names = {"-pt", "--peer-type"},
                description = "Peer type [Local, TCP]",
@@ -51,10 +58,6 @@ public abstract class AbstractPeerApp {
     @Parameter(names = {"--help"},
                description = "Show usage")
     protected Boolean showUsage = false;
-
-    @Parameter(names = {"-v", "--verbose"},
-               description = "Verbose mode")
-    protected Boolean verbose = false;
 
     @Parameter(names = {"-re", "--record-events"},
                description = "Record the events and serialize them")
@@ -120,10 +123,16 @@ public abstract class AbstractPeerApp {
         return true;
     }
 
+    protected final Queue<Peer> uploadBandwidthStatisticPeers = new ConcurrentLinkedQueue<>();
+    protected final Queue<Peer> downloadBandwidthStatisticPeers = new ConcurrentLinkedQueue<>();
+    protected final Queue<Peer> dataBaseUpdatePeers = new ConcurrentLinkedQueue<>();
+    protected final Queue<Peer> initClosePeerQueue = new ConcurrentLinkedQueue<>();
     protected Logger logger;
     protected RecordPeerHandler recordPeerHandler;
     protected BandwidthStatistic uploadBandwidthStatistic;
     protected BandwidthStatistic downloadBandwidthStatistic;
+    protected DataInfo[] dataInfo;
+    protected Instant startTime;
 
     protected SeederDistributionAlgorithm getSeederDistributionAlgorithm() {
         return Algorithms.getSeederDistributionAlgorithm(algorithmType);
@@ -133,52 +142,121 @@ public abstract class AbstractPeerApp {
         return Algorithms.getLeecherDistributionAlgorithm(algorithmType);
     }
 
-    protected void setupRecords(ScheduledExecutorService scheduledExecutorService,
-                                Queue<Peer> uploadBandwidthStatisticPeers,
-                                Queue<Peer> downloadBandwidthStatisticPeers) {
+    protected void initPeers() throws ExecutionException, InterruptedException {
+        Peers.waitForInit(initClosePeerQueue);
+    }
+
+    protected void closePeers() throws InterruptedException, ExecutionException, IOException {
+        Peers.closeAndWait(initClosePeerQueue);
+        Thread.sleep(1000);
+    }
+
+    protected void setupVerbosity() throws Exception {
+        InternalLoggerFactory.setDefaultFactory(new Slf4JLoggerFactory());
+        logger = LoggerFactory.getLogger(getClass());
+    }
+
+    protected void setupRecords() {
         // Setup events
         if (recordEvents) {
             recordPeerHandler = new RecordPeerHandler();
         }
-
-        // Setup stats
-        if (recordStats) {
-            BandwidthStatistic.Mode mode = BandwidthStatistic.Mode.TotalMedian;
-
-            Path uploadStatisticPath =
-                    new File(recordsDirectory, algorithmType + "Upload" + mode + ".csv").toPath();
-            uploadBandwidthStatistic = new BandwidthStatistic(uploadStatisticPath,
-                                                              scheduledExecutorService,
-                                                              STATISTIC_INTERVAL,
-                                                              uploadBandwidthStatisticPeers,
-                                                              BandwidthStatisticState::getAverageUploadRate,
-                                                              mode);
-
-            Path downloadStatisticPath =
-                    new File(recordsDirectory, algorithmType + "Download" + mode + ".csv").toPath();
-            downloadBandwidthStatistic = new BandwidthStatistic(downloadStatisticPath,
-                                                                scheduledExecutorService,
-                                                                STATISTIC_INTERVAL,
-                                                                downloadBandwidthStatisticPeers,
-                                                                BandwidthStatisticState::getAverageDownloadRate,
-                                                                mode);
-        }
     }
 
-    protected void startRecords() {
-        // Start events
-        if (recordEvents) {
-            recordPeerHandler.start();
-        }
+    protected void setupDataInfo() {
+        dataInfo = IntStream.range(0, parts)
+                            .mapToObj(i -> new DataInfo(i,
+                                                        totalSize,
+                                                        Optional.empty(),
+                                                        Optional.empty(),
+                                                        getClass().getSimpleName() + " pseudo hash for part " + i,
+                                                        chunkCount,
+                                                        String::valueOf).full())
+                            .toArray(DataInfo[]::new);
+    }
+
+    protected void setupPeerHandlers() {
+
+    }
+
+    protected void setupSeeders() {
+    }
+
+    protected void setupLeechers() {
+    }
+
+    protected void setup() throws Exception {
+        setupVerbosity();
+        setupRecords();
+        setupDataInfo();
+        setupPeerHandlers();
+        setupSeeders();
+        setupLeechers();
+    }
+
+    protected void setupStartTime() {
+        startTime = Instant.now();
+        logger.info("[== Starting " + getClass().getSimpleName() + " ==]");
+    }
+
+    protected void setupStartRecords(ScheduledExecutorService scheduledExecutorService) {
 
         // Start stats
         if (recordStats) {
-            uploadBandwidthStatistic.schedule();
-            downloadBandwidthStatistic.schedule();
+            BandwidthStatistic.BandwidthStatisticMode bandwidthStatisticMode =
+                    BandwidthStatistic.BandwidthStatisticMode.TotalMedian;
+
+            Collection<Peer> copy = new ArrayList<>(uploadBandwidthStatisticPeers);
+            if (!copy.isEmpty()) {
+                Path uploadStatisticPath = new File(recordsDirectory,
+                                                    algorithmType + getClass().getSimpleName() + "Upload" +
+                                                    bandwidthStatisticMode + ".csv").toPath();
+                uploadBandwidthStatistic = new BandwidthStatistic(uploadStatisticPath,
+                                                                  scheduledExecutorService,
+                                                                  STATISTIC_INTERVAL,
+                                                                  copy,
+                                                                  BandwidthStatisticState::getCurrentUploadRate,
+                                                                  bandwidthStatisticMode);
+                uploadBandwidthStatistic.schedule();
+            }
+
+            copy = new ArrayList<>(downloadBandwidthStatisticPeers);
+            if (!copy.isEmpty()) {
+                Path downloadStatisticPath = new File(recordsDirectory,
+                                                      algorithmType + getClass().getSimpleName() + "Download" +
+                                                      bandwidthStatisticMode + ".csv").toPath();
+                downloadBandwidthStatistic = new BandwidthStatistic(downloadStatisticPath,
+                                                                    scheduledExecutorService,
+                                                                    STATISTIC_INTERVAL,
+                                                                    copy,
+                                                                    BandwidthStatisticState::getCurrentDownloadRate,
+                                                                    bandwidthStatisticMode);
+                downloadBandwidthStatistic.schedule();
+            }
+        }
+
+        // Start events
+        if (recordEvents) {
+            if (recordPeerHandler != null) {
+                recordPeerHandler.start();
+            }
         }
     }
 
-    protected void flushRecords() throws IOException {
+    protected void setupStart(ScheduledExecutorService scheduledExecutorService) {
+        setupStartRecords(scheduledExecutorService);
+        setupStartTime();
+        updatePeerDataBases();
+    }
+
+
+    protected void setupStopTime() {
+        Duration duration = Duration.between(startTime, Instant.now());
+        logger.info("[== Completed " + getClass().getSimpleName() + " in " + (duration.toMillis() / 1000.0) +
+                    " seconds ==]");
+    }
+
+    protected void setupStopRecords() throws IOException {
         // Stop events
         if (recordEvents) {
             recordPeerHandler.end();
@@ -187,7 +265,7 @@ public abstract class AbstractPeerApp {
         // Stop stats
         if (recordStats) {
             // CSV
-            logger.info("[== WRITING STATS ==]");
+            logger.info("[== Writing stats ==]");
             Instant timeStamp = Instant.now();
 
             if (uploadBandwidthStatistic != null) {
@@ -199,29 +277,31 @@ public abstract class AbstractPeerApp {
             }
 
             Duration duration = Duration.between(timeStamp, Instant.now());
-            logger.info("[== DONE IN: " + (duration.toMillis() / 1000.0) + " seconds ==]");
+            logger.info("[== Done in: " + (duration.toMillis() / 1000.0) + " seconds ==]");
         }
 
         // Save events
         if (recordEvents) {
 
             // Get records and serialize
-            logger.info("[== WRITING EVENTS ==]");
+            logger.info("[== Writing events ==]");
             Instant timeStamp = Instant.now();
 
-            IOUtil.serialize(new File(recordsDirectory, algorithmType + "Events.dat"),
+            IOUtil.serialize(new File(recordsDirectory, algorithmType + getClass().getSimpleName() + "Events.dat"),
                              recordPeerHandler.sortAndGetRecords());
 
             Duration duration = Duration.between(timeStamp, Instant.now());
-            logger.info("[== DONE IN: " + (duration.toMillis() / 1000.0) + " seconds ==]");
+            logger.info("[== Done in: " + (duration.toMillis() / 1000.0) + " seconds ==]");
         }
     }
 
-    protected void setupVerbosity() throws Exception {
-        // Setup logging
-        System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", verbose ? "info" : "warn");
-        InternalLoggerFactory.setDefaultFactory(new Slf4JLoggerFactory());
-        logger = LoggerFactory.getLogger(getClass());
+    protected void setupStop() throws IOException, ExecutionException, InterruptedException {
+        setupStopTime();
+        setupStopRecords();
+    }
+
+    protected void updatePeerDataBases() {
+        dataBaseUpdatePeers.forEach(s -> Arrays.stream(dataInfo).forEach(s.getDataBase()::update));
     }
 
     protected abstract void start() throws Exception;
@@ -310,7 +390,7 @@ public abstract class AbstractPeerApp {
     public static class PeerCountValidator implements IValueValidator<Integer> {
 
         public static final int MIN = 1;
-        public static final int MAX = 64;
+        public static final int MAX = 1000;
         public static final String MSG = "Must be between " + MIN + " and " + MAX;
 
         @Override

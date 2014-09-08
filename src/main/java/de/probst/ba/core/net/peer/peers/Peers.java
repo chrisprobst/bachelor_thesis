@@ -19,6 +19,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 
 import java.io.IOException;
+import java.net.SocketAddress;
 import java.util.Collection;
 import java.util.Objects;
 import java.util.Optional;
@@ -39,31 +40,33 @@ public final class Peers {
     public static Seeder seeder(PeerType peerType,
                                 long maxUploadRate,
                                 long maxDownloadRate,
-                                PeerId peerId,
+                                SocketAddress socketAddress,
                                 DataBase dataBase,
                                 SeederDistributionAlgorithm seederDistributionAlgorithm,
                                 Optional<SeederPeerHandler> seederHandler,
                                 Optional<EventLoopGroup> seederEventLoopGroup) {
         return new NettyServerSeeder(maxUploadRate,
                                      maxDownloadRate,
-                                     peerId,
+                                     socketAddress,
                                      dataBase,
                                      seederDistributionAlgorithm,
                                      seederHandler,
                                      seederEventLoopGroup.orElseGet(NioEventLoopGroup::new),
-                                     peerType == PeerType.TCP ? NioServerSocketChannel.class : LocalServerChannel.class);
+                                     peerType == PeerType.TCP ?
+                                     NioServerSocketChannel.class :
+                                     LocalServerChannel.class);
     }
 
     public static Leecher leecher(PeerType peerType,
                                   long maxUploadRate,
                                   long maxDownloadRate,
-                                  PeerId peerId,
+                                  Optional<PeerId> peerId,
                                   DataBase dataBase,
                                   LeecherDistributionAlgorithm leecherDistributionAlgorithm,
                                   Optional<LeecherPeerHandler> leecherHandler,
                                   boolean autoConnect,
                                   Optional<EventLoopGroup> leecherEventLoopGroup,
-                                  Optional<PeerId> announcePeerId) {
+                                  Optional<SocketAddress> announceSocketAddress) {
         return new NettyLeecher(maxUploadRate,
                                 maxDownloadRate,
                                 peerId,
@@ -73,7 +76,7 @@ public final class Peers {
                                 autoConnect,
                                 leecherEventLoopGroup.orElseGet(NioEventLoopGroup::new),
                                 peerType == PeerType.TCP ? NioSocketChannel.class : LocalChannel.class,
-                                announcePeerId);
+                                announceSocketAddress);
     }
 
     public static void waitForInit(Collection<Peer> peers) throws ExecutionException, InterruptedException {
@@ -100,9 +103,9 @@ public final class Peers {
         }
     }
 
-    public static void connectTo(Collection<Peer> leechers, PeerId peerId) {
+    public static void connectAndWait(Collection<Peer> leechers, SocketAddress socketAddress) {
         Objects.requireNonNull(leechers);
-        leechers.forEach(l -> ((Leecher) l).connect(peerId));
+        leechers.forEach(l -> ((Leecher) l).connect(socketAddress).join());
     }
 
 }

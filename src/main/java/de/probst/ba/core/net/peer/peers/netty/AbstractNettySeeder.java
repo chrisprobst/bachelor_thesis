@@ -6,15 +6,17 @@ import de.probst.ba.core.media.transfer.Transfer;
 import de.probst.ba.core.net.peer.AbstractSeeder;
 import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.handler.SeederPeerHandler;
-import de.probst.ba.core.net.peer.peers.netty.handlers.bandwidth.BandwidthManager;
 import de.probst.ba.core.net.peer.peers.netty.handlers.codec.SimpleCodec;
 import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.AnnounceDataInfoHandler;
-import de.probst.ba.core.net.peer.peers.netty.handlers.discovery.PeerIdDiscoveryHandler;
+import de.probst.ba.core.net.peer.peers.netty.handlers.discovery.SocketAddressDiscoveryHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.group.ChannelGroupHandler;
+import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.BandwidthStatisticHandler;
+import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.WriteThrottle;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.UploadHandler;
 import de.probst.ba.core.net.peer.state.BandwidthStatisticState;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
@@ -26,6 +28,7 @@ import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
 
 import java.io.IOException;
+import java.net.SocketAddress;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -37,9 +40,10 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
 
     private final EventLoopGroup seederEventLoopGroup;
     private final ChannelGroupHandler seederChannelGroupHandler;
-    private final BandwidthManager seederBandwidthManager;
+    private final BandwidthStatisticHandler seederBandwidthStatisticHandler;
     private final LoggingHandler seederLogHandler = new LoggingHandler(LogLevel.TRACE);
     private final Class<? extends Channel> seederChannelClass;
+    WriteThrottle writeThrottle;
     private final ChannelInitializer<Channel> seederChannelInitializer = new ChannelInitializer<Channel>() {
         @Override
         public void initChannel(Channel ch) {
@@ -48,10 +52,12 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
             ch.pipeline().addLast(
 
                     // Traffic shaper
-                    seederBandwidthManager.getGlobalTrafficShapingHandler(),
+                    writeThrottle,
+
+                    //seederBandwidthManager.getGlobalTrafficShapingHandler(),
 
                     // Statistic handler
-                    seederBandwidthManager.getGlobalStatisticHandler(),
+                    seederBandwidthStatisticHandler.getGlobalStatisticHandler(),
 
                     // Codec stuff
                     new LengthFieldBasedFrameDecoder(1024 * 1024, 0, 4, 0, 4),
@@ -68,7 +74,7 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
                     new ChunkedWriteHandler(),
 
                     // Logic
-                    new PeerIdDiscoveryHandler(AbstractNettySeeder.this, getSeederChannelGroup()),
+                    new SocketAddressDiscoveryHandler(AbstractNettySeeder.this, getSeederChannelGroup()),
                     new UploadHandler(AbstractNettySeeder.this, getParallelUploads()),
                     new AnnounceDataInfoHandler(AbstractNettySeeder.this));
         }
@@ -95,18 +101,18 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
         return UploadHandler.collectUploads(getSeederChannelGroup());
     }
 
-    protected abstract ChannelFuture initSeederBootstrap();
+    protected abstract ChannelFuture initSeederBootstrap(SocketAddress socketAddress);
 
     public AbstractNettySeeder(long maxUploadRate,
                                long maxDownloadRate,
-                               PeerId peerId,
+                               SocketAddress socketAddress,
                                DataBase dataBase,
                                SeederDistributionAlgorithm seederDistributionAlgorithm,
                                Optional<SeederPeerHandler> seederHandler,
                                EventLoopGroup seederEventLoopGroup,
                                Class<? extends ServerChannel> seederChannelClass) {
 
-        super(peerId, dataBase, seederDistributionAlgorithm, seederHandler);
+        super(dataBase, seederDistributionAlgorithm, seederHandler);
 
         Objects.requireNonNull(seederEventLoopGroup);
         Objects.requireNonNull(seederChannelClass);
@@ -118,20 +124,23 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
         // Connect close future
         seederEventLoopGroup.terminationFuture().addListener(fut -> {
             if (fut.isSuccess()) {
-                getCloseFuture().complete(null);
+                getCloseFuture().complete(this);
             } else {
                 getCloseFuture().completeExceptionally(fut.cause());
             }
         });
 
         // Create internal vars
-        seederBandwidthManager = new BandwidthManager(this, seederEventLoopGroup, maxUploadRate, maxDownloadRate);
+        seederBandwidthStatisticHandler =
+                new BandwidthStatisticHandler(this, maxUploadRate, maxDownloadRate, seederEventLoopGroup);
         seederChannelGroupHandler = new ChannelGroupHandler(this.seederEventLoopGroup.next());
+        writeThrottle = new WriteThrottle(getBandwidthStatisticState().getMaxUploadRate());
 
         // Init bootstrap
-        initSeederBootstrap().addListener(fut -> {
+        initSeederBootstrap(socketAddress).addListener((ChannelFutureListener) fut -> {
             if (fut.isSuccess()) {
-                getInitFuture().complete(null);
+                setPeerId(Optional.of(new PeerId(fut.channel().localAddress(), fut.channel().id())));
+                getInitFuture().complete(this);
             } else {
                 getInitFuture().completeExceptionally(fut.cause());
             }
@@ -140,13 +149,13 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
 
     @Override
     public BandwidthStatisticState getBandwidthStatisticState() {
-        return seederBandwidthManager.getBandwidthStatisticState();
+        return seederBandwidthStatisticHandler.getBandwidthStatisticState();
     }
 
     @Override
     public void close() throws IOException {
         seederEventLoopGroup.shutdownGracefully();
-        seederBandwidthManager.close();
+        seederBandwidthStatisticHandler.close();
         super.close();
     }
 }

@@ -5,6 +5,7 @@ import de.probst.ba.core.media.transfer.TransferManager;
 import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.Seeder;
 
+import java.net.SocketAddress;
 import java.util.Map;
 
 /**
@@ -13,7 +14,7 @@ import java.util.Map;
 public class SeederPeerAdapter implements SeederPeerHandler {
 
     @Override
-    public void discoveredPeer(Seeder seeder, PeerId remotePeerId) {
+    public void discoveredSocketAddress(Seeder seeder, SocketAddress remoteSocketAddress) {
 
     }
 

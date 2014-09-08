@@ -5,8 +5,8 @@ import de.probst.ba.core.media.transfer.TransferManager;
 import de.probst.ba.core.net.peer.Leecher;
 import de.probst.ba.core.net.peer.PeerId;
 
+import java.net.SocketAddress;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -15,22 +15,22 @@ import java.util.Set;
 public class LeecherHandlerList extends PeerHandlerList implements LeecherPeerHandler {
 
     @Override
-    public LeecherHandlerList add(Optional<PeerHandler> peerHandler) {
+    public LeecherHandlerList add(PeerHandler peerHandler) {
         return (LeecherHandlerList) super.add(peerHandler);
     }
 
     @Override
-    public LeecherHandlerList remove(Optional<PeerHandler> peerHandler) {
+    public LeecherHandlerList remove(PeerHandler peerHandler) {
         return (LeecherHandlerList) super.remove(peerHandler);
     }
 
     @Override
-    public void discoveredPeers(Leecher leecher, Set<PeerId> peerIds) {
+    public void discoveredSocketAddresses(Leecher leecher, Set<SocketAddress> socketAddresses) {
         peerHandlers.stream()
                     .filter(ph -> ph instanceof LeecherPeerHandler)
-                    .forEach(ph -> ((LeecherPeerHandler) ph).discoveredPeers(
+                    .forEach(ph -> ((LeecherPeerHandler) ph).discoveredSocketAddresses(
                             leecher,
-                            peerIds));
+                            socketAddresses));
     }
 
     @Override

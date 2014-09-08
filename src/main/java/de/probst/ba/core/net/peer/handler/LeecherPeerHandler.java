@@ -5,6 +5,7 @@ import de.probst.ba.core.media.transfer.TransferManager;
 import de.probst.ba.core.net.peer.Leecher;
 import de.probst.ba.core.net.peer.PeerId;
 
+import java.net.SocketAddress;
 import java.util.Map;
 import java.util.Set;
 
@@ -13,7 +14,7 @@ import java.util.Set;
  */
 public interface LeecherPeerHandler extends PeerHandler {
 
-    void discoveredPeers(Leecher leecher, Set<PeerId> peerIds);
+    void discoveredSocketAddresses(Leecher leecher, Set<SocketAddress> socketAddresses);
 
     void collected(Leecher leecher, PeerId remotePeerId, Map<String, DataInfo> dataInfo);
 

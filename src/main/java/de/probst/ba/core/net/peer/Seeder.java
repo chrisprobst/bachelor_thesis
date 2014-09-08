@@ -4,6 +4,8 @@ import de.probst.ba.core.distribution.SeederDistributionAlgorithm;
 import de.probst.ba.core.net.peer.handler.SeederPeerHandler;
 import de.probst.ba.core.net.peer.state.SeederDataInfoState;
 
+import java.util.concurrent.CompletableFuture;
+
 /**
  * A seeder is a peer which is connected
  * to a couple of leechers to serve their
@@ -12,6 +14,12 @@ import de.probst.ba.core.net.peer.state.SeederDataInfoState;
  * Created by chrisprobst on 01.09.14.
  */
 public interface Seeder extends Peer {
+
+    @Override
+    CompletableFuture<Seeder> getCloseFuture();
+
+    @Override
+    CompletableFuture<Seeder> getInitFuture();
 
     /**
      * @return The seeder data info state.

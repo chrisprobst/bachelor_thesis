@@ -2,13 +2,13 @@ package de.probst.ba.core.net.peer.peers.netty;
 
 import de.probst.ba.core.distribution.SeederDistributionAlgorithm;
 import de.probst.ba.core.media.database.DataBase;
-import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.handler.SeederPeerHandler;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 
+import java.net.SocketAddress;
 import java.util.Optional;
 
 /**
@@ -17,11 +17,11 @@ import java.util.Optional;
 public final class NettyServerSeeder extends AbstractNettySeeder {
 
     @Override
-    protected ChannelFuture initSeederBootstrap() {
+    protected ChannelFuture initSeederBootstrap(SocketAddress socketAddress) {
         return new ServerBootstrap().group(getSeederEventLoopGroup())
                                     .channel(getSeederChannelClass())
                                     .childHandler(getSeederChannelInitializer())
-                                    .bind(getPeerId().getAddress().get());
+                                    .bind(socketAddress);
     }
 
     @SuppressWarnings("unchecked")
@@ -32,7 +32,7 @@ public final class NettyServerSeeder extends AbstractNettySeeder {
 
     public NettyServerSeeder(long maxUploadRate,
                              long maxDownloadRate,
-                             PeerId peerId,
+                             SocketAddress socketAddress,
                              DataBase dataBase,
                              SeederDistributionAlgorithm seederDistributionAlgorithm,
                              Optional<SeederPeerHandler> seederHandler,
@@ -40,7 +40,7 @@ public final class NettyServerSeeder extends AbstractNettySeeder {
                              Class<? extends ServerChannel> seederChannelClass) {
         super(maxUploadRate,
               maxDownloadRate,
-              peerId,
+              socketAddress,
               dataBase,
               seederDistributionAlgorithm,
               seederHandler,

@@ -31,7 +31,7 @@ public final class ChunkCompletionStatistic extends AbstractFileStatistic {
             csv.writeElement("Total percentage");
         } else {
             for (Peer peer : peers) {
-                csv.writeElement(peer.getPeerId().getAddress());
+                csv.writeElement(peer.getPeerId().getSocketAddress());
             }
         }
 

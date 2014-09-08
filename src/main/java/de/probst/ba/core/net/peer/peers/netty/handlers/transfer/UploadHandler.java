@@ -4,7 +4,6 @@ import de.probst.ba.core.media.transfer.Transfer;
 import de.probst.ba.core.media.transfer.TransferManager;
 import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.Seeder;
-import de.probst.ba.core.net.peer.peers.netty.NettyPeerId;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.messages.UploadRejectedMessage;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.messages.UploadRequestMessage;
 import de.probst.ba.core.util.concurrent.AtomicCounter;
@@ -96,9 +95,9 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
         } else {
 
             // Create a new transfer manager
-            TransferManager newTransferManager =
-                    seeder.getDataBase().createTransferManager(Transfer.upload(new NettyPeerId(
-                            ctx.channel()), msg.getDataInfo()));
+            TransferManager newTransferManager = seeder.getDataBase().createTransferManager(Transfer.upload(new PeerId(
+                    ctx.channel().remoteAddress(),
+                    ctx.channel().id()), msg.getDataInfo()));
 
             // If the upload is not allowed, reject it!
             if (!setup(ctx, newTransferManager)) {
@@ -161,7 +160,7 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
 
         @Override
         public ByteBuf readChunk(ChannelHandlerContext ctx) throws Exception {
-            ByteBuf byteBuf = Unpooled.buffer(4096);
+            ByteBuf byteBuf = Unpooled.buffer(0xFFFF);
             try {
                 transferManager.process(byteBuf);
             } catch (Exception e) {

@@ -3,7 +3,6 @@ package de.probst.ba.core.net.peer.peers.netty.handlers.datainfo;
 import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.Seeder;
-import de.probst.ba.core.net.peer.peers.netty.NettyPeerId;
 import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.messages.DataInfoMessage;
 import de.probst.ba.core.util.collections.Tuple2;
 import io.netty.channel.ChannelHandlerAdapter;
@@ -38,7 +37,7 @@ public final class AnnounceDataInfoHandler extends ChannelHandlerAdapter {
         Objects.requireNonNull(dataInfo);
 
         // Create the netty seeder id
-        PeerId peerId = new NettyPeerId(ctx.channel());
+        PeerId peerId = new PeerId(ctx.channel().remoteAddress(), ctx.channel().id());
 
         // Transform the data info using the algorithm
         Map<String, DataInfo> transformedDataInfo =
@@ -62,8 +61,8 @@ public final class AnnounceDataInfoHandler extends ChannelHandlerAdapter {
             if (!fut.isSuccess() && !(fut.cause() instanceof ClosedChannelException)) {
                 ctx.close();
 
-                logger.warn("Seeder " + seeder.getPeerId() + " failed to announce data info, connection closed",
-                            fut.cause());
+                logger.warn("Seeder " + seeder.getPeerId() + " failed to announce data info to " + peerId +
+                            ", connection closed", fut.cause());
             }
         });
 

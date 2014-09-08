@@ -5,7 +5,6 @@ import de.probst.ba.core.media.transfer.Transfer;
 import de.probst.ba.core.media.transfer.TransferManager;
 import de.probst.ba.core.net.peer.Leecher;
 import de.probst.ba.core.net.peer.PeerId;
-import de.probst.ba.core.net.peer.peers.netty.NettyPeerId;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.messages.UploadRejectedMessage;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.messages.UploadRequestMessage;
 import io.netty.buffer.ByteBuf;
@@ -53,7 +52,7 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
         }
 
         // Check that the ids are the same
-        if (!transfer.getRemotePeerId().equals(new NettyPeerId(remoteChannel))) {
+        if (!transfer.getRemotePeerId().equals(new PeerId(remoteChannel.remoteAddress(), remoteChannel.id()))) {
             throw new IllegalArgumentException("!transfer.getRemotePeerId().equals(new NettyPeerId(remoteChannel))");
         }
 

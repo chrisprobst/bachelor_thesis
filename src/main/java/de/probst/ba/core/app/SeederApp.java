@@ -1,30 +1,61 @@
 package de.probst.ba.core.app;
 
-import com.beust.jcommander.Parameter;
+import de.probst.ba.core.media.database.databases.DataBases;
+import de.probst.ba.core.net.peer.Seeder;
+import de.probst.ba.core.net.peer.peers.Peers;
+import io.netty.channel.nio.NioEventLoopGroup;
 
-import java.net.InetAddress;
+import java.util.Optional;
+import java.util.Scanner;
 
 /**
  * Created by chrisprobst on 07.09.14.
  */
-public class SeederApp extends AbstractPeerApp {
+public class SeederApp extends AbstractSocketAddressApp {
 
-    @Parameter(names = {"-p", "--port"},
-               description = "Port of the seeder (" + PortValidator.MSG + ")",
-               validateValueWith = PortValidator.class)
-    private Integer port = 10000;
+    private Seeder seeder;
 
-    @Parameter(names = {"-h", "--host-name"},
-               description = "Host name of the seeder",
-               converter = HostNameConverter.class)
-    private InetAddress hostName = InetAddress.getLocalHost();
-
-    public SeederApp() throws Exception {
+    @Override
+    protected void setupSeeders() {
+        seeder = Peers.seeder(peerType,
+                              uploadRate,
+                              downloadRate,
+                              getSocketAddress(),
+                              DataBases.fakeDataBase(),
+                              getSeederDistributionAlgorithm(),
+                              Optional.ofNullable(recordPeerHandler),
+                              Optional.of(new NioEventLoopGroup()));
+        dataBaseUpdatePeers.add(seeder);
+        uploadBandwidthStatisticPeers.add(seeder);
+        initClosePeerQueue.add(seeder);
     }
 
     @Override
-    protected void start() {
+    protected void start() throws Exception {
+        setup();
+        initPeers();
 
+        Scanner scanner = new Scanner(System.in);
+        logger.info("[== Press [ENTER] to start seeding ==]");
+        if (scanner.hasNextLine()) {
+            scanner.nextLine();
+        } else {
+            return;
+        }
+
+        setupStart(eventLoopGroup);
+        logger.info("[== Seeding on " + seeder.getPeerId() + "==]");
+        seeder.getDataInfoState().getDataInfo().forEach((k, v) -> logger.info("[== Announcing " + v + "==]"));
+
+        if (scanner.hasNextLine()) {
+            scanner.nextLine();
+        }
+
+        setupStop();
+        closePeers();
+    }
+
+    public SeederApp() throws Exception {
     }
 
     public static void main(String[] args) throws Exception {

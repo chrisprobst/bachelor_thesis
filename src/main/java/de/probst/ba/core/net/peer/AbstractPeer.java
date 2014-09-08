@@ -20,17 +20,22 @@ public abstract class AbstractPeer implements Peer {
 
     private final Logger logger = LoggerFactory.getLogger(AbstractPeer.class);
 
-    private final PeerId peerId;
-
     private final DataBase dataBase;
 
     private final DistributionAlgorithm distributionAlgorithm;
 
     private final PeerHandler peerHandler;
 
-    private final CompletableFuture<?> initFuture = new CompletableFuture<>();
+    private final CompletableFuture<? extends Peer> initFuture = new CompletableFuture<>();
 
-    private final CompletableFuture<?> closeFuture = new CompletableFuture<>();
+    private final CompletableFuture<? extends Peer> closeFuture = new CompletableFuture<>();
+
+    private volatile Optional<PeerId> peerId;
+
+    protected void setPeerId(Optional<PeerId> peerId) {
+        Objects.requireNonNull(peerId);
+        this.peerId = peerId;
+    }
 
     protected void silentClose() {
         try {
@@ -40,7 +45,7 @@ public abstract class AbstractPeer implements Peer {
         }
     }
 
-    public AbstractPeer(PeerId peerId,
+    public AbstractPeer(Optional<PeerId> peerId,
                         DataBase dataBase,
                         DistributionAlgorithm distributionAlgorithm,
                         Optional<PeerHandler> peerHandler) {
@@ -57,19 +62,18 @@ public abstract class AbstractPeer implements Peer {
         this.peerHandler = peerHandler.orElseGet(PeerHandlerAdapter::new);
     }
 
-
     @Override
     public PeerId getPeerId() {
-        return peerId;
+        return peerId.get();
     }
 
     @Override
-    public CompletableFuture<?> getInitFuture() {
+    public CompletableFuture<? extends Peer> getInitFuture() {
         return initFuture;
     }
 
     @Override
-    public CompletableFuture<?> getCloseFuture() {
+    public CompletableFuture<? extends Peer> getCloseFuture() {
         return closeFuture;
     }
 

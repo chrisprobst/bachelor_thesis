@@ -4,6 +4,7 @@ import de.probst.ba.core.distribution.LeecherDistributionAlgorithm;
 import de.probst.ba.core.net.peer.handler.LeecherPeerHandler;
 import de.probst.ba.core.net.peer.state.LeecherDataInfoState;
 
+import java.net.SocketAddress;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -18,10 +19,10 @@ public interface Leecher extends Peer {
     /**
      * Try to connect to the given peer.
      *
-     * @param peerId
+     * @param socketAddress
      * @return
      */
-    CompletableFuture<?> connect(PeerId peerId);
+    CompletableFuture<Leecher> connect(SocketAddress socketAddress);
 
     /**
      * This method runs the distribution algorithm
@@ -43,6 +44,12 @@ public interface Leecher extends Peer {
      * new discovered peers or not.
      */
     boolean isAutoConnect();
+
+    @Override
+    CompletableFuture<Leecher> getCloseFuture();
+
+    @Override
+    CompletableFuture<Leecher> getInitFuture();
 
     /**
      * @return The leecher data info state.

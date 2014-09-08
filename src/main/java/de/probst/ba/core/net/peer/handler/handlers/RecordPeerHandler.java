@@ -10,6 +10,7 @@ import de.probst.ba.core.net.peer.handler.LeecherPeerHandler;
 import de.probst.ba.core.net.peer.handler.SeederPeerHandler;
 
 import java.io.Serializable;
+import java.net.SocketAddress;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -70,7 +71,7 @@ public class RecordPeerHandler implements LeecherPeerHandler, SeederPeerHandler 
     }
 
     @Override
-    public void discoveredPeer(Seeder seeder, PeerId remotePeerId) {
+    public void discoveredSocketAddress(Seeder seeder, SocketAddress remoteSocketAddress) {
 
     }
 
@@ -95,7 +96,7 @@ public class RecordPeerHandler implements LeecherPeerHandler, SeederPeerHandler 
     }
 
     @Override
-    public void discoveredPeers(Leecher leecher, Set<PeerId> peerIds) {
+    public void discoveredSocketAddresses(Leecher leecher, Set<SocketAddress> socketAddresses) {
 
     }
 

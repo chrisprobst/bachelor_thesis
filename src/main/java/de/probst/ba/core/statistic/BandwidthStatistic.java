@@ -14,33 +14,39 @@ import java.util.function.Function;
  */
 public final class BandwidthStatistic extends AbstractScheduledStatistic {
 
+    public enum BandwidthStatisticMode {
+        Peer,
+        TotalMedian,
+        TotalAccumulated
+    }
+
     private final Collection<Peer> peers;
     private final Function<BandwidthStatisticState, Number> bandwidthMapper;
-    private final Mode mode;
+    private final BandwidthStatisticMode bandwidthStatisticMode;
 
     public BandwidthStatistic(Path csvPath,
                               ScheduledExecutorService scheduledExecutorService,
                               long delay,
                               Collection<Peer> peers,
                               Function<BandwidthStatisticState, Number> bandwidthMapper,
-                              Mode mode) {
+                              BandwidthStatisticMode bandwidthStatisticMode) {
         super(csvPath, scheduledExecutorService, delay);
         Objects.requireNonNull(peers);
         Objects.requireNonNull(bandwidthMapper);
-        Objects.requireNonNull(mode);
+        Objects.requireNonNull(bandwidthStatisticMode);
         this.peers = peers;
         this.bandwidthMapper = bandwidthMapper;
-        this.mode = mode;
+        this.bandwidthStatisticMode = bandwidthStatisticMode;
     }
 
     private void writeHeader() {
         csv.writeElement("Time");
 
-        if (mode != Mode.Peer) {
+        if (bandwidthStatisticMode != BandwidthStatisticMode.Peer) {
             csv.writeElement("Total bandwidth");
         } else {
             peers.stream()
-                 .forEach(peer -> csv.writeElement(peer.getPeerId().getAddress()));
+                 .forEach(peer -> csv.writeElement(peer.getPeerId().getSocketAddress()));
         }
 
         csv.writeLine();
@@ -51,9 +57,12 @@ public final class BandwidthStatistic extends AbstractScheduledStatistic {
         for (Peer peer : peers) {
             totalUpload += bandwidthMapper.apply(peer.getBandwidthStatisticState()).doubleValue();
         }
-        double upload = mode == Mode.TotalMedian ? totalUpload / peers.size() : totalUpload;
+        double upload =
+                bandwidthStatisticMode == BandwidthStatisticMode.TotalMedian ? totalUpload / peers.size() : totalUpload;
 
-        csv.writeElement(upload);
+        if (Double.isFinite(upload)) {
+            csv.writeElement(upload);
+        }
     }
 
     private void writeIndividualBandwidth() {
@@ -69,18 +78,12 @@ public final class BandwidthStatistic extends AbstractScheduledStatistic {
 
         csv.writeDuration();
 
-        if (mode == Mode.Peer) {
+        if (bandwidthStatisticMode == BandwidthStatisticMode.Peer) {
             writeIndividualBandwidth();
         } else {
             writeTotalBandwidth();
         }
 
         csv.writeLine();
-    }
-
-    public enum Mode {
-        Peer,
-        TotalMedian,
-        TotalAccumulated
     }
 }

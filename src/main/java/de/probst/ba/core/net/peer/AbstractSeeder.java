@@ -10,6 +10,7 @@ import de.probst.ba.core.util.concurrent.AtomicCounter;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Created by chrisprobst on 01.09.14.
@@ -24,18 +25,27 @@ public abstract class AbstractSeeder extends AbstractPeer implements Seeder {
 
     protected abstract Map<PeerId, Transfer> getUploads();
 
-    public AbstractSeeder(PeerId peerId,
-                          DataBase dataBase,
+    public AbstractSeeder(DataBase dataBase,
                           SeederDistributionAlgorithm seederDistributionAlgorithm,
                           Optional<SeederPeerHandler> seederHandler) {
-        super(peerId,
+        super(Optional.empty(),
               dataBase,
               seederDistributionAlgorithm,
               Optional.of(seederHandler.orElseGet(SeederPeerAdapter::new)));
-        if (!peerId.isConnectable()) {
-            throw new IllegalArgumentException("!peerId.isConnectable() " + peerId);
-        }
     }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public CompletableFuture<Seeder> getInitFuture() {
+        return (CompletableFuture<Seeder>) super.getInitFuture();
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public CompletableFuture<Seeder> getCloseFuture() {
+        return (CompletableFuture<Seeder>) super.getCloseFuture();
+    }
+
 
     @Override
     public SeederPeerHandler getPeerHandler() {

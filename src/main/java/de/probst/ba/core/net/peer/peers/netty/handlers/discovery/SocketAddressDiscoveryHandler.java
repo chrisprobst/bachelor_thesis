@@ -1,9 +1,8 @@
 package de.probst.ba.core.net.peer.peers.netty.handlers.discovery;
 
-import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.Seeder;
-import de.probst.ba.core.net.peer.peers.netty.handlers.discovery.messages.PeerIdAnnounceMessage;
-import de.probst.ba.core.net.peer.peers.netty.handlers.discovery.messages.PeerIdDiscoveryMessage;
+import de.probst.ba.core.net.peer.peers.netty.handlers.discovery.messages.SocketAddressAnnounceMessage;
+import de.probst.ba.core.net.peer.peers.netty.handlers.discovery.messages.SocketAddressDiscoveryMessage;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
@@ -12,6 +11,7 @@ import io.netty.channel.group.ChannelGroup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.util.Collections;
 import java.util.HashSet;
@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 /**
  * Created by chrisprobst on 06.09.14.
  */
-public final class PeerIdDiscoveryHandler extends SimpleChannelInboundHandler<PeerIdAnnounceMessage> {
+public final class SocketAddressDiscoveryHandler extends SimpleChannelInboundHandler<SocketAddressAnnounceMessage> {
 
     /**
      * This delay determines in milliseconds how often the discovered
@@ -32,39 +32,39 @@ public final class PeerIdDiscoveryHandler extends SimpleChannelInboundHandler<Pe
      */
     public static final long DISCOVERY_EXCHANGE_DELAY = 1000;
 
-    public static Set<PeerId> collectPeerIds(ChannelGroup channelGroup) {
+    public static Set<SocketAddress> collectSocketAddresses(ChannelGroup channelGroup) {
         return Collections.unmodifiableSet(channelGroup.stream()
-                                                       .map(PeerIdDiscoveryHandler::get)
-                                                       .map(PeerIdDiscoveryHandler::getPeerId)
+                                                       .map(SocketAddressDiscoveryHandler::get)
+                                                       .map(SocketAddressDiscoveryHandler::getSocketAddress)
                                                        .filter(Optional::isPresent)
                                                        .map(Optional::get)
                                                        .collect(Collectors.toSet()));
     }
 
-    public static PeerIdDiscoveryHandler get(Channel remotePeer) {
-        return remotePeer.pipeline().get(PeerIdDiscoveryHandler.class);
+    public static SocketAddressDiscoveryHandler get(Channel remotePeer) {
+        return remotePeer.pipeline().get(SocketAddressDiscoveryHandler.class);
     }
 
-    private final Logger logger = LoggerFactory.getLogger(PeerIdDiscoveryHandler.class);
+    private final Logger logger = LoggerFactory.getLogger(SocketAddressDiscoveryHandler.class);
     private final Seeder seeder;
     private final ChannelGroup channelGroup;
     private ChannelHandlerContext ctx;
     private ChannelFuture writeFuture;
-    private Set<PeerId> lastPeerIds = Collections.emptySet();
-    private volatile Optional<PeerId> peerId = Optional.empty();
+    private Set<SocketAddress> lastSocketAddresses = Collections.emptySet();
+    private volatile Optional<SocketAddress> socketAddress = Optional.empty();
 
-    private void writePeerIds() {
+    private void doAnnounceSocketAddresses() {
         if (writeFuture != null) {
             return;
         }
 
-        Set<PeerId> peerIds = new HashSet<>(collectPeerIds(channelGroup));
-        peerIds.add(seeder.getPeerId());
+        Set<SocketAddress> socketAddresses = new HashSet<>(collectSocketAddresses(channelGroup));
+        socketAddresses.add(seeder.getPeerId().getSocketAddress().get());
 
-        // Do not announce the same peers over and over again
-        if (!peerIds.equals(lastPeerIds)) {
-            lastPeerIds = peerIds;
-            (writeFuture = ctx.writeAndFlush(new PeerIdDiscoveryMessage(peerIds))).addListener(fut -> {
+        // Do not announce the same socket addresses over and over again
+        if (!socketAddresses.equals(lastSocketAddresses)) {
+            lastSocketAddresses = socketAddresses;
+            (writeFuture = ctx.writeAndFlush(new SocketAddressDiscoveryMessage(socketAddresses))).addListener(fut -> {
                 writeFuture = null;
                 if (fut.isSuccess()) {
                     schedule();
@@ -81,24 +81,26 @@ public final class PeerIdDiscoveryHandler extends SimpleChannelInboundHandler<Pe
     }
 
     private void schedule() {
-        ctx.channel().eventLoop().schedule(this::writePeerIds, DISCOVERY_EXCHANGE_DELAY, TimeUnit.MILLISECONDS);
+        ctx.channel()
+           .eventLoop()
+           .schedule(this::doAnnounceSocketAddresses, DISCOVERY_EXCHANGE_DELAY, TimeUnit.MILLISECONDS);
     }
 
     @Override
-    protected void messageReceived(ChannelHandlerContext ctx, PeerIdAnnounceMessage peerIdMessage)
+    protected void messageReceived(ChannelHandlerContext ctx, SocketAddressAnnounceMessage msg)
             throws Exception {
+        Optional<SocketAddress> newSocketAddress = Optional.of(msg.getSocketAddress());
 
-        // Save the peer id
-        this.peerId = Optional.ofNullable(peerIdMessage.getPeerId());
+        if (!this.socketAddress.equals(newSocketAddress)) {
+            this.socketAddress = newSocketAddress;
+            doAnnounceSocketAddresses();
 
-        // HANDLER
-        if (this.peerId.isPresent()) {
-            writePeerIds();
-            seeder.getPeerHandler().discoveredPeer(seeder, this.peerId.get());
+            // HANDLER
+            seeder.getPeerHandler().discoveredSocketAddress(seeder, newSocketAddress.get());
         }
     }
 
-    public PeerIdDiscoveryHandler(Seeder seeder, ChannelGroup channelGroup) {
+    public SocketAddressDiscoveryHandler(Seeder seeder, ChannelGroup channelGroup) {
         Objects.requireNonNull(seeder);
         Objects.requireNonNull(channelGroup);
         this.seeder = seeder;
@@ -112,7 +114,7 @@ public final class PeerIdDiscoveryHandler extends SimpleChannelInboundHandler<Pe
         super.channelActive(ctx);
     }
 
-    public Optional<PeerId> getPeerId() {
-        return peerId;
+    public Optional<SocketAddress> getSocketAddress() {
+        return socketAddress;
     }
 }

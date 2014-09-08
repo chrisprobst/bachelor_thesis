@@ -1,4 +1,4 @@
-package de.probst.ba.core.net.peer.peers.netty.handlers.bandwidth;
+package de.probst.ba.core.net.peer.peers.netty.handlers.traffic;
 
 import de.probst.ba.core.net.peer.Peer;
 import de.probst.ba.core.net.peer.state.BandwidthStatisticState;
@@ -11,27 +11,27 @@ import java.util.concurrent.ScheduledExecutorService;
 /**
  * Created by chrisprobst on 04.09.14.
  */
-public final class BandwidthManager implements AutoCloseable {
+public final class BandwidthStatisticHandler implements AutoCloseable {
 
-    private final GlobalTrafficShapingHandler globalTrafficShapingHandler;
-    private final GlobalTrafficShapingHandler globalStatisticHandler;
     private final Peer peer;
+    private final long maxUploadRate;
+    private final long maxDownloadRate;
+    private final GlobalTrafficShapingHandler globalStatisticHandler;
 
-    public BandwidthManager(Peer peer,
-                            ScheduledExecutorService scheduledExecutorService,
-                            long maxUploadRate,
-                            long maxDownloadRate) {
+    public BandwidthStatisticHandler(Peer peer,
+                                     long maxUploadRate,
+                                     long maxDownloadRate,
+                                     ScheduledExecutorService scheduledExecutorService) {
         Objects.requireNonNull(peer);
 
         this.peer = peer;
-        globalTrafficShapingHandler =
-                new GlobalTrafficShapingHandler(scheduledExecutorService, maxUploadRate, maxDownloadRate, 0);
-
+        this.maxUploadRate = maxUploadRate;
+        this.maxDownloadRate = maxDownloadRate;
         globalStatisticHandler = new GlobalTrafficShapingHandler(scheduledExecutorService, 0, 0);
     }
 
     private long getMaxUploadRate() {
-        return globalTrafficShapingHandler.getWriteLimit();
+        return maxUploadRate;
     }
 
     private long getAverageUploadRate() {
@@ -50,7 +50,7 @@ public final class BandwidthManager implements AutoCloseable {
     }
 
     private long getMaxDownloadRate() {
-        return globalTrafficShapingHandler.getReadLimit();
+        return maxDownloadRate;
     }
 
     private long getAverageDownloadRate() {
@@ -72,10 +72,6 @@ public final class BandwidthManager implements AutoCloseable {
         return globalStatisticHandler;
     }
 
-    public GlobalTrafficShapingHandler getGlobalTrafficShapingHandler() {
-        return globalTrafficShapingHandler;
-    }
-
     public BandwidthStatisticState getBandwidthStatisticState() {
         return new BandwidthStatisticState(peer,
                                            getMaxUploadRate(),
@@ -92,6 +88,5 @@ public final class BandwidthManager implements AutoCloseable {
     @Override
     public void close() {
         globalStatisticHandler.release();
-        globalTrafficShapingHandler.release();
     }
 }

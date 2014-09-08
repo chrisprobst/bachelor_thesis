@@ -5,8 +5,8 @@ import de.probst.ba.core.media.transfer.TransferManager;
 import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.Seeder;
 
+import java.net.SocketAddress;
 import java.util.Map;
-import java.util.Optional;
 
 /**
  * Created by chrisprobst on 05.09.14.
@@ -14,22 +14,22 @@ import java.util.Optional;
 public class SeederHandlerList extends PeerHandlerList implements SeederPeerHandler {
 
     @Override
-    public SeederHandlerList add(Optional<PeerHandler> peerHandler) {
+    public SeederHandlerList add(PeerHandler peerHandler) {
         return (SeederHandlerList) super.add(peerHandler);
     }
 
     @Override
-    public SeederHandlerList remove(Optional<PeerHandler> peerHandler) {
+    public SeederHandlerList remove(PeerHandler peerHandler) {
         return (SeederHandlerList) super.remove(peerHandler);
     }
 
     @Override
-    public void discoveredPeer(Seeder seeder, PeerId remotePeerId) {
+    public void discoveredSocketAddress(Seeder seeder, SocketAddress remoteSocketAddress) {
         peerHandlers.stream()
                     .filter(ph -> ph instanceof SeederPeerHandler)
-                    .forEach(ph -> ((SeederPeerHandler) ph).discoveredPeer(
+                    .forEach(ph -> ((SeederPeerHandler) ph).discoveredSocketAddress(
                             seeder,
-                            remotePeerId));
+                            remoteSocketAddress));
     }
 
     @Override
