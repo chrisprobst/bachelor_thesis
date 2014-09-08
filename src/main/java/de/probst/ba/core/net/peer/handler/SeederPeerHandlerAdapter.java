@@ -11,7 +11,7 @@ import java.util.Map;
 /**
  * Created by chrisprobst on 03.09.14.
  */
-public class SeederPeerAdapter implements SeederPeerHandler {
+public class SeederPeerHandlerAdapter implements SeederPeerHandler {
 
     @Override
     public void discoveredSocketAddress(Seeder seeder, SocketAddress remoteSocketAddress) {

@@ -12,7 +12,7 @@ import java.util.Set;
 /**
  * Created by chrisprobst on 03.09.14.
  */
-public class LeecherPeerAdapter implements LeecherPeerHandler {
+public class LeecherPeerHandlerAdapter implements LeecherPeerHandler {
 
     @Override
     public void discoveredSocketAddresses(Leecher leecher, Set<SocketAddress> socketAddresses) {

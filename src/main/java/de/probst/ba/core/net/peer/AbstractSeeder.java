@@ -3,7 +3,7 @@ package de.probst.ba.core.net.peer;
 import de.probst.ba.core.distribution.SeederDistributionAlgorithm;
 import de.probst.ba.core.media.database.DataBase;
 import de.probst.ba.core.media.transfer.Transfer;
-import de.probst.ba.core.net.peer.handler.SeederPeerAdapter;
+import de.probst.ba.core.net.peer.handler.SeederPeerHandlerAdapter;
 import de.probst.ba.core.net.peer.handler.SeederPeerHandler;
 import de.probst.ba.core.net.peer.state.SeederDataInfoState;
 import de.probst.ba.core.util.concurrent.AtomicCounter;
@@ -31,7 +31,7 @@ public abstract class AbstractSeeder extends AbstractPeer implements Seeder {
         super(Optional.empty(),
               dataBase,
               seederDistributionAlgorithm,
-              Optional.of(seederHandler.orElseGet(SeederPeerAdapter::new)));
+              Optional.of(seederHandler.orElseGet(SeederPeerHandlerAdapter::new)));
     }
 
     @SuppressWarnings("unchecked")

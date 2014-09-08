@@ -4,7 +4,7 @@ import de.probst.ba.core.distribution.LeecherDistributionAlgorithm;
 import de.probst.ba.core.media.database.DataBase;
 import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.media.transfer.Transfer;
-import de.probst.ba.core.net.peer.handler.LeecherPeerAdapter;
+import de.probst.ba.core.net.peer.handler.LeecherPeerHandlerAdapter;
 import de.probst.ba.core.net.peer.handler.LeecherPeerHandler;
 import de.probst.ba.core.net.peer.state.LeecherDataInfoState;
 import org.slf4j.Logger;
@@ -44,7 +44,7 @@ public abstract class AbstractLeecher extends AbstractPeer implements Leecher {
         super(Optional.of(peerId.orElseGet(PeerId::new)),
               dataBase,
               leecherDistributionAlgorithm,
-              Optional.of(leecherHandler.orElseGet(LeecherPeerAdapter::new)));
+              Optional.of(leecherHandler.orElseGet(LeecherPeerHandlerAdapter::new)));
 
         // Save args
         leecherDistributionAlgorithmWorker = new LeecherDistributionAlgorithmWorker(executor);
