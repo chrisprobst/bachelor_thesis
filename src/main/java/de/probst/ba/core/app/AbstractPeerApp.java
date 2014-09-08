@@ -48,7 +48,7 @@ public abstract class AbstractPeerApp {
     @Parameter(names = {"-pt", "--peer-type"},
                description = "Peer type [Local, TCP]",
                converter = PeerTypeConverter.class)
-    protected Peers.PeerType peerType = Peers.PeerType.Local;
+    protected Peers.PeerType peerType = Peers.PeerType.TCP;
 
     @Parameter(names = {"-da", "--distribution-algorithm"},
                description = "Distribution algorithm type [ChunkedSwarm, Logarithmic]",
@@ -265,14 +265,16 @@ public abstract class AbstractPeerApp {
         // Stop stats
         if (recordStats) {
             // CSV
-            logger.info("[== Writing stats ==]");
+            logger.info("[== Writing stats now ==]");
             Instant timeStamp = Instant.now();
 
             if (uploadBandwidthStatistic != null) {
+                logger.info("[== Writing " + uploadBandwidthStatistic.getCsvPath() + " ==]");
                 uploadBandwidthStatistic.close();
             }
 
             if (downloadBandwidthStatistic != null) {
+                logger.info("[== Writing " + downloadBandwidthStatistic.getCsvPath() + " ==]");
                 downloadBandwidthStatistic.close();
             }
 
@@ -284,11 +286,12 @@ public abstract class AbstractPeerApp {
         if (recordEvents) {
 
             // Get records and serialize
-            logger.info("[== Writing events ==]");
+            logger.info("[== Writing events now ==]");
             Instant timeStamp = Instant.now();
 
-            IOUtil.serialize(new File(recordsDirectory, algorithmType + getClass().getSimpleName() + "Events.dat"),
-                             recordPeerHandler.sortAndGetRecords());
+            File file = new File(recordsDirectory, algorithmType + getClass().getSimpleName() + "Events.dat");
+            logger.info("[== Writing " + file + " ==]");
+            IOUtil.serialize(file, recordPeerHandler.sortAndGetRecords());
 
             Duration duration = Duration.between(timeStamp, Instant.now());
             logger.info("[== Done in: " + (duration.toMillis() / 1000.0) + " seconds ==]");

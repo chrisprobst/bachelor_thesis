@@ -18,6 +18,10 @@ public abstract class AbstractFileStatistic extends AbstractStatistic implements
         this.csvPath = csvPath;
     }
 
+    public Path getCsvPath() {
+        return csvPath;
+    }
+
     public synchronized void save() throws IOException {
         Files.write(csvPath, toString().getBytes());
     }

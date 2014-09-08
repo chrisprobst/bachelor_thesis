@@ -3,7 +3,6 @@ package de.probst.ba.core.app;
 import de.probst.ba.core.media.database.databases.DataBases;
 import de.probst.ba.core.net.peer.Seeder;
 import de.probst.ba.core.net.peer.peers.Peers;
-import io.netty.channel.nio.NioEventLoopGroup;
 
 import java.util.Optional;
 import java.util.Scanner;
@@ -24,7 +23,7 @@ public class SeederApp extends AbstractSocketAddressApp {
                               DataBases.fakeDataBase(),
                               getSeederDistributionAlgorithm(),
                               Optional.ofNullable(recordPeerHandler),
-                              Optional.of(new NioEventLoopGroup()));
+                              Optional.of(eventLoopGroup));
         dataBaseUpdatePeers.add(seeder);
         uploadBandwidthStatisticPeers.add(seeder);
         initClosePeerQueue.add(seeder);

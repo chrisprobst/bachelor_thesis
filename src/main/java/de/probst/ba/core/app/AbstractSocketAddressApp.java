@@ -23,7 +23,7 @@ public abstract class AbstractSocketAddressApp extends AbstractPeerApp {
                converter = HostNameConverter.class)
     protected InetAddress hostName = InetAddress.getByName("0.0.0.0");
 
-    protected final EventLoopGroup eventLoopGroup = new NioEventLoopGroup();
+    protected final EventLoopGroup eventLoopGroup = new NioEventLoopGroup(1);
 
     protected InetSocketAddress getSocketAddress() {
         return new InetSocketAddress(hostName, port);
