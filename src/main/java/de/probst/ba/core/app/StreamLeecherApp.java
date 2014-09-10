@@ -1,6 +1,7 @@
 package de.probst.ba.core.app;
 
 import com.beust.jcommander.Parameter;
+import de.probst.ba.core.gui.StreamerGUI;
 import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.media.database.databases.DataBases;
 import de.probst.ba.core.media.transfer.TransferManager;
@@ -11,6 +12,7 @@ import de.probst.ba.core.net.peer.handler.LeecherPeerHandler;
 import de.probst.ba.core.net.peer.handler.LeecherPeerHandlerAdapter;
 import de.probst.ba.core.net.peer.handler.handlers.DataInfoCompletionHandler;
 import de.probst.ba.core.net.peer.peers.Peers;
+import de.probst.ba.core.util.collections.Tuple2;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -37,43 +39,52 @@ public class StreamLeecherApp extends AbstractSocketAddressApp {
                required = true)
     protected InetAddress externalHostName;
 
+    private LeecherHandlerList leecherHandlerList;
     private DataInfoCompletionHandler dataInfoCompletionHandler;
-    private LeecherPeerHandler streamHandler = new LeecherPeerHandlerAdapter() {
-
-        volatile int i = 0;
-
-        @Override
-        public void dataCompleted(Leecher leecher, DataInfo dataInfo, TransferManager lastTransferManager) {
-            if (dataInfo.getId() == i) {
-                System.out.println(" ********  START STREAMING ********");
-                eventLoopGroup.schedule(new Runnable() {
-                    @Override
-                    public void run() {
-                        i++;
-                        DataInfo di = leecher.getDataInfoState()
-                                             .getDataInfo()
-                                             .values()
-                                             .stream()
-                                             .filter(d -> d.getId() == i)
-                                             .findFirst()
-                                             .orElse(null);
-
-                        if (di.isCompleted()) {
-                            System.out.println(" ********  FAST ENOUGH, CONTINUE STREAMING ********");
-                            eventLoopGroup.schedule(this, 7000, TimeUnit.MILLISECONDS);
-                        } else {
-                            System.out.println(" ******** BUG BUG BUG BUG ********");
-                        }
-                    }
-                }, 7000, TimeUnit.MILLISECONDS);
-            }
-        }
-    };
-    private volatile Leecher leecher;
+    private LeecherPeerHandler streamHandler;
+    private Seeder seeder;
+    private Leecher leecher;
 
     @Override
     protected void setupPeerHandlers() {
         dataInfoCompletionHandler = new DataInfoCompletionHandler(parts);
+        streamHandler = new LeecherPeerHandlerAdapter() {
+
+            volatile int i = 0;
+
+            @Override
+            public void dataCompleted(Leecher leecher, DataInfo dataInfo, TransferManager lastTransferManager) {
+                if (dataInfo.getId() == i) {
+                    System.out.println(" ********  START STREAMING ********");
+                    eventLoopGroup.schedule(new Runnable() {
+                        @Override
+                        public void run() {
+                            i++;
+                            DataInfo di = leecher.getDataInfoState()
+                                                 .getDataInfo()
+                                                 .values()
+                                                 .stream()
+                                                 .filter(d -> d.getId() == i)
+                                                 .findFirst()
+                                                 .orElse(null);
+
+                            if (di.isCompleted()) {
+                                System.out.println(" ********  FAST ENOUGH, CONTINUE STREAMING ********");
+                                eventLoopGroup.schedule(this, 20000, TimeUnit.MILLISECONDS);
+                            } else {
+                                System.out.println(" ******** BUG BUG BUG BUG ********");
+                            }
+                        }
+                    }, 20000, TimeUnit.MILLISECONDS);
+                }
+            }
+        };
+        leecherHandlerList = new LeecherHandlerList();
+        leecherHandlerList.add(streamHandler);
+        leecherHandlerList.add(dataInfoCompletionHandler);
+        if (recordPeerHandler != null) {
+            leecherHandlerList.add(recordPeerHandler);
+        }
     }
 
 
@@ -82,64 +93,49 @@ public class StreamLeecherApp extends AbstractSocketAddressApp {
     }
 
     @Override
-    protected void setupLeechers() {
-        // Add the seeder part
-        Seeder seeder = Peers.seeder(peerType,
-                                     uploadRate,
-                                     downloadRate,
-                                     getSocketAddress(),
-                                     DataBases.fakeDataBase(),
-                                     getSeederDistributionAlgorithm(),
-                                     Optional.ofNullable(recordPeerHandler),
-                                     Optional.of(eventLoopGroup));
-        seeder.getInitFuture().thenAccept(s -> {
-            LeecherHandlerList leecherHandlerList = new LeecherHandlerList();
-            leecherHandlerList.add(streamHandler);
-            leecherHandlerList.add(dataInfoCompletionHandler);
-            if (recordPeerHandler != null) {
-                leecherHandlerList.add(recordPeerHandler);
-            }
+    protected void setupPeers() throws Exception {
+        Tuple2<Seeder, Leecher> tuple = Peers.initSeederAndLeecher(peerType,
+                                                                   uploadRate,
+                                                                   downloadRate,
+                                                                   getSocketAddress(), DataBases.fakeDataBase(),
+                                                                   getSeederDistributionAlgorithm(),
+                                                                   getLeecherDistributionAlgorithm(),
+                                                                   Optional.ofNullable(recordPeerHandler),
+                                                                   Optional.of(leecherHandlerList),
+                                                                   true,
+                                                                   Optional.of(eventLoopGroup)).get();
 
-            // Add the leecher part
-            leecher = Peers.leecher(peerType,
-                                    uploadRate,
-                                    downloadRate,
-                                    Optional.of(s.getPeerId()),
-                                    s.getDataBase(),
-                                    getLeecherDistributionAlgorithm(),
-                                    Optional.of(leecherHandlerList),
-                                    true,
-                                    Optional.of(eventLoopGroup),
-                                    s.getPeerId().getSocketAddress());
+        seeder = tuple.first();
+        leecher = tuple.second();
 
-            downloadBandwidthStatisticPeers.add(leecher);
-            initClosePeerQueue.add(leecher);
-        });
-
-
+        downloadBandwidthStatisticPeers.add(leecher);
         uploadBandwidthStatisticPeers.add(seeder);
-        initClosePeerQueue.add(seeder);
     }
 
     @Override
     protected void start() throws Exception {
         setup();
-        initPeers();
 
+        StreamerGUI gui = new StreamerGUI(leecher.getDataBase(), 20000);
         Scanner scanner = new Scanner(System.in);
-        logger.info("[== Press [ENTER] to start leeching ==]");
+
+        // Connect to external seeder and wait
+        leecher.connect(getExternalSocketAddress()).get();
+        logger.info("[== Connected to " + getExternalSocketAddress() + " ==]");
+
+        Thread.sleep(2000);
+
+        logger.info("[== Press [ENTER] to start leeching and timers ==]");
         if (scanner.hasNextLine()) {
             scanner.nextLine();
         } else {
             return;
         }
 
-        // Connect to external seeder and wait
-        CompletableFuture<Leecher> fut = leecher.connect(getExternalSocketAddress());
-        fut.join();
-
         setupStart(eventLoopGroup);
+        gui.startTimers();
         logger.info("[== Leeching ==]");
+
         dataInfoCompletionHandler.getCountDownLatch().await();
         setupStop();
         logger.info("[== Press [ENTER] to stop seeding ==]");
@@ -149,9 +145,12 @@ public class StreamLeecherApp extends AbstractSocketAddressApp {
         } else {
             return;
         }
+
         logger.info("[== Shutting down ==]");
 
-        closePeers();
+        seeder.close();
+        leecher.close();
+        CompletableFuture.allOf(seeder.getCloseFuture(), leecher.getCloseFuture()).get();
     }
 
     public StreamLeecherApp() throws IOException {

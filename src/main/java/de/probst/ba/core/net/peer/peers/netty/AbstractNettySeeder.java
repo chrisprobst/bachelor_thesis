@@ -8,7 +8,7 @@ import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.handler.SeederPeerHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.codec.SimpleCodec;
 import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.AnnounceDataInfoHandler;
-import de.probst.ba.core.net.peer.peers.netty.handlers.discovery.SocketAddressDiscoveryHandler;
+import de.probst.ba.core.net.peer.peers.netty.handlers.discovery.DiscoverSocketAddressHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.group.ChannelGroupHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.BandwidthStatisticHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.WriteThrottle;
@@ -74,7 +74,7 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
                     new ChunkedWriteHandler(),
 
                     // Logic
-                    new SocketAddressDiscoveryHandler(AbstractNettySeeder.this, getSeederChannelGroup()),
+                    new DiscoverSocketAddressHandler(AbstractNettySeeder.this, getSeederChannelGroup()),
                     new UploadHandler(AbstractNettySeeder.this, getParallelUploads()),
                     new AnnounceDataInfoHandler(AbstractNettySeeder.this));
         }
@@ -154,8 +154,11 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
 
     @Override
     public void close() throws IOException {
-        seederEventLoopGroup.shutdownGracefully();
-        seederBandwidthStatisticHandler.close();
-        super.close();
+        try {
+            seederEventLoopGroup.shutdownGracefully();
+            seederBandwidthStatisticHandler.close();
+        } finally {
+            super.close();
+        }
     }
 }

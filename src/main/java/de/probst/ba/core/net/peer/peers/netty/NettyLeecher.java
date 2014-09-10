@@ -10,7 +10,7 @@ import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.handler.LeecherPeerHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.codec.SimpleCodec;
 import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.CollectDataInfoHandler;
-import de.probst.ba.core.net.peer.peers.netty.handlers.discovery.SocketAddressAnnounceHandler;
+import de.probst.ba.core.net.peer.peers.netty.handlers.discovery.AnnounceSocketAddressHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.group.ChannelGroupHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.BandwidthStatisticHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.WriteThrottle;
@@ -80,7 +80,7 @@ public final class NettyLeecher extends AbstractLeecher {
                     leecherChannelGroupHandler,
 
                     // Logic
-                    new SocketAddressAnnounceHandler(NettyLeecher.this, announceSocketAddress),
+                    new AnnounceSocketAddressHandler(NettyLeecher.this, announceSocketAddress),
                     new DownloadHandler(NettyLeecher.this),
                     new CollectDataInfoHandler(NettyLeecher.this));
         }
@@ -183,6 +183,8 @@ public final class NettyLeecher extends AbstractLeecher {
         Objects.requireNonNull(socketAddress);
         CompletableFuture<Leecher> connectionFuture = new CompletableFuture<>();
         Boolean previous;
+
+
         if ((previous = connections.putIfAbsent(socketAddress, false)) == null) {
             logger.debug("Leecher " + getPeerId() + " connecting to " + socketAddress);
             leecherBootstrap.connect(socketAddress).addListener((ChannelFutureListener) future -> {
@@ -212,8 +214,11 @@ public final class NettyLeecher extends AbstractLeecher {
 
     @Override
     public void close() throws IOException {
-        leecherEventLoopGroup.shutdownGracefully();
-        leecherBandwidthStatisticHandler.close();
-        super.close();
+        try {
+            leecherEventLoopGroup.shutdownGracefully();
+            leecherBandwidthStatisticHandler.close();
+        } finally {
+            super.close();
+        }
     }
 }

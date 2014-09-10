@@ -57,7 +57,7 @@ public final class Transform {
     public static List<Tuple2<PeerId, DataInfo>> removeFromAllAndSort(List<Tuple2<PeerId, DataInfo>> remoteDataInfo,
                                                                       DataInfo removeDataInfo) {
         // Remove the data info from the list
-        remoteDataInfo.replaceAll(t -> Tuple.of(t.first(), t.second().substract(removeDataInfo)));
+        remoteDataInfo.replaceAll(t -> Tuple.of(t.first(), t.second().subtract(removeDataInfo)));
 
         // Do remove empty data info
         remoteDataInfo.removeIf(t -> t.second().isEmpty());

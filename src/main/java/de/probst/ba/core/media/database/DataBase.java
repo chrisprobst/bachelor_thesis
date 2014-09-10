@@ -18,11 +18,29 @@ import java.util.function.Consumer;
  */
 public interface DataBase extends Flushable {
 
+    /**
+     * Flushes all changes to the file system.
+     *
+     * @throws IOException
+     */
     void flush() throws IOException;
 
+    /**
+     * Add the given consumer to a list which gets
+     * notified when the data base completes a new chunk.
+     *
+     * @param consumer
+     * @return
+     */
     Tuple2<Long, Map<String, DataInfo>> subscribe(Consumer<Map<String, DataInfo>> consumer);
 
-    void cancel(long token);
+    /**
+     * Cancels a subscription.
+     *
+     * @param token
+     * @return
+     */
+    boolean cancel(long token);
 
     /**
      * @return A snapshot of all existing

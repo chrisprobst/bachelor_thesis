@@ -43,7 +43,7 @@ import java.util.stream.IntStream;
  */
 public abstract class AbstractPeerApp {
 
-    public static final int STATISTIC_INTERVAL = 100;
+    public static final int STATISTIC_INTERVAL = 250;
 
     @Parameter(names = {"-pt", "--peer-type"},
                description = "Peer type [Local, TCP]",
@@ -126,7 +126,6 @@ public abstract class AbstractPeerApp {
     protected final Queue<Peer> uploadBandwidthStatisticPeers = new ConcurrentLinkedQueue<>();
     protected final Queue<Peer> downloadBandwidthStatisticPeers = new ConcurrentLinkedQueue<>();
     protected final Queue<Peer> dataBaseUpdatePeers = new ConcurrentLinkedQueue<>();
-    protected final Queue<Peer> initClosePeerQueue = new ConcurrentLinkedQueue<>();
     protected Logger logger;
     protected RecordPeerHandler recordPeerHandler;
     protected BandwidthStatistic uploadBandwidthStatistic;
@@ -140,15 +139,6 @@ public abstract class AbstractPeerApp {
 
     protected LeecherDistributionAlgorithm getLeecherDistributionAlgorithm() {
         return Algorithms.getLeecherDistributionAlgorithm(algorithmType);
-    }
-
-    protected void initPeers() throws ExecutionException, InterruptedException {
-        Peers.waitForInit(initClosePeerQueue);
-    }
-
-    protected void closePeers() throws InterruptedException, ExecutionException, IOException {
-        Peers.closeAndWait(initClosePeerQueue);
-        Thread.sleep(1000);
     }
 
     protected void setupVerbosity() throws Exception {
@@ -179,10 +169,7 @@ public abstract class AbstractPeerApp {
 
     }
 
-    protected void setupSeeders() {
-    }
-
-    protected void setupLeechers() {
+    protected void setupPeers() throws Exception {
     }
 
     protected void setup() throws Exception {
@@ -190,8 +177,7 @@ public abstract class AbstractPeerApp {
         setupRecords();
         setupDataInfo();
         setupPeerHandlers();
-        setupSeeders();
-        setupLeechers();
+        setupPeers();
     }
 
     protected void setupStartTime() {

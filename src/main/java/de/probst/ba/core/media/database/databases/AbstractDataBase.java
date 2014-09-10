@@ -19,6 +19,8 @@ import java.util.function.Consumer;
 public abstract class AbstractDataBase implements DataBase {
 
     protected final Map<String, DataInfo> dataInfo = new HashMap<>();
+    private long tokens = 0;
+    private final Map<Long, Consumer<Map<String, DataInfo>>> listeners = new HashMap<>();
 
     protected abstract void doProcessBuffer(DataInfo dataInfo,
                                             int chunkIndex,
@@ -62,9 +64,6 @@ public abstract class AbstractDataBase implements DataBase {
         return dataInfo.get(hash);
     }
 
-    private long tokens = 0;
-    private final Map<Long, Consumer<Map<String, DataInfo>>> listeners = new HashMap<>();
-
     @Override
     public synchronized Tuple2<Long, Map<String, DataInfo>> subscribe(Consumer<Map<String, DataInfo>> consumer) {
         Objects.requireNonNull(consumer);
@@ -74,8 +73,8 @@ public abstract class AbstractDataBase implements DataBase {
     }
 
     @Override
-    public synchronized void cancel(long token) {
-        listeners.remove(token);
+    public synchronized boolean cancel(long token) {
+        return listeners.remove(token) != null;
     }
 
     @Override

@@ -288,7 +288,7 @@ public final class DataInfo implements Serializable {
      * @param other
      * @return
      */
-    public DataInfo substract(DataInfo other) {
+    public DataInfo subtract(DataInfo other) {
         ensureCompatibility(other);
 
         DataInfo dataInfo = duplicate();

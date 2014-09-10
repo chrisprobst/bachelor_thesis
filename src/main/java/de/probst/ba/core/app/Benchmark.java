@@ -9,6 +9,7 @@ import de.probst.ba.core.net.peer.Seeder;
 import de.probst.ba.core.net.peer.handler.LeecherHandlerList;
 import de.probst.ba.core.net.peer.handler.handlers.DataInfoCompletionHandler;
 import de.probst.ba.core.net.peer.peers.Peers;
+import de.probst.ba.core.util.collections.Tuple2;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -17,6 +18,8 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Optional;
 import java.util.Queue;
+import java.util.Scanner;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
@@ -33,14 +36,14 @@ public class Benchmark extends AbstractPeerApp {
                validateValueWith = PeerCountValidator.class)
     private Integer leechers = 7;
 
+    private final Queue<Peer> peerQueue = new ConcurrentLinkedQueue<>();
     private final Queue<Peer> seederQueue = new ConcurrentLinkedQueue<>();
-    private final Queue<Peer> leecherQueue = new ConcurrentLinkedQueue<>();
     private final EventLoopGroup eventLoopGroup = new NioEventLoopGroup();
     private DataInfoCompletionHandler dataInfoCompletionHandler;
 
     private SocketAddress getSeederSocketAddress(int i) {
         if (peerType == Peers.PeerType.TCP) {
-            return new InetSocketAddress(10000 + i);
+            return new InetSocketAddress("127.0.0.1", 10000 + i);
         } else {
             return new LocalAddress("S-" + i);
         }
@@ -48,7 +51,7 @@ public class Benchmark extends AbstractPeerApp {
 
     private SocketAddress getLeecherSocketAddress(int i) {
         if (peerType == Peers.PeerType.TCP) {
-            return new InetSocketAddress(20000 + i);
+            return new InetSocketAddress("127.0.0.1", 20000 + i);
         } else {
             return new LocalAddress("L-" + i);
         }
@@ -60,7 +63,7 @@ public class Benchmark extends AbstractPeerApp {
     }
 
     @Override
-    protected void setupSeeders() {
+    protected void setupPeers() throws Exception {
         // Setup all seeders
         for (int i = 0; i < seeders; i++) {
             Seeder seeder = Peers.seeder(peerType,
@@ -70,60 +73,47 @@ public class Benchmark extends AbstractPeerApp {
                                          DataBases.fakeDataBase(),
                                          getSeederDistributionAlgorithm(),
                                          Optional.ofNullable(recordPeerHandler),
-                                         Optional.of(eventLoopGroup));
+                                         Optional.of(eventLoopGroup)).getInitFuture().get();
 
             uploadBandwidthStatisticPeers.add(seeder);
-
-            initClosePeerQueue.add(seeder);
             dataBaseUpdatePeers.add(seeder);
-
             seederQueue.add(seeder);
+            peerQueue.add(seeder);
         }
-    }
-
-    @Override
-    protected void setupLeechers() {
 
         // Setup all leechers
         for (int i = 0; i < leechers; i++) {
-            // Add the seeder part
-            Seeder seeder = Peers.seeder(peerType,
-                                         uploadRate,
-                                         downloadRate,
-                                         getLeecherSocketAddress(i),
-                                         DataBases.fakeDataBase(),
-                                         getSeederDistributionAlgorithm(),
-                                         Optional.ofNullable(recordPeerHandler),
-                                         Optional.of(eventLoopGroup));
+            LeecherHandlerList leecherHandlerList = new LeecherHandlerList();
+            leecherHandlerList.add(dataInfoCompletionHandler);
+            if (recordPeerHandler != null) {
+                leecherHandlerList.add(recordPeerHandler);
+            }
+            Tuple2<Seeder, Leecher> tuple = Peers.initSeederAndLeecher(peerType,
+                                                                       uploadRate,
+                                                                       downloadRate,
+                                                                       getLeecherSocketAddress(i),
+                                                                       DataBases.fakeDataBase(),
+                                                                       getSeederDistributionAlgorithm(),
+                                                                       getLeecherDistributionAlgorithm(),
+                                                                       Optional.ofNullable(recordPeerHandler),
+                                                                       Optional.of(leecherHandlerList),
+                                                                       true,
+                                                                       Optional.of(eventLoopGroup)).get();
+            Seeder seeder = tuple.first();
+            Leecher leecher = tuple.second();
 
-            seeder.getInitFuture().thenAccept(s -> {
-                LeecherHandlerList leecherHandlerList = new LeecherHandlerList();
-                leecherHandlerList.add(dataInfoCompletionHandler);
-                if (recordPeerHandler != null) {
-                    leecherHandlerList.add(recordPeerHandler);
-                }
-
-                // Add the leecher part
-                Leecher leecher = Peers.leecher(peerType,
-                                                uploadRate,
-                                                downloadRate,
-                                                Optional.of(s.getPeerId()),
-                                                s.getDataBase(),
-                                                getLeecherDistributionAlgorithm(),
-                                                Optional.of(leecherHandlerList),
-                                                true,
-                                                Optional.of(eventLoopGroup),
-                                                s.getPeerId().getSocketAddress());
-
-
-                downloadBandwidthStatisticPeers.add(leecher);
-                initClosePeerQueue.add(leecher);
-                leecherQueue.add(leecher);
-            });
-
-
+            downloadBandwidthStatisticPeers.add(leecher);
             uploadBandwidthStatisticPeers.add(seeder);
-            initClosePeerQueue.add(seeder);
+            peerQueue.add(seeder);
+            peerQueue.add(leecher);
+
+            seederQueue.stream()
+                       .map(Peer::getPeerId)
+                       .map(PeerId::getSocketAddress)
+                       .map(Optional::get)
+                       .map(leecher::connect)
+                       .forEach(CompletableFuture::join);
+
         }
     }
 
@@ -151,22 +141,23 @@ public class Benchmark extends AbstractPeerApp {
     @Override
     protected void start() throws Exception {
         setup();
-        initPeers();
         logTransferInfo();
 
-        // Connect every peer to every other peer
-        seederQueue.stream()
-                   .map(Peer::getPeerId)
-                   .map(PeerId::getSocketAddress)
-                   .map(Optional::get)
-                   .forEach(socketAddress -> Peers.connectAndWait(leecherQueue, socketAddress));
-
         Thread.sleep(2000);
+
+        Scanner scanner = new Scanner(System.in);
+        logger.info("[== Press [ENTER] to start benchmark ==]");
+        if (scanner.hasNextLine()) {
+            scanner.nextLine();
+        } else {
+            return;
+        }
 
         setupStart(eventLoopGroup);
         dataInfoCompletionHandler.getCountDownLatch().await();
         setupStop();
-        closePeers();
+
+        Peers.closeAndWait(peerQueue);
     }
 
     public static void main(String[] args) throws Exception {

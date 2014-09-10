@@ -18,13 +18,17 @@ public final class Transfer implements Serializable {
 
     // The remote peer id
     private final PeerId remotePeerId;
+    
     // The data info which describes this transfer
     private final DataInfo dataInfo;
+
     // Tells whether or not this transfer
     // is a download or an upload
     private final boolean download;
+
     // The size of this transfer
     private final long size;
+
     // The completed size of this transfer
     private final long completedSize;
 

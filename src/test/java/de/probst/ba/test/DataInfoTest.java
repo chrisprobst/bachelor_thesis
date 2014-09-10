@@ -82,7 +82,7 @@ public class DataInfoTest {
         DataInfo c = dataInfo
                 .withChunk(2);
 
-        assertEquals(a.substract(b), c);
+        assertEquals(a.subtract(b), c);
     }
 
     @Test

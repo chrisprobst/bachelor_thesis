@@ -11,6 +11,8 @@ import de.probst.ba.core.net.peer.handler.LeecherPeerHandler;
 import de.probst.ba.core.net.peer.handler.SeederPeerHandler;
 import de.probst.ba.core.net.peer.peers.netty.NettyLeecher;
 import de.probst.ba.core.net.peer.peers.netty.NettyServerSeeder;
+import de.probst.ba.core.util.collections.Tuple;
+import de.probst.ba.core.util.collections.Tuple2;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
@@ -23,6 +25,7 @@ import java.net.SocketAddress;
 import java.util.Collection;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 /**
@@ -35,6 +38,41 @@ public final class Peers {
     }
 
     private Peers() {
+    }
+
+    public static CompletableFuture<Tuple2<Seeder, Leecher>> initSeederAndLeecher(
+            PeerType peerType,
+            long maxUploadRate,
+            long maxDownloadRate,
+            SocketAddress socketAddress,
+            DataBase dataBase,
+            SeederDistributionAlgorithm seederDistributionAlgorithm,
+            LeecherDistributionAlgorithm leecherDistributionAlgorithm,
+            Optional<SeederPeerHandler> seederHandler,
+            Optional<LeecherPeerHandler> leecherHandler,
+            boolean leecherAutoConnect,
+            Optional<EventLoopGroup> eventLoopGroup) {
+
+        return Peers.seeder(peerType,
+                            maxUploadRate,
+                            maxDownloadRate,
+                            socketAddress,
+                            dataBase,
+                            seederDistributionAlgorithm,
+                            seederHandler,
+                            eventLoopGroup)
+                    .getInitFuture().thenCompose(seeder -> Peers.leecher(peerType,
+                                                                         maxUploadRate,
+                                                                         maxDownloadRate,
+                                                                         Optional.of(seeder.getPeerId()),
+                                                                         seeder.getDataBase(),
+                                                                         leecherDistributionAlgorithm,
+                                                                         leecherHandler,
+                                                                         leecherAutoConnect,
+                                                                         eventLoopGroup,
+                                                                         seeder.getPeerId().getSocketAddress())
+                                                                .getInitFuture()
+                                                                .thenApply(leecher -> Tuple.of(seeder, leecher)));
     }
 
     public static Seeder seeder(PeerType peerType,
@@ -86,14 +124,18 @@ public final class Peers {
         }
     }
 
-    public static void closeAndWait(Collection<Peer> peers)
-            throws ExecutionException, InterruptedException, IOException {
+    public static void closeAndWait(Collection<Peer> peers) throws IOException,
+                                                                   ExecutionException,
+                                                                   InterruptedException {
+        close(peers);
+        waitForClose(peers);
+    }
+
+    public static void close(Collection<Peer> peers) throws IOException {
         Objects.requireNonNull(peers);
         for (Peer peer : peers) {
             peer.close();
         }
-
-        waitForClose(peers);
     }
 
     public static void waitForClose(Collection<Peer> peers) throws ExecutionException, InterruptedException {
@@ -102,10 +144,4 @@ public final class Peers {
             peer.getCloseFuture().get();
         }
     }
-
-    public static void connectAndWait(Collection<Peer> leechers, SocketAddress socketAddress) {
-        Objects.requireNonNull(leechers);
-        leechers.forEach(l -> ((Leecher) l).connect(socketAddress).join());
-    }
-
 }

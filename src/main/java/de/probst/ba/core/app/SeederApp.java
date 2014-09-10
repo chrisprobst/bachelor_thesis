@@ -15,7 +15,7 @@ public class SeederApp extends AbstractSocketAddressApp {
     private Seeder seeder;
 
     @Override
-    protected void setupSeeders() {
+    protected void setupPeers() throws Exception {
         seeder = Peers.seeder(peerType,
                               uploadRate,
                               downloadRate,
@@ -23,16 +23,14 @@ public class SeederApp extends AbstractSocketAddressApp {
                               DataBases.fakeDataBase(),
                               getSeederDistributionAlgorithm(),
                               Optional.ofNullable(recordPeerHandler),
-                              Optional.of(eventLoopGroup));
+                              Optional.of(eventLoopGroup)).getInitFuture().get();
         dataBaseUpdatePeers.add(seeder);
         uploadBandwidthStatisticPeers.add(seeder);
-        initClosePeerQueue.add(seeder);
     }
 
     @Override
     protected void start() throws Exception {
         setup();
-        initPeers();
 
         Scanner scanner = new Scanner(System.in);
         logger.info("[== Press [ENTER] to start seeding ==]");
@@ -51,7 +49,8 @@ public class SeederApp extends AbstractSocketAddressApp {
         }
 
         setupStop();
-        closePeers();
+        seeder.close();
+        seeder.getCloseFuture().get();
     }
 
     public SeederApp() throws Exception {

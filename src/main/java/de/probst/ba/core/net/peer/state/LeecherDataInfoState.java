@@ -89,7 +89,7 @@ public final class LeecherDataInfoState extends DataInfoState {
                                           DataInfo estimated = getEstimatedDataInfo().get(key);
 
                                           if (estimated != null) {
-                                              remote = remote.substract(estimated);
+                                              remote = remote.subtract(estimated);
                                               if (remote.isEmpty()) {
                                                   remoteDataInfo.remove(key);
                                               } else {
