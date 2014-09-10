@@ -41,20 +41,12 @@ public class PeerId implements Serializable {
         this.uniqueId = uniqueId;
     }
 
-    public boolean isConnectable() {
-        return socketAddress != null;
-    }
-
     public Optional<SocketAddress> getSocketAddress() {
         return Optional.ofNullable(socketAddress);
     }
 
     public Object getUniqueId() {
         return uniqueId;
-    }
-
-    public PeerId withSocketAddress(SocketAddress socketAddress) {
-        return new PeerId(Optional.of(socketAddress), uniqueId);
     }
 
     @Override
