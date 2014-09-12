@@ -6,7 +6,6 @@ import de.probst.ba.core.media.transfer.Transfer;
 import de.probst.ba.core.net.peer.AbstractSeeder;
 import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.handler.SeederPeerHandler;
-import de.probst.ba.core.net.peer.peers.netty.handlers.codec.SimpleCodec;
 import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.AnnounceDataInfoHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.discovery.DiscoverSocketAddressHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.group.ChannelGroupHandler;
@@ -21,8 +20,6 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.group.ChannelGroup;
-import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
-import io.netty.handler.codec.LengthFieldPrepender;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
@@ -38,12 +35,13 @@ import java.util.Optional;
  */
 public abstract class AbstractNettySeeder extends AbstractSeeder {
 
+    private final Object allowLock = new Object();
     private final EventLoopGroup seederEventLoopGroup;
     private final ChannelGroupHandler seederChannelGroupHandler;
     private final BandwidthStatisticHandler seederBandwidthStatisticHandler;
     private final LoggingHandler seederLogHandler = new LoggingHandler(LogLevel.TRACE);
     private final Class<? extends Channel> seederChannelClass;
-    WriteThrottle writeThrottle;
+    private final WriteThrottle writeThrottle;
     private final ChannelInitializer<Channel> seederChannelInitializer = new ChannelInitializer<Channel>() {
         @Override
         public void initChannel(Channel ch) {
@@ -51,18 +49,16 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
             // Build pipeline
             ch.pipeline().addLast(
 
-                    // Traffic shaper
-                    writeThrottle,
-
-                    //seederBandwidthManager.getGlobalTrafficShapingHandler(),
-
                     // Statistic handler
                     seederBandwidthStatisticHandler.getGlobalStatisticHandler(),
 
+                    // Traffic shaper
+                    writeThrottle,
+
                     // Codec stuff
-                    new LengthFieldBasedFrameDecoder(1024 * 1024, 0, 4, 0, 4),
-                    new LengthFieldPrepender(4),
-                    new SimpleCodec(),
+                    //new LengthFieldBasedFrameDecoder(1024 * 1024, 0, 4, 0, 4),
+                    //new LengthFieldPrepender(4),
+                    //new SimpleCodec(),
 
                     // Logging
                     seederLogHandler,
@@ -75,7 +71,7 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
 
                     // Logic
                     new DiscoverSocketAddressHandler(AbstractNettySeeder.this, getSeederChannelGroup()),
-                    new UploadHandler(AbstractNettySeeder.this, getParallelUploads()),
+                    new UploadHandler(AbstractNettySeeder.this, allowLock),
                     new AnnounceDataInfoHandler(AbstractNettySeeder.this));
         }
     };
@@ -145,6 +141,11 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
                 getInitFuture().completeExceptionally(fut.cause());
             }
         });
+    }
+
+    @Override
+    public void announce() {
+        AnnounceDataInfoHandler.announce(getSeederChannelGroup(), getDataBase().getDataInfoWithStamp());
     }
 
     @Override

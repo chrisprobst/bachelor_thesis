@@ -1,6 +1,7 @@
 package de.probst.ba.core.distribution;
 
 import de.probst.ba.core.media.database.DataInfo;
+import de.probst.ba.core.media.transfer.TransferManager;
 import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.Seeder;
 
@@ -32,18 +33,15 @@ public interface SeederDistributionAlgorithm extends DistributionAlgorithm {
     Map<String, DataInfo> transformUploadDataInfo(Seeder seeder, Map<String, DataInfo> dataInfo, PeerId remotePeerId);
 
     /**
-     * Returns the maximum number of active uploads running in
-     * parallel.
+     * Returns whether or not the given upload is allowed.
      * <p>
-     * This method is called by different threads concurrently, so
-     * make sure you have no race conditions.
+     * This method is thread-safe.
      * <p>
      * The framework internally already checks that one peer cannot start
      * two downloads in parallel because it would not make much sense.
-     * So this number is for distinct peers.
      *
      * @param seeder
-     * @return A positive integer > 0.
+     * @return
      */
-    int getMaxParallelUploads(Seeder seeder);
+    boolean isUploadAllowed(Seeder seeder, TransferManager transferManager);
 }

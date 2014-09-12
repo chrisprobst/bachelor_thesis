@@ -14,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -44,11 +45,6 @@ public final class CollectDataInfoHandler extends SimpleChannelInboundHandler<Da
     private Map<String, DataInfo> lastNonEmptyRemoteDataInfo = Collections.emptyMap();
 
     private volatile Optional<Tuple2<PeerId, Map<String, DataInfo>>> externalRemoteDataInfo = Optional.empty();
-
-    public CollectDataInfoHandler(AbstractLeecher leecher) {
-        Objects.requireNonNull(leecher);
-        this.leecher = leecher;
-    }
 
     private Optional<Tuple2<PeerId, Map<String, DataInfo>>> getRemoteDataInfo() {
         return externalRemoteDataInfo;
@@ -89,5 +85,22 @@ public final class CollectDataInfoHandler extends SimpleChannelInboundHandler<Da
 
         // HANDLER
         leecher.getPeerHandler().collected(leecher, peerId, remoteDataInfo);
+    }
+
+    public CollectDataInfoHandler(AbstractLeecher leecher) {
+        Objects.requireNonNull(leecher);
+        this.leecher = leecher;
+    }
+
+    public void removeDataInfo(DataInfo remoteDataInfo) {
+        if (externalRemoteDataInfo.isPresent()) {
+            Map<String, DataInfo> dataInfo = new HashMap<>(externalRemoteDataInfo.get().second());
+            DataInfo existingDataInfo = dataInfo.get(remoteDataInfo.getHash());
+            if (existingDataInfo != null) {
+                dataInfo.put(existingDataInfo.getHash(), existingDataInfo.subtract(remoteDataInfo));
+            }
+            externalRemoteDataInfo =
+                    Optional.of(Tuple.of(externalRemoteDataInfo.get().first(), Collections.unmodifiableMap(dataInfo)));
+        }
     }
 }

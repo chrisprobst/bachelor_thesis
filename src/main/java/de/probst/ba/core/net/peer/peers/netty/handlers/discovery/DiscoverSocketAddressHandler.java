@@ -30,7 +30,7 @@ public final class DiscoverSocketAddressHandler extends SimpleChannelInboundHand
      * This delay determines in milliseconds how often the discovered
      * peers will be exchanged.
      */
-    public static final long DISCOVERY_EXCHANGE_DELAY = 1000;
+    public static final long DISCOVERY_EXCHANGE_DELAY = 2000;
 
     public static Set<SocketAddress> collectSocketAddresses(ChannelGroup channelGroup) {
         return Collections.unmodifiableSet(channelGroup.stream()

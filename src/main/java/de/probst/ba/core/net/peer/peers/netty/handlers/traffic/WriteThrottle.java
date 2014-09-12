@@ -5,8 +5,6 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.LinkedList;
 import java.util.Queue;
@@ -17,9 +15,6 @@ import java.util.concurrent.TimeUnit;
  */
 @ChannelHandler.Sharable
 public final class WriteThrottle extends ChannelHandlerAdapter implements Runnable {
-
-    private final Logger logger =
-            LoggerFactory.getLogger(WriteThrottle.class);
 
     private class ThrottledWrite {
         public long timeToWait;
@@ -57,31 +52,23 @@ public final class WriteThrottle extends ChannelHandlerAdapter implements Runnab
                 return;
             }
 
-            if (throttledWrite.timeToWait > 10) {
-                throttledWrite.ctx.channel()
-                                  .eventLoop()
-                                  .schedule(throttledWrite::write, throttledWrite.timeToWait, TimeUnit.MILLISECONDS);
-            } else {
-                throttledWrite.write();
-            }
+            throttledWrite.ctx.channel()
+                              .eventLoop()
+                              .schedule(throttledWrite::write, throttledWrite.timeToWait, TimeUnit.MILLISECONDS);
         }
     }
 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-        if (msg instanceof ByteBuf) {
+        long amount = msg instanceof ByteBuf ? ((ByteBuf) msg).readableBytes() : 0;
+        long timeToWait = (long) ((amount / (double) uploadRate) * 1000);
 
-            long amount = ((ByteBuf) msg).readableBytes();
-            long timeToWait = (long) ((amount / (double) uploadRate) * 1000);
-            synchronized (this) {
-                writes.offer(new ThrottledWrite(timeToWait, msg, promise, ctx));
-                if (!running) {
-                    running = true;
-                    ctx.channel().eventLoop().execute(this);
-                }
+        synchronized (this) {
+            writes.offer(new ThrottledWrite(timeToWait, msg, promise, ctx));
+            if (!running) {
+                running = true;
+                ctx.channel().eventLoop().execute(this);
             }
-        } else {
-            super.write(ctx, msg, promise);
         }
     }
 }

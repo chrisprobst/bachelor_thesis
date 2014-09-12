@@ -1,6 +1,7 @@
 package de.probst.ba.core.app;
 
 import com.beust.jcommander.Parameter;
+import de.probst.ba.core.distribution.algorithms.SuperSeederDistributionAlgorithm;
 import de.probst.ba.core.media.database.databases.DataBases;
 import de.probst.ba.core.net.peer.Leecher;
 import de.probst.ba.core.net.peer.Peer;
@@ -71,7 +72,7 @@ public class Benchmark extends AbstractPeerApp {
                                          downloadRate,
                                          getSeederSocketAddress(i),
                                          DataBases.fakeDataBase(),
-                                         getSeederDistributionAlgorithm(),
+                                         new SuperSeederDistributionAlgorithm(),
                                          Optional.ofNullable(recordPeerHandler),
                                          Optional.of(eventLoopGroup)).getInitFuture().get();
 
@@ -143,7 +144,7 @@ public class Benchmark extends AbstractPeerApp {
         setup();
         logTransferInfo();
 
-        Thread.sleep(2000);
+        Thread.sleep(4000);
 
         Scanner scanner = new Scanner(System.in);
         logger.info("[== Press [ENTER] to start benchmark ==]");

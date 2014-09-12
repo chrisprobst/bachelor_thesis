@@ -2,6 +2,7 @@ package de.probst.ba.core.distribution.algorithms;
 
 import de.probst.ba.core.distribution.SeederDistributionAlgorithm;
 import de.probst.ba.core.media.database.DataInfo;
+import de.probst.ba.core.media.transfer.TransferManager;
 import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.Seeder;
 
@@ -20,7 +21,7 @@ public class DefaultSeederDistributionAlgorithm implements SeederDistributionAlg
     }
 
     @Override
-    public int getMaxParallelUploads(Seeder seeder) {
-        return Integer.MAX_VALUE;
+    public boolean isUploadAllowed(Seeder seeder, TransferManager transferManager) {
+        return true;
     }
 }

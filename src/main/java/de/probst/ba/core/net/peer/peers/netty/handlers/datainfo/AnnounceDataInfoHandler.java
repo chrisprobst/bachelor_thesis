@@ -5,8 +5,10 @@ import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.Seeder;
 import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.messages.DataInfoMessage;
 import de.probst.ba.core.util.collections.Tuple2;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.group.ChannelGroup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,6 +16,7 @@ import java.nio.channels.ClosedChannelException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
+import java.util.OptionalLong;
 
 /**
  * Periodically announces the data info from the
@@ -26,39 +29,45 @@ import java.util.Objects;
  */
 public final class AnnounceDataInfoHandler extends ChannelHandlerAdapter {
 
+    public static void announce(ChannelGroup channelGroup, Tuple2<Long, Map<String, DataInfo>> dataInfoWithStamp) {
+        channelGroup.stream().map(AnnounceDataInfoHandler::get).forEach(h -> h.announce(dataInfoWithStamp));
+    }
+
+    public static AnnounceDataInfoHandler get(Channel remotePeer) {
+        return remotePeer.pipeline().get(AnnounceDataInfoHandler.class);
+    }
+
     private final Logger logger = LoggerFactory.getLogger(AnnounceDataInfoHandler.class);
 
     private final Seeder seeder;
+    private volatile ChannelHandlerContext ctx;
+    private volatile PeerId peerId;
     private long token;
-    private ChannelHandlerContext ctx;
-    private Map<String, DataInfo> lastTransformedDataInfo = Collections.emptyMap();
+    private OptionalLong stamp = OptionalLong.empty();
+    private volatile Map<String, DataInfo> nextDataInfo = Collections.emptyMap();
+    private boolean scheduled;
 
-    private void doAnnounce(Map<String, DataInfo> dataInfo) {
-        Objects.requireNonNull(dataInfo);
-
-        // Create the netty seeder id
-        PeerId peerId = new PeerId(ctx.channel().remoteAddress(), ctx.channel().id());
-
-        // Transform the data info using the algorithm
-        Map<String, DataInfo> transformedDataInfo =
-                seeder.getDistributionAlgorithm().transformUploadDataInfo(seeder, dataInfo, peerId);
-
-        // Do not announce the same data info twice
-        if (transformedDataInfo.equals(lastTransformedDataInfo)) {
-            return;
-        }
-
-        // Set last transformed data info
-        lastTransformedDataInfo = transformedDataInfo;
+    private void doAnnounce() {
+        Map<String, DataInfo> dataInfo = nextDataInfo;
 
         // Create a new data info message
-        DataInfoMessage dataInfoMessage = new DataInfoMessage(transformedDataInfo);
+        DataInfoMessage dataInfoMessage = new DataInfoMessage(dataInfo);
 
         // Write and flush the data info message
         ctx.writeAndFlush(dataInfoMessage).addListener(fut -> {
-
-            // Close if this exception was not expected
-            if (!fut.isSuccess() && !(fut.cause() instanceof ClosedChannelException)) {
+            if (fut.isSuccess()) {
+                boolean execute = false;
+                synchronized (this) {
+                    if (!nextDataInfo.equals(dataInfo)) {
+                        execute = true;
+                    } else {
+                        scheduled = false;
+                    }
+                }
+                if (execute) {
+                    ctx.channel().eventLoop().execute(this::doAnnounce);
+                }
+            } else if (!(fut.cause() instanceof ClosedChannelException)) {
                 ctx.close();
 
                 logger.warn("Seeder " + seeder.getPeerId() + " failed to announce data info to " + peerId +
@@ -66,7 +75,7 @@ public final class AnnounceDataInfoHandler extends ChannelHandlerAdapter {
             }
         });
 
-        logger.debug("Seeder " + seeder.getPeerId() + " announced " + transformedDataInfo + " to " + peerId);
+        logger.debug("Seeder " + seeder.getPeerId() + " announced " + dataInfo + " to " + peerId);
 
         // HANDLER
         seeder.getPeerHandler().announced(seeder, peerId, dataInfoMessage.getDataInfo());
@@ -77,22 +86,42 @@ public final class AnnounceDataInfoHandler extends ChannelHandlerAdapter {
         this.seeder = seeder;
     }
 
-    public void announce(Map<String, DataInfo> dataInfo) {
-        Objects.requireNonNull(dataInfo);
-        ctx.channel().eventLoop().execute(() -> doAnnounce(dataInfo));
+    public void announce(Tuple2<Long, Map<String, DataInfo>> dataInfoWithStamp) {
+        Objects.requireNonNull(dataInfoWithStamp);
+
+        // Transform the data info using the algorithm
+        Map<String, DataInfo> transformedDataInfo =
+                seeder.getDistributionAlgorithm().transformUploadDataInfo(seeder, dataInfoWithStamp.second(), peerId);
+
+        if (transformedDataInfo == null) {
+            logger.warn("Seeder " + seeder.getPeerId() + " transformed data info to null");
+            return;
+        }
+
+        boolean execute = false;
+        synchronized (this) {
+            if (!transformedDataInfo.equals(nextDataInfo) &&
+                (!stamp.isPresent() || stamp.getAsLong() < dataInfoWithStamp.first())) {
+                nextDataInfo = transformedDataInfo;
+                stamp = OptionalLong.of(dataInfoWithStamp.first());
+                if (!scheduled) {
+                    execute = scheduled = true;
+                }
+            }
+        }
+
+        if (execute) {
+            ctx.channel().eventLoop().execute(this::doAnnounce);
+        }
     }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        // Subscribe to new data info
-        Tuple2<Long, Map<String, DataInfo>> tuple = seeder.getDataBase().subscribe(this::announce);
 
         // Init vars
         this.ctx = ctx;
-        token = tuple.first();
-
-        // Init first state
-        doAnnounce(tuple.second());
+        peerId = new PeerId(ctx.channel().remoteAddress(), ctx.channel().id());
+        token = seeder.getDataBase().subscribe(this::announce);
         super.channelActive(ctx);
     }
 

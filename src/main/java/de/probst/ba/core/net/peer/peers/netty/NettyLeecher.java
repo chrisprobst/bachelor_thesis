@@ -8,7 +8,6 @@ import de.probst.ba.core.net.peer.AbstractLeecher;
 import de.probst.ba.core.net.peer.Leecher;
 import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.handler.LeecherPeerHandler;
-import de.probst.ba.core.net.peer.peers.netty.handlers.codec.SimpleCodec;
 import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.CollectDataInfoHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.discovery.AnnounceSocketAddressHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.group.ChannelGroupHandler;
@@ -23,8 +22,6 @@ import io.netty.channel.ChannelId;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.group.ChannelGroup;
-import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
-import io.netty.handler.codec.LengthFieldPrepender;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import org.slf4j.Logger;
@@ -53,25 +50,23 @@ public final class NettyLeecher extends AbstractLeecher {
     private final Bootstrap leecherBootstrap;
     private final Class<? extends Channel> leecherChannelClass;
     private final ConcurrentMap<SocketAddress, Boolean> connections = new ConcurrentHashMap<>();
-    WriteThrottle writeThrottle;
-
+    private final WriteThrottle writeThrottle;
     private final ChannelInitializer<Channel> leecherChannelInitializer = new ChannelInitializer<Channel>() {
 
         @Override
         public void initChannel(Channel ch) {
             ch.pipeline().addLast(
 
-                    // Traffic shaper
-                    //leecherBandwidthManager.getGlobalTrafficShapingHandler(),
-                    writeThrottle,
-
                     // Statistic handler
                     leecherBandwidthStatisticHandler.getGlobalStatisticHandler(),
 
+                    // Traffic shaper
+                    writeThrottle,
+
                     // Codec stuff
-                    new LengthFieldBasedFrameDecoder(1024 * 1024, 0, 4, 0, 4),
-                    new LengthFieldPrepender(4),
-                    new SimpleCodec(),
+                    //new LengthFieldBasedFrameDecoder(1024 * 1024, 0, 4, 0, 4),
+                    //new LengthFieldPrepender(4),
+                    //new SimpleCodec(),
 
                     // Logging
                     leecherLogHandler,

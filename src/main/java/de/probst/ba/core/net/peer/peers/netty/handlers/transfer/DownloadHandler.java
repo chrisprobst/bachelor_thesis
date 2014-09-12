@@ -5,6 +5,7 @@ import de.probst.ba.core.media.transfer.Transfer;
 import de.probst.ba.core.media.transfer.TransferManager;
 import de.probst.ba.core.net.peer.Leecher;
 import de.probst.ba.core.net.peer.PeerId;
+import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.CollectDataInfoHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.messages.UploadRejectedMessage;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.messages.UploadRequestMessage;
 import io.netty.buffer.ByteBuf;
@@ -144,11 +145,15 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
         if (msg instanceof UploadRejectedMessage) {
             UploadRejectedMessage uploadRejectedMessage = (UploadRejectedMessage) msg;
 
-            logger.info("Leecher " + leecher.getPeerId() + " requested the download " + transferManager +
-                        ", but was rejected");
+            logger.debug("Leecher " + leecher.getPeerId() + " requested the download " + transferManager +
+                         ", but was rejected");
 
             // HANDLER
             leecher.getPeerHandler().downloadRejected(leecher, transferManager, uploadRejectedMessage.getCause());
+
+            // Very important:
+            // Remove the rejected data info from the remote data info
+            CollectDataInfoHandler.get(ctx.channel()).removeDataInfo(transferManager.getTransfer().getDataInfo());
 
             reset();
         } else if (msg instanceof ByteBuf) {

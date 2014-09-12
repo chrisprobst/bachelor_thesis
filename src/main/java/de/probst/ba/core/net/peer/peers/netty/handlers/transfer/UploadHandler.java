@@ -6,7 +6,6 @@ import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.Seeder;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.messages.UploadRejectedMessage;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.messages.UploadRequestMessage;
-import de.probst.ba.core.util.concurrent.AtomicCounter;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -45,29 +44,32 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
 
     private final Logger logger = LoggerFactory.getLogger(UploadHandler.class);
     private final Seeder seeder;
-    private final AtomicCounter parallelUploads;
+    private final Object allowLock;
     private volatile TransferManager transferManager;
 
-    public UploadHandler(Seeder seeder, AtomicCounter parallelUploads) {
+    public UploadHandler(Seeder seeder, Object allowLock) {
         Objects.requireNonNull(seeder);
-        Objects.requireNonNull(parallelUploads);
+        Objects.requireNonNull(allowLock);
         this.seeder = seeder;
-        this.parallelUploads = parallelUploads;
+        this.allowLock = allowLock;
     }
 
     private boolean setup(ChannelHandlerContext ctx, TransferManager transferManager) {
-        if (parallelUploads.tryIncrement(seeder.getDistributionAlgorithm().getMaxParallelUploads(seeder))) {
-            this.transferManager = transferManager;
-            ctx.channel().config().setAutoRead(false);
-            return true;
+        boolean allowed;
+        synchronized (allowLock) {
+            if ((allowed = seeder.getDistributionAlgorithm().isUploadAllowed(seeder, transferManager))) {
+                this.transferManager = transferManager;
+            }
         }
-        return false;
+        if (allowed) {
+            ctx.channel().config().setAutoRead(false);
+        }
+        return allowed;
     }
 
     private void reset(ChannelHandlerContext ctx) {
         transferManager = null;
         ctx.channel().config().setAutoRead(true);
-        parallelUploads.tryDecrement();
     }
 
     public Optional<TransferManager> getTransferManager() {
@@ -101,9 +103,9 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
 
             // If the upload is not allowed, reject it!
             if (!setup(ctx, newTransferManager)) {
-                Exception cause = new IllegalStateException("Maximum number of uploads reached");
+                Exception cause = new IllegalStateException("Upload denied");
 
-                logger.info("Seeder " + seeder.getPeerId() + " rejected upload " + transferManager, cause);
+                logger.debug("Seeder " + seeder.getPeerId() + " denied upload " + transferManager);
 
                 ctx.writeAndFlush(new UploadRejectedMessage(cause));
 

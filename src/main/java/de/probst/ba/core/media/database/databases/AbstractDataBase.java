@@ -20,7 +20,8 @@ public abstract class AbstractDataBase implements DataBase {
 
     protected final Map<String, DataInfo> dataInfo = new HashMap<>();
     private long tokens = 0;
-    private final Map<Long, Consumer<Map<String, DataInfo>>> listeners = new HashMap<>();
+    private long stamps = 0;
+    private final Map<Long, Consumer<Tuple2<Long, Map<String, DataInfo>>>> listeners = new HashMap<>();
 
     protected abstract void doProcessBuffer(DataInfo dataInfo,
                                             int chunkIndex,
@@ -33,10 +34,12 @@ public abstract class AbstractDataBase implements DataBase {
     protected void doComplete(DataInfo dataInfo, int chunkIndex, boolean download) throws IOException {
         if (download) {
             this.dataInfo.computeIfPresent(dataInfo.getHash(), (k, v) -> v.withChunk(chunkIndex));
-
-            Map<String, DataInfo> newDataInfo = getDataInfo();
-            listeners.values().forEach(c -> c.accept(newDataInfo));
         }
+    }
+
+    @Override
+    public synchronized Tuple2<Long, Map<String, DataInfo>> getDataInfoWithStamp() {
+        return Tuple.of(stamps++, dataInfo);
     }
 
     @Override
@@ -51,11 +54,17 @@ public abstract class AbstractDataBase implements DataBase {
     }
 
     @Override
-    public synchronized void update(DataInfo dataInfo) {
-        DataInfo old = this.dataInfo.put(dataInfo.getHash(), dataInfo);
-        if (!dataInfo.equals(old)) {
-            Map<String, DataInfo> newDataInfo = getDataInfo();
-            listeners.values().forEach(c -> c.accept(newDataInfo));
+    public void update(DataInfo dataInfo) {
+        Tuple2<Long, Map<String, DataInfo>> newDataInfo = null;
+        synchronized (this) {
+            DataInfo old = this.dataInfo.put(dataInfo.getHash(), dataInfo);
+            if (!dataInfo.equals(old)) {
+                newDataInfo = getDataInfoWithStamp();
+            }
+        }
+        if (newDataInfo != null) {
+            Tuple2<Long, Map<String, DataInfo>> finalDataInfo = newDataInfo;
+            listeners.values().forEach(c -> c.accept(finalDataInfo));
         }
     }
 
@@ -65,11 +74,17 @@ public abstract class AbstractDataBase implements DataBase {
     }
 
     @Override
-    public synchronized Tuple2<Long, Map<String, DataInfo>> subscribe(Consumer<Map<String, DataInfo>> consumer) {
+    public long subscribe(Consumer<Tuple2<Long, Map<String, DataInfo>>> consumer) {
         Objects.requireNonNull(consumer);
-        long token = tokens++;
-        listeners.put(token, consumer);
-        return Tuple.of(token, getDataInfo());
+        Tuple2<Long, Map<String, DataInfo>> newDataInfo;
+        long token;
+        synchronized (this) {
+            token = tokens++;
+            listeners.put(token, consumer);
+            newDataInfo = getDataInfoWithStamp();
+        }
+        consumer.accept(newDataInfo);
+        return token;
     }
 
     @Override
@@ -131,17 +146,23 @@ public abstract class AbstractDataBase implements DataBase {
     }
 
     @Override
-    public synchronized void processBufferAndComplete(DataInfo dataInfo,
-                                                      int chunkIndex,
-                                                      long offset,
-                                                      ByteBuf byteBuf,
-                                                      int length,
-                                                      boolean download) throws IOException {
+    public void processBufferAndComplete(DataInfo dataInfo,
+                                         int chunkIndex,
+                                         long offset,
+                                         ByteBuf byteBuf,
+                                         int length,
+                                         boolean download) throws IOException {
 
-        // Process buffer as usual
-        processBuffer(dataInfo, chunkIndex, offset, byteBuf, length, download);
+        Tuple2<Long, Map<String, DataInfo>> newDataInfo;
+        synchronized (this) {
+            // Process buffer as usual
+            processBuffer(dataInfo, chunkIndex, offset, byteBuf, length, download);
 
-        // Complete the chunk
-        doComplete(dataInfo, chunkIndex, download);
+            // Complete the chunk
+            doComplete(dataInfo, chunkIndex, download);
+            newDataInfo = getDataInfoWithStamp();
+        }
+
+        listeners.values().forEach(c -> c.accept(newDataInfo));
     }
 }

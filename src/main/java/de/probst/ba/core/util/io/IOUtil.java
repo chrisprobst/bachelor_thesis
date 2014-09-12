@@ -28,7 +28,8 @@ public class IOUtil {
 
     @SuppressWarnings("unchecked")
     public static <T> T deserialize(byte[] array) throws IOException, ClassNotFoundException {
-        try (ObjectInputStream objectInputStream = new ObjectInputStream(new ByteArrayInputStream(array))) {
+        try (ObjectInputStream objectInputStream = new ObjectInputStream(new ByteArrayInputStream(
+                array))) {
             return (T) objectInputStream.readObject();
         }
     }

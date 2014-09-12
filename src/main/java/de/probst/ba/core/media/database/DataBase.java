@@ -32,7 +32,7 @@ public interface DataBase extends Flushable {
      * @param consumer
      * @return
      */
-    Tuple2<Long, Map<String, DataInfo>> subscribe(Consumer<Map<String, DataInfo>> consumer);
+    long subscribe(Consumer<Tuple2<Long, Map<String, DataInfo>>> consumer);
 
     /**
      * Cancels a subscription.
@@ -41,6 +41,9 @@ public interface DataBase extends Flushable {
      * @return
      */
     boolean cancel(long token);
+
+
+    Tuple2<Long, Map<String, DataInfo>> getDataInfoWithStamp();
 
     /**
      * @return A snapshot of all existing
