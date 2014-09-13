@@ -4,8 +4,8 @@ import de.probst.ba.core.distribution.LeecherDistributionAlgorithm;
 import de.probst.ba.core.media.database.DataBase;
 import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.media.transfer.Transfer;
-import de.probst.ba.core.net.peer.handler.LeecherPeerHandlerAdapter;
 import de.probst.ba.core.net.peer.handler.LeecherPeerHandler;
+import de.probst.ba.core.net.peer.handler.LeecherPeerHandlerAdapter;
 import de.probst.ba.core.net.peer.state.LeecherDataInfoState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,6 +18,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.stream.Collectors;
 
 /**
@@ -35,19 +36,25 @@ public abstract class AbstractLeecher extends AbstractPeer implements Leecher {
 
     protected abstract Map<PeerId, Map<String, DataInfo>> getRemoteDataInfo();
 
-    public AbstractLeecher(Optional<PeerId> peerId,
+    public AbstractLeecher(long maxUploadRate,
+                           long maxDownloadRate,
+                           Optional<PeerId> peerId,
                            DataBase dataBase,
                            LeecherDistributionAlgorithm leecherDistributionAlgorithm,
                            Optional<LeecherPeerHandler> leecherHandler,
+                           ScheduledExecutorService leakyBucketRefillTaskScheduler,
                            boolean autoConnect,
-                           Executor executor) {
-        super(Optional.of(peerId.orElseGet(PeerId::new)),
+                           Executor algorithmExecutor) {
+        super(maxUploadRate,
+              maxDownloadRate,
+              Optional.of(peerId.orElseGet(PeerId::new)),
               dataBase,
               leecherDistributionAlgorithm,
-              Optional.of(leecherHandler.orElseGet(LeecherPeerHandlerAdapter::new)));
+              Optional.of(leecherHandler.orElseGet(LeecherPeerHandlerAdapter::new)),
+              leakyBucketRefillTaskScheduler);
 
         // Save args
-        leecherDistributionAlgorithmWorker = new LeecherDistributionAlgorithmWorker(executor);
+        leecherDistributionAlgorithmWorker = new LeecherDistributionAlgorithmWorker(algorithmExecutor);
         this.autoConnect = autoConnect;
     }
 

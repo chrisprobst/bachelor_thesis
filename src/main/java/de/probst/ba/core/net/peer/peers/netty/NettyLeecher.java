@@ -16,8 +16,6 @@ import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.RoundRobinTraffic
 import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.WriteRequestHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.DownloadHandler;
 import de.probst.ba.core.net.peer.state.BandwidthStatisticState;
-import de.probst.ba.core.util.concurrent.LeakyBucket;
-import de.probst.ba.core.util.concurrent.LeakyBucketRefillTask;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
@@ -44,15 +42,12 @@ import java.util.concurrent.ConcurrentMap;
  */
 public final class NettyLeecher extends AbstractLeecher {
 
-    private final LeakyBucketRefillTask leakyBucketRefillTask;
-    private final LeakyBucket leakyBucket;
-    private final RoundRobinTrafficShaper roundRobinTrafficShaper;
-
     private final Logger logger = LoggerFactory.getLogger(NettyLeecher.class);
     private final EventLoopGroup leecherEventLoopGroup;
     private final ChannelGroupHandler leecherChannelGroupHandler;
     private final Optional<SocketAddress> announceSocketAddress;
     private final BandwidthStatisticHandler leecherBandwidthStatisticHandler;
+    private final RoundRobinTrafficShaper roundRobinUploadTrafficShaper;
     private final LoggingHandler leecherLogHandler = new LoggingHandler(LogLevel.TRACE);
     private final Bootstrap leecherBootstrap;
     private final Class<? extends Channel> leecherChannelClass;
@@ -67,7 +62,7 @@ public final class NettyLeecher extends AbstractLeecher {
                     leecherBandwidthStatisticHandler,
 
                     // Traffic shaper
-                    new WriteRequestHandler(roundRobinTrafficShaper),
+                    new WriteRequestHandler(roundRobinUploadTrafficShaper),
 
                     // Codec stuff
                     //new ComplexCodec(),
@@ -136,10 +131,13 @@ public final class NettyLeecher extends AbstractLeecher {
                         Class<? extends Channel> leecherChannelClass,
                         Optional<SocketAddress> announceSocketAddress) {
 
-        super(peerId,
+        super(maxUploadRate,
+              maxDownloadRate,
+              peerId,
               dataBase,
               leecherDistributionAlgorithm,
               leecherHandler,
+              leecherEventLoopGroup.next(),
               autoConnect,
               leecherEventLoopGroup.next());
 
@@ -163,14 +161,12 @@ public final class NettyLeecher extends AbstractLeecher {
 
         // Create internal vars
         leecherBandwidthStatisticHandler = new BandwidthStatisticHandler(this, maxUploadRate, maxDownloadRate);
-        leecherChannelGroupHandler = new ChannelGroupHandler(this.leecherEventLoopGroup.next());
+        leecherChannelGroupHandler = new ChannelGroupHandler(leecherEventLoopGroup.next());
 
-        // Leaky bucket
-        leakyBucketRefillTask = new LeakyBucketRefillTask(this.leecherEventLoopGroup.next(), 250);
-        leakyBucket = new LeakyBucket(leakyBucketRefillTask, maxUploadRate, maxUploadRate);
-        roundRobinTrafficShaper =
-                new RoundRobinTrafficShaper(leakyBucket,
-                                            this.leecherEventLoopGroup.next(),
+        // Traffic shaping
+        roundRobinUploadTrafficShaper =
+                new RoundRobinTrafficShaper(getLeakyUploadBucket(),
+                                            leecherEventLoopGroup.next(),
                                             () -> WriteRequestHandler.collect(getLeecherChannelGroup()));
 
         // Init bootstrap

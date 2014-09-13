@@ -10,6 +10,7 @@ import de.probst.ba.core.net.peer.state.SeederDataInfoState;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ScheduledExecutorService;
 
 /**
  * Created by chrisprobst on 01.09.14.
@@ -18,13 +19,17 @@ public abstract class AbstractSeeder extends AbstractPeer implements Seeder {
 
     protected abstract Map<PeerId, Transfer> getUploads();
 
-    public AbstractSeeder(DataBase dataBase,
+    public AbstractSeeder(long maxUploadRate,
+                          long maxDownloadRate,
+                          DataBase dataBase,
                           SeederDistributionAlgorithm seederDistributionAlgorithm,
-                          Optional<SeederPeerHandler> seederHandler) {
-        super(Optional.empty(),
+                          Optional<SeederPeerHandler> seederHandler,
+                          ScheduledExecutorService leakyBucketRefillTaskScheduler) {
+        super(maxUploadRate, maxDownloadRate, Optional.empty(),
               dataBase,
               seederDistributionAlgorithm,
-              Optional.of(seederHandler.orElseGet(SeederPeerHandlerAdapter::new)));
+              Optional.of(seederHandler.orElseGet(SeederPeerHandlerAdapter::new)),
+              leakyBucketRefillTaskScheduler);
     }
 
     @SuppressWarnings("unchecked")

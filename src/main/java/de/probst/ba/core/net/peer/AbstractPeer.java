@@ -5,6 +5,8 @@ import de.probst.ba.core.media.database.DataBase;
 import de.probst.ba.core.net.peer.handler.PeerHandler;
 import de.probst.ba.core.net.peer.handler.PeerHandlerAdapter;
 import de.probst.ba.core.net.peer.state.DataInfoState;
+import de.probst.ba.core.util.concurrent.LeakyBucket;
+import de.probst.ba.core.util.concurrent.LeakyBucketRefillTask;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,13 +14,22 @@ import java.io.IOException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ScheduledExecutorService;
 
 /**
  * Created by chrisprobst on 17.08.14.
  */
 public abstract class AbstractPeer implements Peer {
 
+    public static final int LEAKY_BUCKET_REFILL_INTERVAL = 250;
+
     private final Logger logger = LoggerFactory.getLogger(AbstractPeer.class);
+
+    private final LeakyBucketRefillTask leakyBucketRefillTask;
+
+    private final LeakyBucket leakyUploadBucket;
+
+    private final LeakyBucket leakyDownloadBucket;
 
     private final DataBase dataBase;
 
@@ -31,6 +42,14 @@ public abstract class AbstractPeer implements Peer {
     private final CompletableFuture<? extends Peer> closeFuture = new CompletableFuture<>();
 
     private volatile Optional<PeerId> peerId;
+
+    public LeakyBucket getLeakyDownloadBucket() {
+        return leakyDownloadBucket;
+    }
+
+    public LeakyBucket getLeakyUploadBucket() {
+        return leakyUploadBucket;
+    }
 
     protected void setPeerId(Optional<PeerId> peerId) {
         Objects.requireNonNull(peerId);
@@ -45,21 +64,30 @@ public abstract class AbstractPeer implements Peer {
         }
     }
 
-    public AbstractPeer(Optional<PeerId> peerId,
+    public AbstractPeer(long maxUploadRate,
+                        long maxDownloadRate,
+                        Optional<PeerId> peerId,
                         DataBase dataBase,
                         DistributionAlgorithm distributionAlgorithm,
-                        Optional<PeerHandler> peerHandler) {
+                        Optional<PeerHandler> peerHandler,
+                        ScheduledExecutorService leakyBucketRefillTaskScheduler) {
 
         Objects.requireNonNull(peerId);
         Objects.requireNonNull(dataBase);
         Objects.requireNonNull(distributionAlgorithm);
         Objects.requireNonNull(peerHandler);
+        Objects.requireNonNull(leakyBucketRefillTaskScheduler);
 
         // Save args
         this.peerId = peerId;
         this.dataBase = dataBase;
         this.distributionAlgorithm = distributionAlgorithm;
         this.peerHandler = peerHandler.orElseGet(PeerHandlerAdapter::new);
+
+        // Leaky bucket
+        leakyBucketRefillTask = new LeakyBucketRefillTask(leakyBucketRefillTaskScheduler, LEAKY_BUCKET_REFILL_INTERVAL);
+        leakyUploadBucket = new LeakyBucket(leakyBucketRefillTask, maxUploadRate, maxUploadRate);
+        leakyDownloadBucket = new LeakyBucket(leakyBucketRefillTask, maxDownloadRate, maxDownloadRate);
     }
 
     @Override
@@ -94,7 +122,13 @@ public abstract class AbstractPeer implements Peer {
 
     @Override
     public void close() throws IOException {
-        getDataBase().flush();
+        try {
+            leakyBucketRefillTask.close();
+            leakyDownloadBucket.close();
+            leakyUploadBucket.close();
+        } finally {
+            getDataBase().flush();
+        }
     }
 
     @Override

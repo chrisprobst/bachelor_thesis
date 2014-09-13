@@ -43,7 +43,7 @@ import java.util.stream.IntStream;
  */
 public abstract class AbstractPeerApp {
 
-    public static final int STATISTIC_INTERVAL = 500;
+    public static final int STATISTIC_INTERVAL = 250;
 
     @Parameter(names = {"-pt", "--peer-type"},
                description = "Peer type [Local, TCP]",

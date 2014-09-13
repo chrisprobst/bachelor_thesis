@@ -14,8 +14,6 @@ import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.RoundRobinTraffic
 import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.WriteRequestHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.UploadHandler;
 import de.probst.ba.core.net.peer.state.BandwidthStatisticState;
-import de.probst.ba.core.util.concurrent.LeakyBucket;
-import de.probst.ba.core.util.concurrent.LeakyBucketRefillTask;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -38,14 +36,11 @@ import java.util.Optional;
  */
 public abstract class AbstractNettySeeder extends AbstractSeeder {
 
-    private final LeakyBucketRefillTask leakyBucketRefillTask;
-    private final LeakyBucket leakyBucket;
-    private final RoundRobinTrafficShaper roundRobinTrafficShaper;
-
     private final Object allowLock = new Object();
     private final EventLoopGroup seederEventLoopGroup;
     private final ChannelGroupHandler seederChannelGroupHandler;
     private final BandwidthStatisticHandler seederBandwidthStatisticHandler;
+    private final RoundRobinTrafficShaper roundRobinDownloadTrafficShaper;
     private final LoggingHandler seederLogHandler = new LoggingHandler(LogLevel.TRACE);
     private final Class<? extends Channel> seederChannelClass;
     private final ChannelInitializer<Channel> seederChannelInitializer = new ChannelInitializer<Channel>() {
@@ -59,7 +54,7 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
                     seederBandwidthStatisticHandler,
 
                     // Traffic shaper
-                    new WriteRequestHandler(roundRobinTrafficShaper),
+                    new WriteRequestHandler(roundRobinDownloadTrafficShaper),
 
                     // Codec stuff
                     //new ComplexCodec(),
@@ -115,7 +110,12 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
                                EventLoopGroup seederEventLoopGroup,
                                Class<? extends ServerChannel> seederChannelClass) {
 
-        super(dataBase, seederDistributionAlgorithm, seederHandler);
+        super(maxUploadRate,
+              maxDownloadRate,
+              dataBase,
+              seederDistributionAlgorithm,
+              seederHandler,
+              seederEventLoopGroup.next());
 
         Objects.requireNonNull(seederEventLoopGroup);
         Objects.requireNonNull(seederChannelClass);
@@ -135,14 +135,12 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
 
         // Create internal vars
         seederBandwidthStatisticHandler = new BandwidthStatisticHandler(this, maxUploadRate, maxDownloadRate);
-        seederChannelGroupHandler = new ChannelGroupHandler(this.seederEventLoopGroup.next());
+        seederChannelGroupHandler = new ChannelGroupHandler(seederEventLoopGroup.next());
 
         // Leaky bucket
-        leakyBucketRefillTask = new LeakyBucketRefillTask(this.seederEventLoopGroup.next(), 250);
-        leakyBucket = new LeakyBucket(leakyBucketRefillTask, maxUploadRate, maxUploadRate);
-        roundRobinTrafficShaper =
-                new RoundRobinTrafficShaper(leakyBucket,
-                                            this.seederEventLoopGroup.next(),
+        roundRobinDownloadTrafficShaper =
+                new RoundRobinTrafficShaper(getLeakyUploadBucket(),
+                                            seederEventLoopGroup.next(),
                                             () -> WriteRequestHandler.collect(getSeederChannelGroup()));
 
         // Init bootstrap
@@ -165,8 +163,6 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
     public void close() throws IOException {
         try {
             seederEventLoopGroup.shutdownGracefully();
-            leakyBucketRefillTask.close();
-            leakyBucket.close();
         } finally {
             super.close();
         }
