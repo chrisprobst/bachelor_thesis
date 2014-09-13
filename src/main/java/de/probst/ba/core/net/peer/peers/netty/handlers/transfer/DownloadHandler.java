@@ -17,7 +17,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.nio.channels.ClosedChannelException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
@@ -105,12 +104,6 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        ctx.close();
-        super.exceptionCaught(ctx, cause);
-    }
-
-    @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         if (transfer.get().equals(evt)) {
 
@@ -118,18 +111,7 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
             setup();
 
             // Write the download request
-            ctx.writeAndFlush(new UploadRequestMessage(transferManager.getTransfer().getDataInfo()))
-               .addListener(fut -> {
-                   if (!fut.isSuccess()) {
-                       // Close if this exception was not expected
-                       if (!(fut.cause() instanceof ClosedChannelException)) {
-                           ctx.close();
-
-                           logger.warn("Leecher " + leecher.getPeerId() +
-                                       " failed to send upload request, connection closed", fut.cause());
-                       }
-                   }
-               });
+            ctx.writeAndFlush(new UploadRequestMessage(transferManager.getTransfer().getDataInfo()));
 
             logger.debug("Leecher " + leecher.getPeerId() + " requested download " + transferManager);
 

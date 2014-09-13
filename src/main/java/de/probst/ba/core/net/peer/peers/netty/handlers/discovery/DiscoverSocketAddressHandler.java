@@ -12,7 +12,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.SocketAddress;
-import java.nio.channels.ClosedChannelException;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Objects;
@@ -30,7 +29,7 @@ public final class DiscoverSocketAddressHandler extends SimpleChannelInboundHand
      * This delay determines in milliseconds how often the discovered
      * peers will be exchanged.
      */
-    public static final long DISCOVERY_EXCHANGE_DELAY = 2000;
+    public static final long DISCOVERY_EXCHANGE_DELAY = 1000;
 
     public static Set<SocketAddress> collectSocketAddresses(ChannelGroup channelGroup) {
         return Collections.unmodifiableSet(channelGroup.stream()
@@ -48,17 +47,37 @@ public final class DiscoverSocketAddressHandler extends SimpleChannelInboundHand
     private final Logger logger = LoggerFactory.getLogger(DiscoverSocketAddressHandler.class);
     private final Seeder seeder;
     private final ChannelGroup channelGroup;
-    private ChannelHandlerContext ctx;
+
     private Future<?> scheduleFuture;
     private ChannelFuture writeFuture;
     private Set<SocketAddress> lastSocketAddresses = Collections.emptySet();
     private volatile Optional<SocketAddress> socketAddress = Optional.empty();
 
-    private void writeSocketAddresses(boolean scheduled) {
+    private void schedule(ChannelHandlerContext ctx) {
+        scheduleFuture = ctx.channel().eventLoop().schedule(() -> writeSocketAddresses(ctx, true),
+                                                            DISCOVERY_EXCHANGE_DELAY,
+                                                            TimeUnit.MILLISECONDS);
+    }
+
+    private void writeSocketAddresses(ChannelHandlerContext ctx, boolean scheduled) {
+        if (scheduled) {
+            // Set schedule future to null if this was invoked by
+            // the scheduler
+            scheduleFuture = null;
+        }
+
         if (writeFuture != null) {
+            if (scheduled) {
+                // Do schedule again if this was invoked by
+                // the scheduler
+                schedule(ctx);
+            }
+
+            // Do not write if there is a pending write request
             return;
         }
 
+        // Collect all known socket addresses and add them into a set including our own address
         Set<SocketAddress> socketAddresses = new HashSet<>(collectSocketAddresses(channelGroup));
         socketAddresses.add(seeder.getPeerId().getSocketAddress().get());
 
@@ -66,29 +85,25 @@ public final class DiscoverSocketAddressHandler extends SimpleChannelInboundHand
         if (!socketAddresses.equals(lastSocketAddresses)) {
             lastSocketAddresses = socketAddresses;
 
+            // Write and flush and save the write future
             (writeFuture = ctx.writeAndFlush(new SocketAddressMessage(socketAddresses))).addListener(fut -> {
                 if (fut.isSuccess()) {
+                    // The write operation completed,
+                    // set the future to null
                     writeFuture = null;
-                    if (scheduled) {
-                        schedule();
-                    }
-                } else if (!(fut.cause() instanceof ClosedChannelException)) {
-                    // Close if this exception was not expected
-                    ctx.close();
 
-                    logger.warn("Seeder " + seeder.getPeerId() +
-                                " failed to write discovery message, connection closed", fut.cause());
+                    if (scheduled) {
+                        // Do schedule again if this was invoked by
+                        // the scheduler
+                        schedule(ctx);
+                    }
                 }
             });
         } else if (scheduled) {
-            schedule();
+            // Do schedule again if this was invoked by
+            // the scheduler
+            schedule(ctx);
         }
-    }
-
-    private void schedule() {
-        scheduleFuture = ctx.channel().eventLoop().schedule(() -> writeSocketAddresses(true),
-                                                            DISCOVERY_EXCHANGE_DELAY,
-                                                            TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -99,7 +114,7 @@ public final class DiscoverSocketAddressHandler extends SimpleChannelInboundHand
         if (newSocketAddress.isPresent() && !this.socketAddress.equals(newSocketAddress)) {
             this.socketAddress = newSocketAddress;
 
-            writeSocketAddresses(false);
+            writeSocketAddresses(ctx, false);
 
             // HANDLER
             seeder.getPeerHandler().discoveredSocketAddress(seeder, newSocketAddress.get());
@@ -123,8 +138,7 @@ public final class DiscoverSocketAddressHandler extends SimpleChannelInboundHand
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        this.ctx = ctx;
-        schedule();
+        schedule(ctx);
         super.channelActive(ctx);
     }
 

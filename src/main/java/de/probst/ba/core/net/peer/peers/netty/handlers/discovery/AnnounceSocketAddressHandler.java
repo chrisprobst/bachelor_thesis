@@ -20,15 +20,6 @@ public final class AnnounceSocketAddressHandler extends SimpleChannelInboundHand
     private final Leecher leecher;
     private final Optional<SocketAddress> announceSocketAddress;
     private Set<SocketAddress> lastSocketAddresses = Collections.emptySet();
-    private volatile ChannelHandlerContext ctx;
-
-    private void connect(Set<SocketAddress> socketAddresses) {
-        socketAddresses.forEach(leecher::connect);
-    }
-
-    private void writeSocketAddress() {
-        announceSocketAddress.map(SocketAddressMessage::new).ifPresent(ctx::writeAndFlush);
-    }
 
     @Override
     protected void messageReceived(ChannelHandlerContext ctx, SocketAddressMessage msg) throws Exception {
@@ -41,7 +32,7 @@ public final class AnnounceSocketAddressHandler extends SimpleChannelInboundHand
             lastSocketAddresses = socketAddresses;
 
             if (leecher.isAutoConnect()) {
-                connect(socketAddresses);
+                socketAddresses.forEach(leecher::connect);
             }
 
             // HANDLER
@@ -57,9 +48,14 @@ public final class AnnounceSocketAddressHandler extends SimpleChannelInboundHand
     }
 
     @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        ctx.close();
+        super.exceptionCaught(ctx, cause);
+    }
+
+    @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        this.ctx = ctx;
-        writeSocketAddress();
+        announceSocketAddress.map(SocketAddressMessage::new).ifPresent(ctx::writeAndFlush);
         super.channelActive(ctx);
     }
 }

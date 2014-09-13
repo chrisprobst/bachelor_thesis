@@ -2,8 +2,6 @@ package de.probst.ba.core.media.database.databases;
 
 import de.probst.ba.core.media.database.DataBase;
 import de.probst.ba.core.media.database.DataInfo;
-import de.probst.ba.core.util.collections.Tuple;
-import de.probst.ba.core.util.collections.Tuple2;
 import io.netty.buffer.ByteBuf;
 
 import java.io.IOException;
@@ -11,7 +9,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 /**
  * Created by chrisprobst on 15.08.14.
@@ -19,9 +17,15 @@ import java.util.function.Consumer;
 public abstract class AbstractDataBase implements DataBase {
 
     protected final Map<String, DataInfo> dataInfo = new HashMap<>();
-    private long tokens = 0;
-    private long stamps = 0;
-    private final Map<Long, Consumer<Tuple2<Long, Map<String, DataInfo>>>> listeners = new HashMap<>();
+    protected volatile Map<String, DataInfo> nonEmptyDataInfoView = Collections.emptyMap();
+
+    private void createNonEmptyDataInfoView() {
+        nonEmptyDataInfoView = Collections.unmodifiableMap(dataInfo.entrySet()
+                                                                   .stream()
+                                                                   .filter(p -> !p.getValue().isEmpty())
+                                                                   .collect(Collectors.toMap(Map.Entry::getKey,
+                                                                                             Map.Entry::getValue)));
+    }
 
     protected abstract void doProcessBuffer(DataInfo dataInfo,
                                             int chunkIndex,
@@ -34,62 +38,24 @@ public abstract class AbstractDataBase implements DataBase {
     protected void doComplete(DataInfo dataInfo, int chunkIndex, boolean download) throws IOException {
         if (download) {
             this.dataInfo.computeIfPresent(dataInfo.getHash(), (k, v) -> v.withChunk(chunkIndex));
+            createNonEmptyDataInfoView();
         }
     }
 
     @Override
-    public synchronized Tuple2<Long, Map<String, DataInfo>> getDataInfoWithStamp() {
-        return Tuple.of(stamps++, dataInfo);
+    public Map<String, DataInfo> getDataInfo() {
+        return nonEmptyDataInfoView;
     }
 
     @Override
-    public synchronized Map<String, DataInfo> getDataInfo() {
-        Map<String, DataInfo> copy = new HashMap<>(dataInfo);
-        dataInfo.forEach((k, v) -> {
-            if (v.isEmpty()) {
-                copy.remove(k);
-            }
-        });
-        return Collections.unmodifiableMap(copy);
-    }
-
-    @Override
-    public void update(DataInfo dataInfo) {
-        Tuple2<Long, Map<String, DataInfo>> newDataInfo = null;
-        synchronized (this) {
-            DataInfo old = this.dataInfo.put(dataInfo.getHash(), dataInfo);
-            if (!dataInfo.equals(old)) {
-                newDataInfo = getDataInfoWithStamp();
-            }
-        }
-        if (newDataInfo != null) {
-            Tuple2<Long, Map<String, DataInfo>> finalDataInfo = newDataInfo;
-            listeners.values().forEach(c -> c.accept(finalDataInfo));
-        }
+    public synchronized void update(DataInfo dataInfo) {
+        this.dataInfo.put(dataInfo.getHash(), dataInfo);
+        createNonEmptyDataInfoView();
     }
 
     @Override
     public synchronized DataInfo get(String hash) {
         return dataInfo.get(hash);
-    }
-
-    @Override
-    public long subscribe(Consumer<Tuple2<Long, Map<String, DataInfo>>> consumer) {
-        Objects.requireNonNull(consumer);
-        Tuple2<Long, Map<String, DataInfo>> newDataInfo;
-        long token;
-        synchronized (this) {
-            token = tokens++;
-            listeners.put(token, consumer);
-            newDataInfo = getDataInfoWithStamp();
-        }
-        consumer.accept(newDataInfo);
-        return token;
-    }
-
-    @Override
-    public synchronized boolean cancel(long token) {
-        return listeners.remove(token) != null;
     }
 
     @Override
@@ -121,8 +87,8 @@ public abstract class AbstractDataBase implements DataBase {
 
         long chunkSize = dataInfo.getChunkSize(chunkIndex);
 
-        if (offset < 0 || offset >= chunkSize - 1) {
-            throw new IllegalArgumentException("offset < 0 || offset >= chunkSize - 1");
+        if (offset < 0 || offset >= chunkSize) {
+            throw new IllegalArgumentException("offset < 0 || offset >= chunkSize");
         }
 
         if (length <= 0) {
@@ -146,23 +112,17 @@ public abstract class AbstractDataBase implements DataBase {
     }
 
     @Override
-    public void processBufferAndComplete(DataInfo dataInfo,
-                                         int chunkIndex,
-                                         long offset,
-                                         ByteBuf byteBuf,
-                                         int length,
-                                         boolean download) throws IOException {
+    public synchronized void processBufferAndComplete(DataInfo dataInfo,
+                                                      int chunkIndex,
+                                                      long offset,
+                                                      ByteBuf byteBuf,
+                                                      int length,
+                                                      boolean download) throws IOException {
 
-        Tuple2<Long, Map<String, DataInfo>> newDataInfo;
-        synchronized (this) {
-            // Process buffer as usual
-            processBuffer(dataInfo, chunkIndex, offset, byteBuf, length, download);
+        // Process buffer as usual
+        processBuffer(dataInfo, chunkIndex, offset, byteBuf, length, download);
 
-            // Complete the chunk
-            doComplete(dataInfo, chunkIndex, download);
-            newDataInfo = getDataInfoWithStamp();
-        }
-
-        listeners.values().forEach(c -> c.accept(newDataInfo));
+        // Complete the chunk
+        doComplete(dataInfo, chunkIndex, download);
     }
 }

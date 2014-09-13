@@ -2,14 +2,12 @@ package de.probst.ba.core.media.database;
 
 import de.probst.ba.core.media.transfer.Transfer;
 import de.probst.ba.core.media.transfer.TransferManager;
-import de.probst.ba.core.util.collections.Tuple2;
 import io.netty.buffer.ByteBuf;
 
 import java.io.Flushable;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Consumer;
 
 /**
  * A data base manages data info and the content.
@@ -24,26 +22,6 @@ public interface DataBase extends Flushable {
      * @throws IOException
      */
     void flush() throws IOException;
-
-    /**
-     * Add the given consumer to a list which gets
-     * notified when the data base completes a new chunk.
-     *
-     * @param consumer
-     * @return
-     */
-    long subscribe(Consumer<Tuple2<Long, Map<String, DataInfo>>> consumer);
-
-    /**
-     * Cancels a subscription.
-     *
-     * @param token
-     * @return
-     */
-    boolean cancel(long token);
-
-
-    Tuple2<Long, Map<String, DataInfo>> getDataInfoWithStamp();
 
     /**
      * @return A snapshot of all existing

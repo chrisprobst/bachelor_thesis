@@ -2,32 +2,54 @@ package de.probst.ba.core.net.peer.peers.netty.handlers.traffic;
 
 import de.probst.ba.core.net.peer.Peer;
 import de.probst.ba.core.net.peer.state.BandwidthStatisticState;
-import io.netty.handler.traffic.GlobalTrafficShapingHandler;
-import io.netty.handler.traffic.TrafficCounter;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerAdapter;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Objects;
-import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Created by chrisprobst on 04.09.14.
  */
-public final class BandwidthStatisticHandler implements AutoCloseable {
+@ChannelHandler.Sharable
+public final class BandwidthStatisticHandler extends ChannelHandlerAdapter {
 
     private final Peer peer;
     private final long maxUploadRate;
     private final long maxDownloadRate;
-    private final GlobalTrafficShapingHandler globalStatisticHandler;
+    private final Instant startTotalTimeStamp = Instant.now();
+    private final AtomicLong totalWritten = new AtomicLong();
+    private final AtomicLong totalRead = new AtomicLong();
 
-    public BandwidthStatisticHandler(Peer peer,
-                                     long maxUploadRate,
-                                     long maxDownloadRate,
-                                     ScheduledExecutorService scheduledExecutorService) {
+    private Instant startCurrentWrittenTimeStamp = Instant.now();
+    private final AtomicLong currentWritten = new AtomicLong();
+    private Instant startCurrentReadTimeStamp = Instant.now();
+    private final AtomicLong currentRead = new AtomicLong();
+
+    public BandwidthStatisticHandler(Peer peer, long maxUploadRate, long maxDownloadRate) {
         Objects.requireNonNull(peer);
 
         this.peer = peer;
         this.maxUploadRate = maxUploadRate;
         this.maxDownloadRate = maxDownloadRate;
-        globalStatisticHandler = new GlobalTrafficShapingHandler(scheduledExecutorService, 0, 0);
+    }
+
+    @Override
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        totalWritten.getAndAdd(TrafficUtil.estimateMessageSize(msg));
+        currentWritten.getAndAdd(TrafficUtil.estimateMessageSize(msg));
+        super.write(ctx, msg, promise);
+    }
+
+    @Override
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        totalRead.getAndAdd(TrafficUtil.estimateMessageSize(msg));
+        currentRead.getAndAdd(TrafficUtil.estimateMessageSize(msg));
+        super.channelRead(ctx, msg);
     }
 
     private long getMaxUploadRate() {
@@ -35,18 +57,26 @@ public final class BandwidthStatisticHandler implements AutoCloseable {
     }
 
     private long getAverageUploadRate() {
-        TrafficCounter trafficCounter = globalStatisticHandler.trafficCounter();
-        long bytesWritten = trafficCounter.cumulativeWrittenBytes();
-        double time = (System.currentTimeMillis() - trafficCounter.lastCumulativeTime()) / 1000.0;
-        return time > 0 ? (long) (bytesWritten / time) : 0;
+        Duration duration = Duration.between(startTotalTimeStamp, Instant.now());
+        double seconds = duration.toMillis() / 1000.0;
+        return seconds > 0 ? (long) (totalWritten.get() / seconds) : 0;
     }
 
     private long getCurrentUploadRate() {
-        return globalStatisticHandler.trafficCounter().lastWriteThroughput();
+        synchronized (currentWritten) {
+            Instant now = Instant.now();
+            Duration duration = Duration.between(startCurrentWrittenTimeStamp, now);
+            startCurrentWrittenTimeStamp = now;
+
+            double seconds = duration.toMillis() / 1000.0;
+            long rate = seconds > 0 ? (long) (currentWritten.get() / seconds) : 0;
+            currentWritten.set(0);
+            return rate;
+        }
     }
 
     private long getTotalUploaded() {
-        return globalStatisticHandler.trafficCounter().cumulativeWrittenBytes();
+        return totalWritten.get();
     }
 
     private long getMaxDownloadRate() {
@@ -54,22 +84,26 @@ public final class BandwidthStatisticHandler implements AutoCloseable {
     }
 
     private long getAverageDownloadRate() {
-        TrafficCounter trafficCounter = globalStatisticHandler.trafficCounter();
-        long bytesRead = trafficCounter.cumulativeReadBytes();
-        double time = (System.currentTimeMillis() - trafficCounter.lastCumulativeTime()) / 1000.0;
-        return time > 0 ? (long) (bytesRead / time) : 0;
+        Duration duration = Duration.between(startTotalTimeStamp, Instant.now());
+        double seconds = duration.toMillis() / 1000.0;
+        return seconds > 0 ? (long) (totalRead.get() / seconds) : 0;
     }
 
     private long getCurrentDownloadRate() {
-        return globalStatisticHandler.trafficCounter().lastReadThroughput();
+        synchronized (currentRead) {
+            Instant now = Instant.now();
+            Duration duration = Duration.between(startCurrentReadTimeStamp, now);
+            startCurrentReadTimeStamp = now;
+
+            double seconds = duration.toMillis() / 1000.0;
+            long rate = seconds > 0 ? (long) (currentRead.get() / seconds) : 0;
+            currentRead.set(0);
+            return rate;
+        }
     }
 
     private long getTotalDownloaded() {
-        return globalStatisticHandler.trafficCounter().cumulativeReadBytes();
-    }
-
-    public GlobalTrafficShapingHandler getGlobalStatisticHandler() {
-        return globalStatisticHandler;
+        return totalRead.get();
     }
 
     public BandwidthStatisticState getBandwidthStatisticState() {
@@ -83,10 +117,5 @@ public final class BandwidthStatisticHandler implements AutoCloseable {
                                            getAverageDownloadRate(),
                                            getCurrentDownloadRate(),
                                            getTotalDownloaded());
-    }
-
-    @Override
-    public void close() {
-        globalStatisticHandler.release();
     }
 }

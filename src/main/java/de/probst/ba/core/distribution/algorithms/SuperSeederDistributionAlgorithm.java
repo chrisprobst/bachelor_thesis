@@ -51,12 +51,6 @@ public final class SuperSeederDistributionAlgorithm implements SeederDistributio
         if (totallyEmpty) {
             return true;
         }
-
-        if (alreadyUploaded.add(transferManager.getTransfer().getDataInfo())) {
-            seeder.announce();
-            return true;
-        } else {
-            return false;
-        }
+        return alreadyUploaded.add(transferManager.getTransfer().getDataInfo());
     }
 }

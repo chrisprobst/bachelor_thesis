@@ -77,20 +77,13 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        ctx.close();
-        super.exceptionCaught(ctx, cause);
-    }
-
-    @Override
     protected void messageReceived(ChannelHandlerContext ctx, UploadRequestMessage msg) throws Exception {
 
         if (msg.getDataInfo().isEmpty()) {
             Exception cause = new IllegalArgumentException("Requested empty data info upload");
+            ctx.writeAndFlush(new UploadRejectedMessage(cause));
 
             logger.info("Seeder " + seeder.getPeerId() + " rejected upload " + transferManager, cause);
-
-            ctx.writeAndFlush(new UploadRejectedMessage(cause));
 
             // HANDLER
             seeder.getPeerHandler().uploadRejected(seeder, null, cause);
@@ -104,36 +97,32 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
             // If the upload is not allowed, reject it!
             if (!setup(ctx, newTransferManager)) {
                 Exception cause = new IllegalStateException("Upload denied");
-
-                logger.debug("Seeder " + seeder.getPeerId() + " denied upload " + transferManager);
-
                 ctx.writeAndFlush(new UploadRejectedMessage(cause));
+
+                logger.debug("Seeder " + seeder.getPeerId() + " denied upload " + newTransferManager);
 
                 // HANDLER
                 seeder.getPeerHandler().uploadRejected(seeder, newTransferManager, cause);
             } else {
-                logger.debug("Seeder " + seeder.getPeerId() + " started upload " + newTransferManager);
-
                 // Upload chunked input
                 ctx.writeAndFlush(new ChunkedDataBaseInput(newTransferManager)).addListener(fut -> {
-                    if (!fut.isSuccess()) {
-                        // Close if this exception was not expected
-                        if (!(fut.cause() instanceof ClosedChannelException)) {
-                            ctx.close();
-
-                            logger.warn("Seeder " + seeder.getPeerId() + " failed to upload, connection closed",
-                                        fut.cause());
-                        }
-                    } else {
-                        logger.debug("Seeder " + seeder.getPeerId() + " succeeded upload " + transferManager);
+                    if (fut.isSuccess()) {
+                        logger.debug("Seeder " + seeder.getPeerId() + " succeeded upload " + newTransferManager);
 
                         // HANDLER
-                        seeder.getPeerHandler().uploadSucceeded(seeder, transferManager);
+                        seeder.getPeerHandler().uploadSucceeded(seeder, newTransferManager);
 
                         // Restore
                         reset(ctx);
+                    } else if (!(fut.cause() instanceof ClosedChannelException)) {
+                        ctx.close();
+
+                        logger.warn("Seeder " + seeder.getPeerId() + " failed to upload, connection closed",
+                                    fut.cause());
                     }
                 });
+
+                logger.debug("Seeder " + seeder.getPeerId() + " started upload " + newTransferManager);
 
                 // HANDLER
                 seeder.getPeerHandler().uploadStarted(seeder, newTransferManager);

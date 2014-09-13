@@ -8,6 +8,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 /**
  * Created by chrisprobst on 18.08.14.
@@ -20,7 +22,7 @@ public class IOUtil {
 
     public static byte[] serialize(Object object) throws IOException {
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        try (ObjectOutputStream objectOutputStream = new ObjectOutputStream(byteArrayOutputStream)) {
+        try (ObjectOutputStream objectOutputStream = new ObjectOutputStream(new GZIPOutputStream(byteArrayOutputStream))) {
             objectOutputStream.writeObject(object);
         }
         return byteArrayOutputStream.toByteArray();
@@ -28,8 +30,8 @@ public class IOUtil {
 
     @SuppressWarnings("unchecked")
     public static <T> T deserialize(byte[] array) throws IOException, ClassNotFoundException {
-        try (ObjectInputStream objectInputStream = new ObjectInputStream(new ByteArrayInputStream(
-                array))) {
+        try (ObjectInputStream objectInputStream = new ObjectInputStream(new GZIPInputStream(new ByteArrayInputStream(
+                array)))) {
             return (T) objectInputStream.readObject();
         }
     }

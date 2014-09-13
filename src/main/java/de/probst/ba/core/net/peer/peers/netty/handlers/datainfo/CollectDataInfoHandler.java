@@ -43,7 +43,6 @@ public final class CollectDataInfoHandler extends SimpleChannelInboundHandler<Da
 
     private Map<String, DataInfo> lastRemoteDataInfo = Collections.emptyMap();
     private Map<String, DataInfo> lastNonEmptyRemoteDataInfo = Collections.emptyMap();
-
     private volatile Optional<Tuple2<PeerId, Map<String, DataInfo>>> externalRemoteDataInfo = Optional.empty();
 
     private Optional<Tuple2<PeerId, Map<String, DataInfo>>> getRemoteDataInfo() {
@@ -61,10 +60,10 @@ public final class CollectDataInfoHandler extends SimpleChannelInboundHandler<Da
         }
 
         // Set last remote data info
-        lastRemoteDataInfo = remoteDataInfo;
+        lastRemoteDataInfo = Collections.unmodifiableMap(remoteDataInfo);
 
-        // Update external remote data info
-        externalRemoteDataInfo = Optional.of(Tuple.of(peerId, Collections.unmodifiableMap(remoteDataInfo)));
+        // Set external remote data info
+        externalRemoteDataInfo = Optional.of(Tuple.of(peerId, lastRemoteDataInfo));
 
         // Create non empty remote data info
         Map<String, DataInfo> nonEmptyRemoteDataInfo = remoteDataInfo.entrySet()
@@ -79,7 +78,7 @@ public final class CollectDataInfoHandler extends SimpleChannelInboundHandler<Da
         }
 
         // Set last non empty remote data info
-        lastNonEmptyRemoteDataInfo = nonEmptyRemoteDataInfo;
+        lastNonEmptyRemoteDataInfo = Collections.unmodifiableMap(nonEmptyRemoteDataInfo);
 
         logger.debug("Leecher " + leecher.getPeerId() + " collected " + remoteDataInfo + " from " + peerId);
 
@@ -92,15 +91,48 @@ public final class CollectDataInfoHandler extends SimpleChannelInboundHandler<Da
         this.leecher = leecher;
     }
 
-    public void removeDataInfo(DataInfo remoteDataInfo) {
-        if (externalRemoteDataInfo.isPresent()) {
-            Map<String, DataInfo> dataInfo = new HashMap<>(externalRemoteDataInfo.get().second());
-            DataInfo existingDataInfo = dataInfo.get(remoteDataInfo.getHash());
-            if (existingDataInfo != null) {
-                dataInfo.put(existingDataInfo.getHash(), existingDataInfo.subtract(remoteDataInfo));
-            }
-            externalRemoteDataInfo =
-                    Optional.of(Tuple.of(externalRemoteDataInfo.get().first(), Collections.unmodifiableMap(dataInfo)));
+    /**
+     * Removes the given remove data info from the remote data info.
+     * This is useful if you requested an upload which was rejected.
+     * This way you can stop the leecher from re-requesting the same
+     * data info over and over again.
+     * <p>
+     * Please note that the seeder has to re-announce the rejected data info
+     * later if the leecher should be able to request the data info again.
+     * <p>
+     * Also note that this method can and should only be invoked by this event loop.
+     *
+     * @param removeDataInfo
+     */
+    public void removeDataInfo(DataInfo removeDataInfo) {
+        Objects.requireNonNull(removeDataInfo);
+        if (!externalRemoteDataInfo.isPresent()) {
+            return;
         }
+
+        Map<String, DataInfo> remoteDataInfo = new HashMap<>(lastRemoteDataInfo);
+
+        // Lookup up existing data info
+        DataInfo existingDataInfo = remoteDataInfo.get(removeDataInfo.getHash());
+        if (existingDataInfo != null) {
+            // Subtract the remove data info from the existing data info and put back into map
+            remoteDataInfo.put(existingDataInfo.getHash(), existingDataInfo.subtract(removeDataInfo));
+        }
+
+        // Update the last remote data info
+        lastRemoteDataInfo = Collections.unmodifiableMap(remoteDataInfo);
+
+        Map<String, DataInfo> nonEmptyRemoteDataInfo = remoteDataInfo.entrySet()
+                                                                     .stream()
+                                                                     .filter(p -> !p.getValue().isEmpty())
+                                                                     .collect(Collectors.toMap(Map.Entry::getKey,
+                                                                                               Map.Entry::getValue));
+
+        // Update the last non empty remote data info
+        lastNonEmptyRemoteDataInfo = Collections.unmodifiableMap(nonEmptyRemoteDataInfo);
+
+        // Update the external remote data info
+        externalRemoteDataInfo = Optional.of(Tuple.of(externalRemoteDataInfo.get().first(),
+                                                      lastRemoteDataInfo));
     }
 }

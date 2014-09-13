@@ -4,81 +4,37 @@ import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.Seeder;
 import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.messages.DataInfoMessage;
-import de.probst.ba.core.util.collections.Tuple2;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.group.ChannelGroup;
+import io.netty.util.concurrent.ScheduledFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.nio.channels.ClosedChannelException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
-import java.util.OptionalLong;
+import java.util.concurrent.TimeUnit;
 
-/**
- * Periodically announces the data info from the
- * given data base.
- * <p>
- * If an error occurs during announcing,
- * the connection will be closed.
- * <p>
- * Created by chrisprobst on 13.08.14.
- */
-public final class AnnounceDataInfoHandler extends ChannelHandlerAdapter {
+public final class AnnounceDataInfoHandler extends ChannelHandlerAdapter implements Runnable {
 
-    public static void announce(ChannelGroup channelGroup, Tuple2<Long, Map<String, DataInfo>> dataInfoWithStamp) {
-        channelGroup.stream().map(AnnounceDataInfoHandler::get).forEach(h -> h.announce(dataInfoWithStamp));
-    }
-
-    public static AnnounceDataInfoHandler get(Channel remotePeer) {
-        return remotePeer.pipeline().get(AnnounceDataInfoHandler.class);
-    }
+    public static final long ANNOUNCE_DELAY = 250;
 
     private final Logger logger = LoggerFactory.getLogger(AnnounceDataInfoHandler.class);
 
     private final Seeder seeder;
-    private volatile ChannelHandlerContext ctx;
-    private volatile PeerId peerId;
-    private long token;
-    private OptionalLong stamp = OptionalLong.empty();
-    private volatile Map<String, DataInfo> nextDataInfo = Collections.emptyMap();
-    private boolean scheduled;
+    private ChannelHandlerContext ctx;
+    private PeerId peerId;
+    private ScheduledFuture<?> timer;
+    private Map<String, DataInfo> lastDataInfo = Collections.emptyMap();
 
-    private void doAnnounce() {
-        Map<String, DataInfo> dataInfo = nextDataInfo;
+    private void schedule() {
+        timer = ctx.channel().eventLoop().schedule(this, ANNOUNCE_DELAY, TimeUnit.MILLISECONDS);
+    }
 
-        // Create a new data info message
-        DataInfoMessage dataInfoMessage = new DataInfoMessage(dataInfo);
-
-        // Write and flush the data info message
-        ctx.writeAndFlush(dataInfoMessage).addListener(fut -> {
-            if (fut.isSuccess()) {
-                boolean execute = false;
-                synchronized (this) {
-                    if (!nextDataInfo.equals(dataInfo)) {
-                        execute = true;
-                    } else {
-                        scheduled = false;
-                    }
-                }
-                if (execute) {
-                    ctx.channel().eventLoop().execute(this::doAnnounce);
-                }
-            } else if (!(fut.cause() instanceof ClosedChannelException)) {
-                ctx.close();
-
-                logger.warn("Seeder " + seeder.getPeerId() + " failed to announce data info to " + peerId +
-                            ", connection closed", fut.cause());
-            }
-        });
-
-        logger.debug("Seeder " + seeder.getPeerId() + " announced " + dataInfo + " to " + peerId);
-
-        // HANDLER
-        seeder.getPeerHandler().announced(seeder, peerId, dataInfoMessage.getDataInfo());
+    private void cancel() {
+        if (timer != null) {
+            timer.cancel(false);
+        }
     }
 
     public AnnounceDataInfoHandler(Seeder seeder) {
@@ -86,49 +42,47 @@ public final class AnnounceDataInfoHandler extends ChannelHandlerAdapter {
         this.seeder = seeder;
     }
 
-    public void announce(Tuple2<Long, Map<String, DataInfo>> dataInfoWithStamp) {
-        Objects.requireNonNull(dataInfoWithStamp);
-
-        // Transform the data info using the algorithm
-        Map<String, DataInfo> transformedDataInfo =
-                seeder.getDistributionAlgorithm().transformUploadDataInfo(seeder, dataInfoWithStamp.second(), peerId);
-
-        if (transformedDataInfo == null) {
-            logger.warn("Seeder " + seeder.getPeerId() + " transformed data info to null");
-            return;
-        }
-
-        boolean execute = false;
-        synchronized (this) {
-            if (!transformedDataInfo.equals(nextDataInfo) &&
-                (!stamp.isPresent() || stamp.getAsLong() < dataInfoWithStamp.first())) {
-                nextDataInfo = transformedDataInfo;
-                stamp = OptionalLong.of(dataInfoWithStamp.first());
-                if (!scheduled) {
-                    execute = scheduled = true;
-                }
-            }
-        }
-
-        if (execute) {
-            ctx.channel().eventLoop().execute(this::doAnnounce);
-        }
-    }
-
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-
-        // Init vars
         this.ctx = ctx;
         peerId = new PeerId(ctx.channel().remoteAddress(), ctx.channel().id());
-        token = seeder.getDataBase().subscribe(this::announce);
+        schedule();
         super.channelActive(ctx);
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        // Cancel subscription
-        seeder.getDataBase().cancel(token);
+        cancel();
         super.channelInactive(ctx);
+    }
+
+    @Override
+    public void run() {
+        Map<String, DataInfo> transformedDataInfo = seeder.getDistributionAlgorithm()
+                                                          .transformUploadDataInfo(seeder,
+                                                                                   seeder.getDataBase().getDataInfo(),
+                                                                                   peerId);
+
+        if (transformedDataInfo == null) {
+            logger.warn("Seeder " + seeder.getPeerId() +
+                        " has an algorithm which returned null for the transformed data info");
+            schedule();
+            return;
+        }
+
+        if (transformedDataInfo.equals(lastDataInfo)) {
+            schedule();
+            return;
+        }
+
+        lastDataInfo = transformedDataInfo;
+        ctx.writeAndFlush(new DataInfoMessage(transformedDataInfo)).addListener(fut -> {
+            if (fut.isSuccess()) {
+                schedule();
+
+                // HANDLER
+                seeder.getPeerHandler().announced(seeder, peerId, transformedDataInfo);
+            }
+        });
     }
 }

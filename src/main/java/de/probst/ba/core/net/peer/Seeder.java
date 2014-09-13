@@ -15,20 +15,6 @@ import java.util.concurrent.CompletableFuture;
  */
 public interface Seeder extends Peer {
 
-    /**
-     * Announces the local data info.
-     * <p>
-     * Please not, that this method is already called
-     * by the framework internally at undefined intervals
-     * and can be triggered by network metrics, timers and
-     * events randomly.
-     * <p>
-     * Please only call this method if you think that you are
-     * smarter than the framework because running the algorithm
-     * is not for free.
-     */
-    void announce();
-
     @Override
     CompletableFuture<Seeder> getCloseFuture();
 

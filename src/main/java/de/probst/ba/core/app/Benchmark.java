@@ -73,6 +73,7 @@ public class Benchmark extends AbstractPeerApp {
                                          getSeederSocketAddress(i),
                                          DataBases.fakeDataBase(),
                                          new SuperSeederDistributionAlgorithm(),
+                                         //getSeederDistributionAlgorithm(),
                                          Optional.ofNullable(recordPeerHandler),
                                          Optional.of(eventLoopGroup)).getInitFuture().get();
 
@@ -126,7 +127,7 @@ public class Benchmark extends AbstractPeerApp {
         double dumbTime = timePerTransfer / seeders * leechers;
 
         // ~ who knows ?!
-        double chunkSwarmTime = timePerTransfer / seeders * 1.3;
+        double chunkSwarmTime = timePerTransfer / seeders * 2;
 
         // log(n) - log(s) = log(n / s) = log((s + l) / s) = log(1 + l/s)
         double logarithmicTime =
@@ -144,7 +145,7 @@ public class Benchmark extends AbstractPeerApp {
         setup();
         logTransferInfo();
 
-        Thread.sleep(4000);
+        Thread.sleep(3000);
 
         Scanner scanner = new Scanner(System.in);
         logger.info("[== Press [ENTER] to start benchmark ==]");

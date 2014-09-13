@@ -8,11 +8,11 @@ import de.probst.ba.core.net.peer.AbstractLeecher;
 import de.probst.ba.core.net.peer.Leecher;
 import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.handler.LeecherPeerHandler;
+import de.probst.ba.core.net.peer.peers.netty.handlers.codec.SimpleCodec;
 import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.CollectDataInfoHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.discovery.AnnounceSocketAddressHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.group.ChannelGroupHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.BandwidthStatisticHandler;
-import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.WriteThrottle;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.DownloadHandler;
 import de.probst.ba.core.net.peer.state.BandwidthStatisticState;
 import io.netty.bootstrap.Bootstrap;
@@ -22,6 +22,8 @@ import io.netty.channel.ChannelId;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.group.ChannelGroup;
+import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
+import io.netty.handler.codec.LengthFieldPrepender;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import org.slf4j.Logger;
@@ -50,7 +52,6 @@ public final class NettyLeecher extends AbstractLeecher {
     private final Bootstrap leecherBootstrap;
     private final Class<? extends Channel> leecherChannelClass;
     private final ConcurrentMap<SocketAddress, Boolean> connections = new ConcurrentHashMap<>();
-    private final WriteThrottle writeThrottle;
     private final ChannelInitializer<Channel> leecherChannelInitializer = new ChannelInitializer<Channel>() {
 
         @Override
@@ -58,15 +59,13 @@ public final class NettyLeecher extends AbstractLeecher {
             ch.pipeline().addLast(
 
                     // Statistic handler
-                    leecherBandwidthStatisticHandler.getGlobalStatisticHandler(),
-
-                    // Traffic shaper
-                    writeThrottle,
+                    leecherBandwidthStatisticHandler,
 
                     // Codec stuff
-                    //new LengthFieldBasedFrameDecoder(1024 * 1024, 0, 4, 0, 4),
-                    //new LengthFieldPrepender(4),
-                    //new SimpleCodec(),
+                    //new ComplexCodec(),
+                    new LengthFieldBasedFrameDecoder(1024 * 1024, 0, 4, 0, 4),
+                    new LengthFieldPrepender(4),
+                    new SimpleCodec(),
 
                     // Logging
                     leecherLogHandler,
@@ -155,11 +154,8 @@ public final class NettyLeecher extends AbstractLeecher {
         });
 
         // Create internal vars
-        leecherBandwidthStatisticHandler =
-                new BandwidthStatisticHandler(this, maxUploadRate, maxDownloadRate, leecherEventLoopGroup);
+        leecherBandwidthStatisticHandler = new BandwidthStatisticHandler(this, maxUploadRate, maxDownloadRate);
         leecherChannelGroupHandler = new ChannelGroupHandler(this.leecherEventLoopGroup.next());
-
-        writeThrottle = new WriteThrottle(getBandwidthStatisticState().getMaxUploadRate());
 
         // Init bootstrap
         leecherBootstrap = initLeecherBootstrap();
@@ -211,7 +207,6 @@ public final class NettyLeecher extends AbstractLeecher {
     public void close() throws IOException {
         try {
             leecherEventLoopGroup.shutdownGracefully();
-            leecherBandwidthStatisticHandler.close();
         } finally {
             super.close();
         }
