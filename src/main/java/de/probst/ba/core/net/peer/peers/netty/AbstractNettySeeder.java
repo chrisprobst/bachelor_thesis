@@ -9,9 +9,9 @@ import de.probst.ba.core.net.peer.handler.SeederPeerHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.AnnounceDataInfoHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.discovery.DiscoverSocketAddressHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.group.ChannelGroupHandler;
-import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.BandwidthStatisticHandler;
-import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.LeastWrittenFirstTrafficShaper;
-import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.WriteRequestHandler;
+import de.probst.ba.core.net.peer.peers.netty.handlers.statistic.BandwidthStatisticHandler;
+import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.MessageQueueHandler;
+import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.TrafficShapers;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.UploadHandler;
 import de.probst.ba.core.net.peer.state.BandwidthStatisticState;
 import io.netty.channel.Channel;
@@ -40,7 +40,8 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
     private final EventLoopGroup seederEventLoopGroup;
     private final ChannelGroupHandler seederChannelGroupHandler;
     private final BandwidthStatisticHandler seederBandwidthStatisticHandler;
-    private final LeastWrittenFirstTrafficShaper leastWrittenFirstUploadTrafficShaper;
+    private final Optional<Runnable> leastWrittenFirstTrafficShaper;
+    private final Optional<Runnable> leastReadFirstTrafficShaper;
     private final LoggingHandler seederLogHandler = new LoggingHandler(LogLevel.TRACE);
     private final Class<? extends Channel> seederChannelClass;
     private final ChannelInitializer<Channel> seederChannelInitializer = new ChannelInitializer<Channel>() {
@@ -54,7 +55,7 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
                     seederBandwidthStatisticHandler,
 
                     // Traffic shaper
-                    new WriteRequestHandler(leastWrittenFirstUploadTrafficShaper),
+                    new MessageQueueHandler(leastWrittenFirstTrafficShaper, leastReadFirstTrafficShaper),
 
                     // Codec stuff
                     //new ComplexCodec(),
@@ -138,10 +139,15 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
         seederChannelGroupHandler = new ChannelGroupHandler(seederEventLoopGroup.next());
 
         // Traffic shaping
-        leastWrittenFirstUploadTrafficShaper =
-                new LeastWrittenFirstTrafficShaper(getLeakyUploadBucket(),
-                                                   seederEventLoopGroup.next(),
-                                                   () -> WriteRequestHandler.collect(getSeederChannelGroup()));
+        leastWrittenFirstTrafficShaper = getLeakyUploadBucket().map(leakyBucket -> TrafficShapers.leastWrittenFirst(
+                seederEventLoopGroup.next(),
+                leakyBucket,
+                () -> MessageQueueHandler.collect(getSeederChannelGroup())));
+        leastReadFirstTrafficShaper = getLeakyDownloadBucket().map(leakyBucket -> TrafficShapers.leastReadFirst(
+                seederEventLoopGroup.next(),
+                leakyBucket,
+                () -> MessageQueueHandler.collect(getSeederChannelGroup())));
+
 
         // Init bootstrap
         initSeederBootstrap(socketAddress).addListener((ChannelFutureListener) fut -> {

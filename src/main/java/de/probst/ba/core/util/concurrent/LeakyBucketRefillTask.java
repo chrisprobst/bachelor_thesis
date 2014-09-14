@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * Created by chrisprobst on 12.09.14.
  */
-public final class LeakyBucketRefillTask implements Runnable, AutoCloseable {
+public final class LeakyBucketRefillTask implements Runnable {
 
     private final Future<?> scheduleFuture;
     private final Set<LeakyBucket> leakyBuckets = Collections.newSetFromMap(new ConcurrentHashMap<>());
@@ -31,8 +31,7 @@ public final class LeakyBucketRefillTask implements Runnable, AutoCloseable {
         return leakyBuckets.remove(leakyBucket);
     }
 
-    @Override
-    public void close() {
+    public void cancel() {
         scheduleFuture.cancel(false);
     }
 

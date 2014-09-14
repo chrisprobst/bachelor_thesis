@@ -120,24 +120,28 @@ public class Benchmark extends AbstractPeerApp {
     }
 
     private void logTransferInfo() {
-        // Setup status flags
-        double timePerTransfer = totalSize / uploadRate;
+        if (uploadRate > 0) {
+            // Setup status flags
+            double timePerTransfer = totalSize / uploadRate;
 
-        // Server/Client like
-        double dumbTime = timePerTransfer / seeders * leechers;
+            // Server/Client like
+            double dumbTime = timePerTransfer / seeders * leechers;
 
-        // ~ who knows ?!
-        double chunkSwarmTime = timePerTransfer / seeders * 2;
+            // ~ who knows ?!
+            double chunkSwarmTime = timePerTransfer / seeders * 2;
 
-        // log(n) - log(s) = log(n / s) = log((s + l) / s) = log(1 + l/s)
-        double logarithmicTime =
-                timePerTransfer * Math.ceil(Math.log(1 + leechers / (double) seeders) / Math.log(2));
+            // log(n) - log(s) = log(n / s) = log((s + l) / s) = log(1 + l/s)
+            double logarithmicTime =
+                    timePerTransfer * Math.ceil(Math.log(1 + leechers / (double) seeders) / Math.log(2));
 
-        // A small info for all waiters
-        logger.info("[== One transfer needs approx.: " + timePerTransfer + " seconds ==]");
-        logger.info("[== A dumb algorithm needs approx.: " + dumbTime + " seconds ==]");
-        logger.info("[== A Logarithmic algorithm needs approx.: " + logarithmicTime + " seconds ==]");
-        logger.info("[== A ChunkedSwarm algorithm needs approx.: " + chunkSwarmTime + " seconds ==]");
+            // A small info for all waiters
+            logger.info("[== One transfer needs approx.: " + timePerTransfer + " seconds ==]");
+            logger.info("[== A dumb algorithm needs approx.: " + dumbTime + " seconds ==]");
+            logger.info("[== A Logarithmic algorithm needs approx.: " + logarithmicTime + " seconds ==]");
+            logger.info("[== A ChunkedSwarm algorithm needs approx.: " + chunkSwarmTime + " seconds ==]");
+        } else {
+            logger.info("[== Cannot estimate time because upload rate is infinity (0) ==]");
+        }
     }
 
     @Override

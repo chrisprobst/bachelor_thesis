@@ -25,11 +25,11 @@ public abstract class AbstractPeer implements Peer {
 
     private final Logger logger = LoggerFactory.getLogger(AbstractPeer.class);
 
-    private final LeakyBucketRefillTask leakyBucketRefillTask;
+    private final Optional<LeakyBucketRefillTask> leakyBucketRefillTask;
 
-    private final LeakyBucket leakyUploadBucket;
+    private final Optional<LeakyBucket> leakyUploadBucket;
 
-    private final LeakyBucket leakyDownloadBucket;
+    private final Optional<LeakyBucket> leakyDownloadBucket;
 
     private final DataBase dataBase;
 
@@ -43,11 +43,11 @@ public abstract class AbstractPeer implements Peer {
 
     private volatile Optional<PeerId> peerId;
 
-    public LeakyBucket getLeakyDownloadBucket() {
+    public Optional<LeakyBucket> getLeakyDownloadBucket() {
         return leakyDownloadBucket;
     }
 
-    public LeakyBucket getLeakyUploadBucket() {
+    public Optional<LeakyBucket> getLeakyUploadBucket() {
         return leakyUploadBucket;
     }
 
@@ -85,9 +85,19 @@ public abstract class AbstractPeer implements Peer {
         this.peerHandler = peerHandler.orElseGet(PeerHandlerAdapter::new);
 
         // Leaky bucket
-        leakyBucketRefillTask = new LeakyBucketRefillTask(leakyBucketRefillTaskScheduler, LEAKY_BUCKET_REFILL_INTERVAL);
-        leakyUploadBucket = new LeakyBucket(leakyBucketRefillTask, maxUploadRate, maxUploadRate);
-        leakyDownloadBucket = new LeakyBucket(leakyBucketRefillTask, maxDownloadRate, maxDownloadRate);
+        leakyUploadBucket =
+                maxUploadRate > 0 ? Optional.of(new LeakyBucket(maxUploadRate, maxUploadRate)) : Optional.empty();
+        leakyDownloadBucket =
+                maxDownloadRate > 0 ? Optional.of(new LeakyBucket(maxDownloadRate, maxDownloadRate)) : Optional.empty();
+
+        if (leakyUploadBucket.isPresent() || leakyDownloadBucket.isPresent()) {
+            leakyBucketRefillTask = Optional.of(new LeakyBucketRefillTask(leakyBucketRefillTaskScheduler,
+                                                                          LEAKY_BUCKET_REFILL_INTERVAL));
+            leakyUploadBucket.ifPresent(leakyBucketRefillTask.get()::add);
+            leakyDownloadBucket.ifPresent(leakyBucketRefillTask.get()::add);
+        } else {
+            leakyBucketRefillTask = Optional.empty();
+        }
     }
 
     @Override
@@ -123,9 +133,7 @@ public abstract class AbstractPeer implements Peer {
     @Override
     public void close() throws IOException {
         try {
-            leakyBucketRefillTask.close();
-            leakyDownloadBucket.close();
-            leakyUploadBucket.close();
+            leakyBucketRefillTask.ifPresent(LeakyBucketRefillTask::cancel);
         } finally {
             getDataBase().flush();
         }

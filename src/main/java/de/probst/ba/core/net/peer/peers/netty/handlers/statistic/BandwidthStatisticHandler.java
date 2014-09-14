@@ -1,6 +1,7 @@
-package de.probst.ba.core.net.peer.peers.netty.handlers.traffic;
+package de.probst.ba.core.net.peer.peers.netty.handlers.statistic;
 
 import de.probst.ba.core.net.peer.Peer;
+import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.TrafficUtil;
 import de.probst.ba.core.net.peer.state.BandwidthStatisticState;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;

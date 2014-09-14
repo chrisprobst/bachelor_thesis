@@ -11,9 +11,9 @@ import de.probst.ba.core.net.peer.handler.LeecherPeerHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.CollectDataInfoHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.discovery.AnnounceSocketAddressHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.group.ChannelGroupHandler;
-import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.BandwidthStatisticHandler;
-import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.LeastWrittenFirstTrafficShaper;
-import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.WriteRequestHandler;
+import de.probst.ba.core.net.peer.peers.netty.handlers.statistic.BandwidthStatisticHandler;
+import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.MessageQueueHandler;
+import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.TrafficShapers;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.DownloadHandler;
 import de.probst.ba.core.net.peer.state.BandwidthStatisticState;
 import io.netty.bootstrap.Bootstrap;
@@ -47,7 +47,8 @@ public final class NettyLeecher extends AbstractLeecher {
     private final ChannelGroupHandler leecherChannelGroupHandler;
     private final Optional<SocketAddress> announceSocketAddress;
     private final BandwidthStatisticHandler leecherBandwidthStatisticHandler;
-    private final LeastWrittenFirstTrafficShaper leastWrittenFirstUploadTrafficShaper;
+    private final Optional<Runnable> leastWrittenFirstTrafficShaper;
+    private final Optional<Runnable> leastReadFirstTrafficShaper;
     private final LoggingHandler leecherLogHandler = new LoggingHandler(LogLevel.TRACE);
     private final Bootstrap leecherBootstrap;
     private final Class<? extends Channel> leecherChannelClass;
@@ -62,7 +63,7 @@ public final class NettyLeecher extends AbstractLeecher {
                     leecherBandwidthStatisticHandler,
 
                     // Traffic shaper
-                    new WriteRequestHandler(leastWrittenFirstUploadTrafficShaper),
+                    new MessageQueueHandler(leastWrittenFirstTrafficShaper, leastReadFirstTrafficShaper),
 
                     // Codec stuff
                     //new ComplexCodec(),
@@ -164,10 +165,15 @@ public final class NettyLeecher extends AbstractLeecher {
         leecherChannelGroupHandler = new ChannelGroupHandler(leecherEventLoopGroup.next());
 
         // Traffic shaping
-        leastWrittenFirstUploadTrafficShaper =
-                new LeastWrittenFirstTrafficShaper(getLeakyUploadBucket(),
-                                            leecherEventLoopGroup.next(),
-                                            () -> WriteRequestHandler.collect(getLeecherChannelGroup()));
+        leastWrittenFirstTrafficShaper = getLeakyUploadBucket().map(leakyBucket -> TrafficShapers.leastWrittenFirst(
+                leecherEventLoopGroup.next(),
+                leakyBucket,
+                () -> MessageQueueHandler.collect(getLeecherChannelGroup())));
+        leastReadFirstTrafficShaper = getLeakyDownloadBucket().map(leakyBucket -> TrafficShapers.leastReadFirst(
+                leecherEventLoopGroup.next(),
+                leakyBucket,
+                () -> MessageQueueHandler.collect(getLeecherChannelGroup())));
+
 
         // Init bootstrap
         leecherBootstrap = initLeecherBootstrap();

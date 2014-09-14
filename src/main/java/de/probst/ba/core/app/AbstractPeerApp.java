@@ -98,7 +98,7 @@ public abstract class AbstractPeerApp {
                description = "The download rate in bytes per second, " +
                              "must greater-equal than the upload rate (" + TransferRateValidator.MSG + ")",
                validateValueWith = TransferRateValidator.class)
-    protected Integer downloadRate = 0;
+    protected Integer downloadRate = 1_000_000;
 
     protected boolean checkParameters(JCommander jCommander) {
         if (showUsage) {
