@@ -10,7 +10,7 @@ import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.AnnounceDataInfo
 import de.probst.ba.core.net.peer.peers.netty.handlers.discovery.DiscoverSocketAddressHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.group.ChannelGroupHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.BandwidthStatisticHandler;
-import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.RoundRobinTrafficShaper;
+import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.LeastWrittenFirstTrafficShaper;
 import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.WriteRequestHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.UploadHandler;
 import de.probst.ba.core.net.peer.state.BandwidthStatisticState;
@@ -40,7 +40,7 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
     private final EventLoopGroup seederEventLoopGroup;
     private final ChannelGroupHandler seederChannelGroupHandler;
     private final BandwidthStatisticHandler seederBandwidthStatisticHandler;
-    private final RoundRobinTrafficShaper roundRobinDownloadTrafficShaper;
+    private final LeastWrittenFirstTrafficShaper leastWrittenFirstUploadTrafficShaper;
     private final LoggingHandler seederLogHandler = new LoggingHandler(LogLevel.TRACE);
     private final Class<? extends Channel> seederChannelClass;
     private final ChannelInitializer<Channel> seederChannelInitializer = new ChannelInitializer<Channel>() {
@@ -54,7 +54,7 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
                     seederBandwidthStatisticHandler,
 
                     // Traffic shaper
-                    new WriteRequestHandler(roundRobinDownloadTrafficShaper),
+                    new WriteRequestHandler(leastWrittenFirstUploadTrafficShaper),
 
                     // Codec stuff
                     //new ComplexCodec(),
@@ -137,11 +137,11 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
         seederBandwidthStatisticHandler = new BandwidthStatisticHandler(this, maxUploadRate, maxDownloadRate);
         seederChannelGroupHandler = new ChannelGroupHandler(seederEventLoopGroup.next());
 
-        // Leaky bucket
-        roundRobinDownloadTrafficShaper =
-                new RoundRobinTrafficShaper(getLeakyUploadBucket(),
-                                            seederEventLoopGroup.next(),
-                                            () -> WriteRequestHandler.collect(getSeederChannelGroup()));
+        // Traffic shaping
+        leastWrittenFirstUploadTrafficShaper =
+                new LeastWrittenFirstTrafficShaper(getLeakyUploadBucket(),
+                                                   seederEventLoopGroup.next(),
+                                                   () -> WriteRequestHandler.collect(getSeederChannelGroup()));
 
         // Init bootstrap
         initSeederBootstrap(socketAddress).addListener((ChannelFutureListener) fut -> {

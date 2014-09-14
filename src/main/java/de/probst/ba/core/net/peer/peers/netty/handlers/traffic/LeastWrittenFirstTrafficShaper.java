@@ -12,7 +12,7 @@ import java.util.stream.Collectors;
 /**
  * Created by chrisprobst on 13.09.14.
  */
-public final class RoundRobinTrafficShaper {
+public final class LeastWrittenFirstTrafficShaper {
 
     private final LeakyBucket leakyBucket;
     private final ExecutorService executorService;
@@ -27,9 +27,9 @@ public final class RoundRobinTrafficShaper {
                                                        .collect(Collectors.toList()));
     }
 
-    public RoundRobinTrafficShaper(LeakyBucket leakyBucket,
-                                   ExecutorService executorService,
-                                   Supplier<Collection<WriteRequestHandler>> writeRequestHandlers) {
+    public LeastWrittenFirstTrafficShaper(LeakyBucket leakyBucket,
+                                          ExecutorService executorService,
+                                          Supplier<Collection<WriteRequestHandler>> writeRequestHandlers) {
 
         Objects.requireNonNull(leakyBucket);
         Objects.requireNonNull(executorService);

@@ -12,7 +12,7 @@ import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.CollectDataInfoH
 import de.probst.ba.core.net.peer.peers.netty.handlers.discovery.AnnounceSocketAddressHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.group.ChannelGroupHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.BandwidthStatisticHandler;
-import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.RoundRobinTrafficShaper;
+import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.LeastWrittenFirstTrafficShaper;
 import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.WriteRequestHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.DownloadHandler;
 import de.probst.ba.core.net.peer.state.BandwidthStatisticState;
@@ -47,7 +47,7 @@ public final class NettyLeecher extends AbstractLeecher {
     private final ChannelGroupHandler leecherChannelGroupHandler;
     private final Optional<SocketAddress> announceSocketAddress;
     private final BandwidthStatisticHandler leecherBandwidthStatisticHandler;
-    private final RoundRobinTrafficShaper roundRobinUploadTrafficShaper;
+    private final LeastWrittenFirstTrafficShaper leastWrittenFirstUploadTrafficShaper;
     private final LoggingHandler leecherLogHandler = new LoggingHandler(LogLevel.TRACE);
     private final Bootstrap leecherBootstrap;
     private final Class<? extends Channel> leecherChannelClass;
@@ -62,7 +62,7 @@ public final class NettyLeecher extends AbstractLeecher {
                     leecherBandwidthStatisticHandler,
 
                     // Traffic shaper
-                    new WriteRequestHandler(roundRobinUploadTrafficShaper),
+                    new WriteRequestHandler(leastWrittenFirstUploadTrafficShaper),
 
                     // Codec stuff
                     //new ComplexCodec(),
@@ -164,8 +164,8 @@ public final class NettyLeecher extends AbstractLeecher {
         leecherChannelGroupHandler = new ChannelGroupHandler(leecherEventLoopGroup.next());
 
         // Traffic shaping
-        roundRobinUploadTrafficShaper =
-                new RoundRobinTrafficShaper(getLeakyUploadBucket(),
+        leastWrittenFirstUploadTrafficShaper =
+                new LeastWrittenFirstTrafficShaper(getLeakyUploadBucket(),
                                             leecherEventLoopGroup.next(),
                                             () -> WriteRequestHandler.collect(getLeecherChannelGroup()));
 

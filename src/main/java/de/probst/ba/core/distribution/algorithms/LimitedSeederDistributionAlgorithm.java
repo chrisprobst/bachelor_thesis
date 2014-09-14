@@ -13,7 +13,7 @@ import java.util.Map;
 /**
  * Created by chrisprobst on 01.09.14.
  */
-public class LimitedSeederDistributionAlgorithm implements SeederDistributionAlgorithm {
+public final class LimitedSeederDistributionAlgorithm implements SeederDistributionAlgorithm {
 
     private final int maxParallelUploads;
 

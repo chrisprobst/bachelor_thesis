@@ -20,7 +20,7 @@ import java.util.OptionalLong;
 /**
  * Created by chrisprobst on 01.09.14.
  */
-public class OrderedChunkedSwarmLeecherDistributionAlgorithm implements LeecherDistributionAlgorithm {
+public final class OrderedChunkedSwarmLeecherDistributionAlgorithm implements LeecherDistributionAlgorithm {
 
     private final Logger logger = LoggerFactory.getLogger(OrderedChunkedSwarmLeecherDistributionAlgorithm.class);
 

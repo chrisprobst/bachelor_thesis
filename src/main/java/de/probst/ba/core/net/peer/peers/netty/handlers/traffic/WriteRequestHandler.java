@@ -26,13 +26,13 @@ public final class WriteRequestHandler extends ChannelHandlerAdapter implements 
         return remotePeer.pipeline().get(WriteRequestHandler.class);
     }
 
-    private final RoundRobinTrafficShaper roundRobinTrafficShaper;
+    private final LeastWrittenFirstTrafficShaper leastWrittenFirstTrafficShaper;
     private final AtomicLong totalRemoved = new AtomicLong();
     private final Queue<WriteRequest> writeRequestQueue = new ConcurrentLinkedQueue<>();
 
-    public WriteRequestHandler(RoundRobinTrafficShaper roundRobinTrafficShaper) {
-        Objects.requireNonNull(roundRobinTrafficShaper);
-        this.roundRobinTrafficShaper = roundRobinTrafficShaper;
+    public WriteRequestHandler(LeastWrittenFirstTrafficShaper leastWrittenFirstTrafficShaper) {
+        Objects.requireNonNull(leastWrittenFirstTrafficShaper);
+        this.leastWrittenFirstTrafficShaper = leastWrittenFirstTrafficShaper;
     }
 
     public WriteRequest peek() {
@@ -52,7 +52,7 @@ public final class WriteRequestHandler extends ChannelHandlerAdapter implements 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         writeRequestQueue.add(new WriteRequest(ctx, msg, promise));
-        roundRobinTrafficShaper.execute();
+        leastWrittenFirstTrafficShaper.execute();
     }
 
     @Override

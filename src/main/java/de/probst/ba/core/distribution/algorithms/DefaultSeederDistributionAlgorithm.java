@@ -11,7 +11,7 @@ import java.util.Map;
 /**
  * Created by chrisprobst on 01.09.14.
  */
-public class DefaultSeederDistributionAlgorithm implements SeederDistributionAlgorithm {
+public final class DefaultSeederDistributionAlgorithm implements SeederDistributionAlgorithm {
 
     @Override
     public Map<String, DataInfo> transformUploadDataInfo(Seeder seeder,
