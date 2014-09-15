@@ -3,16 +3,14 @@ package de.probst.ba.core.statistic;
 import de.probst.ba.core.net.peer.Peer;
 import de.probst.ba.core.net.peer.state.BandwidthStatisticState;
 
-import java.nio.file.Path;
 import java.util.Collection;
 import java.util.Objects;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 
 /**
  * Created by chrisprobst on 04.09.14.
  */
-public final class BandwidthStatistic extends AbstractScheduledStatistic {
+public final class BandwidthStatistic extends AbstractStatistic {
 
     public enum BandwidthStatisticMode {
         Peer,
@@ -24,13 +22,9 @@ public final class BandwidthStatistic extends AbstractScheduledStatistic {
     private final Function<BandwidthStatisticState, Number> bandwidthMapper;
     private final BandwidthStatisticMode bandwidthStatisticMode;
 
-    public BandwidthStatistic(Path csvPath,
-                              ScheduledExecutorService scheduledExecutorService,
-                              long delay,
-                              Collection<Peer> peers,
+    public BandwidthStatistic(Collection<Peer> peers,
                               Function<BandwidthStatisticState, Number> bandwidthMapper,
                               BandwidthStatisticMode bandwidthStatisticMode) {
-        super(csvPath, scheduledExecutorService, delay);
         Objects.requireNonNull(peers);
         Objects.requireNonNull(bandwidthMapper);
         Objects.requireNonNull(bandwidthStatisticMode);

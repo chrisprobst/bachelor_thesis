@@ -15,6 +15,8 @@ import de.probst.ba.core.net.peer.handler.handlers.RecordPeerHandler;
 import de.probst.ba.core.net.peer.peers.Peers;
 import de.probst.ba.core.net.peer.state.BandwidthStatisticState;
 import de.probst.ba.core.statistic.BandwidthStatistic;
+import de.probst.ba.core.util.concurrent.CancelableRunnable;
+import de.probst.ba.core.util.concurrent.Task;
 import de.probst.ba.core.util.io.IOUtil;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import io.netty.util.internal.logging.Slf4JLoggerFactory;
@@ -25,6 +27,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
@@ -36,6 +39,7 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
 /**
@@ -126,10 +130,14 @@ public abstract class AbstractPeerApp {
     protected final Queue<Peer> uploadBandwidthStatisticPeers = new ConcurrentLinkedQueue<>();
     protected final Queue<Peer> downloadBandwidthStatisticPeers = new ConcurrentLinkedQueue<>();
     protected final Queue<Peer> dataBaseUpdatePeers = new ConcurrentLinkedQueue<>();
+    private final BandwidthStatistic.BandwidthStatisticMode bandwidthStatisticMode =
+            BandwidthStatistic.BandwidthStatisticMode.TotalMedian;
     protected Logger logger;
     protected RecordPeerHandler recordPeerHandler;
     protected BandwidthStatistic uploadBandwidthStatistic;
+    protected CancelableRunnable uploadBandwidthStatisticTask;
     protected BandwidthStatistic downloadBandwidthStatistic;
+    protected CancelableRunnable downloadBandwidthStatisticTask;
     protected DataInfo[] dataInfo;
     protected Instant startTime;
 
@@ -189,35 +197,30 @@ public abstract class AbstractPeerApp {
 
         // Start stats
         if (recordStats) {
-            BandwidthStatistic.BandwidthStatisticMode bandwidthStatisticMode =
-                    BandwidthStatistic.BandwidthStatisticMode.TotalMedian;
+
 
             Collection<Peer> copy = new ArrayList<>(uploadBandwidthStatisticPeers);
             if (!copy.isEmpty()) {
-                Path uploadStatisticPath = new File(recordsDirectory,
-                                                    algorithmType + getClass().getSimpleName() + "Upload" +
-                                                    bandwidthStatisticMode + ".csv").toPath();
-                uploadBandwidthStatistic = new BandwidthStatistic(uploadStatisticPath,
-                                                                  scheduledExecutorService,
-                                                                  STATISTIC_INTERVAL,
-                                                                  copy,
+                uploadBandwidthStatistic = new BandwidthStatistic(copy,
                                                                   BandwidthStatisticState::getCurrentUploadRate,
                                                                   bandwidthStatisticMode);
-                uploadBandwidthStatistic.schedule();
+                uploadBandwidthStatisticTask = new Task(t -> {
+                    uploadBandwidthStatistic.writeStatistic();
+                    t.run();
+                }, runnable -> scheduledExecutorService.schedule(runnable, STATISTIC_INTERVAL, TimeUnit.MILLISECONDS));
+                uploadBandwidthStatisticTask.run();
             }
 
             copy = new ArrayList<>(downloadBandwidthStatisticPeers);
             if (!copy.isEmpty()) {
-                Path downloadStatisticPath = new File(recordsDirectory,
-                                                      algorithmType + getClass().getSimpleName() + "Download" +
-                                                      bandwidthStatisticMode + ".csv").toPath();
-                downloadBandwidthStatistic = new BandwidthStatistic(downloadStatisticPath,
-                                                                    scheduledExecutorService,
-                                                                    STATISTIC_INTERVAL,
-                                                                    copy,
+                downloadBandwidthStatistic = new BandwidthStatistic(copy,
                                                                     BandwidthStatisticState::getCurrentDownloadRate,
                                                                     bandwidthStatisticMode);
-                downloadBandwidthStatistic.schedule();
+                downloadBandwidthStatisticTask = new Task(t -> {
+                    downloadBandwidthStatistic.writeStatistic();
+                    t.run();
+                }, runnable -> scheduledExecutorService.schedule(runnable, STATISTIC_INTERVAL, TimeUnit.MILLISECONDS));
+                downloadBandwidthStatisticTask.run();
             }
         }
 
@@ -255,13 +258,23 @@ public abstract class AbstractPeerApp {
             Instant timeStamp = Instant.now();
 
             if (uploadBandwidthStatistic != null) {
-                logger.info("[== Writing " + uploadBandwidthStatistic.getCsvPath() + " ==]");
-                uploadBandwidthStatistic.close();
+                Path uploadStatisticPath = new File(recordsDirectory,
+                                                    algorithmType + getClass().getSimpleName() + "Upload" +
+                                                    bandwidthStatisticMode + ".csv").toPath();
+
+                logger.info("[== Writing " + uploadStatisticPath + " ==]");
+                uploadBandwidthStatisticTask.cancel();
+                Files.write(uploadStatisticPath, uploadBandwidthStatistic.toString().getBytes());
             }
 
             if (downloadBandwidthStatistic != null) {
-                logger.info("[== Writing " + downloadBandwidthStatistic.getCsvPath() + " ==]");
-                downloadBandwidthStatistic.close();
+                Path downloadStatisticPath = new File(recordsDirectory,
+                                                      algorithmType + getClass().getSimpleName() + "Download" +
+                                                      bandwidthStatisticMode + ".csv").toPath();
+
+                logger.info("[== Writing " + downloadStatisticPath + " ==]");
+                downloadBandwidthStatisticTask.cancel();
+                Files.write(downloadStatisticPath, downloadBandwidthStatistic.toString().getBytes());
             }
 
             Duration duration = Duration.between(timeStamp, Instant.now());
