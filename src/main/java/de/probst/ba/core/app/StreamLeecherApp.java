@@ -4,7 +4,6 @@ import com.beust.jcommander.Parameter;
 import de.probst.ba.core.gui.StreamerGUI;
 import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.media.database.databases.DataBases;
-import de.probst.ba.core.net.peer.transfer.TransferManager;
 import de.probst.ba.core.net.peer.Leecher;
 import de.probst.ba.core.net.peer.Seeder;
 import de.probst.ba.core.net.peer.handler.LeecherHandlerList;
@@ -12,6 +11,7 @@ import de.probst.ba.core.net.peer.handler.LeecherPeerHandler;
 import de.probst.ba.core.net.peer.handler.LeecherPeerHandlerAdapter;
 import de.probst.ba.core.net.peer.handler.handlers.DataInfoCompletionHandler;
 import de.probst.ba.core.net.peer.peers.Peers;
+import de.probst.ba.core.net.peer.transfer.TransferManager;
 import de.probst.ba.core.util.collections.Tuple2;
 
 import java.io.IOException;
@@ -121,11 +121,11 @@ public class StreamLeecherApp extends AbstractSocketAddressApp {
 
         // Connect to external seeder and wait
         leecher.connect(getExternalSocketAddress()).get();
-        logger.info("[== Connected to " + getExternalSocketAddress() + " ==]");
+        logger.info(">>> [ Connected to " + getExternalSocketAddress() + " ]");
 
-        Thread.sleep(2000);
+        Thread.sleep(3000);
 
-        logger.info("[== Press [ENTER] to start leeching and timers ==]");
+        logger.info(">>> [ Press [ENTER] to start leeching and timers ]");
         if (scanner.hasNextLine()) {
             scanner.nextLine();
         } else {
@@ -134,11 +134,11 @@ public class StreamLeecherApp extends AbstractSocketAddressApp {
 
         setupStart(eventLoopGroup);
         gui.startTimers();
-        logger.info("[== Leeching ==]");
+        logger.info(">>> [ Leeching ]");
 
         dataInfoCompletionHandler.getCountDownLatch().await();
         setupStop();
-        logger.info("[== Press [ENTER] to stop seeding ==]");
+        logger.info(">>> [ Press [ENTER] to stop seeding ]");
 
         if (scanner.hasNextLine()) {
             scanner.nextLine();
@@ -146,7 +146,7 @@ public class StreamLeecherApp extends AbstractSocketAddressApp {
             return;
         }
 
-        logger.info("[== Shutting down ==]");
+        logger.info(">>> [ Shutting down ]");
 
         seeder.close();
         leecher.close();

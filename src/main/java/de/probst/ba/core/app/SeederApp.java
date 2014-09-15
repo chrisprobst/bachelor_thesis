@@ -21,7 +21,7 @@ public class SeederApp extends AbstractSocketAddressApp {
                               downloadRate,
                               getSocketAddress(),
                               DataBases.fakeDataBase(),
-                              getSeederDistributionAlgorithm(),
+                              getSeederOnlyDistributionAlgorithm(),
                               Optional.ofNullable(recordPeerHandler),
                               Optional.of(eventLoopGroup)).getInitFuture().get();
         dataBaseUpdatePeers.add(seeder);
@@ -33,7 +33,7 @@ public class SeederApp extends AbstractSocketAddressApp {
         setup();
 
         Scanner scanner = new Scanner(System.in);
-        logger.info("[== Press [ENTER] to start seeding ==]");
+        logger.info(">>> [ Press [ENTER] to start seeding ]");
         if (scanner.hasNextLine()) {
             scanner.nextLine();
         } else {
@@ -41,8 +41,8 @@ public class SeederApp extends AbstractSocketAddressApp {
         }
 
         setupStart(eventLoopGroup);
-        logger.info("[== Seeding on " + seeder.getPeerId() + "==]");
-        seeder.getDataInfoState().getDataInfo().forEach((k, v) -> logger.info("[== Announcing " + v + "==]"));
+        logger.info(">>> [ Seeding on " + seeder.getPeerId() + " ]");
+        seeder.getDataInfoState().getDataInfo().forEach((k, v) -> logger.info(">>> [ Announcing " + v + " ]"));
 
         if (scanner.hasNextLine()) {
             scanner.nextLine();

@@ -80,22 +80,22 @@ public class LeecherApp extends AbstractSocketAddressApp {
 
         // Connect to external seeder and wait
         leecher.connect(getExternalSocketAddress()).get();
-        logger.info("[== Connected to " + getExternalSocketAddress() + " ==]");
+        logger.info(">>> [ Connected to " + getExternalSocketAddress() + " ]");
 
         setupStart(eventLoopGroup);
-        logger.info("[== Leeching ==]");
+        logger.info(">>> [ Leeching ]");
 
         dataInfoCompletionHandler.getCountDownLatch().await();
         setupStop();
 
-        logger.info("[== Press [ENTER] to stop seeding ==]");
+        logger.info(">>> [ Press [ENTER] to stop seeding ]");
 
         if (scanner.hasNextLine()) {
             scanner.nextLine();
         } else {
             return;
         }
-        logger.info("[== Shutting down ==]");
+        logger.info(">>> [ Shutting down ]");
 
         seeder.close();
         leecher.close();
