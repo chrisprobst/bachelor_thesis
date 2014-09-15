@@ -6,7 +6,7 @@ import java.util.Queue;
 /**
  * Created by chrisprobst on 12.09.14.
  */
-public class LeakyBucket {
+public final class LeakyBucket {
 
     private final long maxTokens;
     private final long refillRate;

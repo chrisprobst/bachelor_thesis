@@ -1,7 +1,7 @@
 package de.probst.ba.core.media.database;
 
-import de.probst.ba.core.media.transfer.Transfer;
-import de.probst.ba.core.media.transfer.TransferManager;
+import de.probst.ba.core.net.peer.transfer.Transfer;
+import de.probst.ba.core.net.peer.transfer.TransferManager;
 import io.netty.buffer.ByteBuf;
 
 import java.io.Flushable;

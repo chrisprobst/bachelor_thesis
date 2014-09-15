@@ -1,8 +1,8 @@
 package de.probst.ba.core.net.peer.peers.netty.handlers.transfer;
 
 import de.probst.ba.core.media.database.DataInfo;
-import de.probst.ba.core.media.transfer.Transfer;
-import de.probst.ba.core.media.transfer.TransferManager;
+import de.probst.ba.core.net.peer.transfer.Transfer;
+import de.probst.ba.core.net.peer.transfer.TransferManager;
 import de.probst.ba.core.net.peer.Leecher;
 import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.CollectDataInfoHandler;

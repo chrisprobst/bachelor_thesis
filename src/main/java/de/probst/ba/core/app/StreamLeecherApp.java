@@ -4,7 +4,7 @@ import com.beust.jcommander.Parameter;
 import de.probst.ba.core.gui.StreamerGUI;
 import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.media.database.databases.DataBases;
-import de.probst.ba.core.media.transfer.TransferManager;
+import de.probst.ba.core.net.peer.transfer.TransferManager;
 import de.probst.ba.core.net.peer.Leecher;
 import de.probst.ba.core.net.peer.Seeder;
 import de.probst.ba.core.net.peer.handler.LeecherHandlerList;

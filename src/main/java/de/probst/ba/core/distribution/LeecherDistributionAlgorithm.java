@@ -1,6 +1,6 @@
 package de.probst.ba.core.distribution;
 
-import de.probst.ba.core.media.transfer.Transfer;
+import de.probst.ba.core.net.peer.transfer.Transfer;
 import de.probst.ba.core.net.peer.Leecher;
 
 import java.util.List;

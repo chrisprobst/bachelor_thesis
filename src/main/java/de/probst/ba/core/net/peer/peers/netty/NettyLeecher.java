@@ -3,7 +3,6 @@ package de.probst.ba.core.net.peer.peers.netty;
 import de.probst.ba.core.distribution.LeecherDistributionAlgorithm;
 import de.probst.ba.core.media.database.DataBase;
 import de.probst.ba.core.media.database.DataInfo;
-import de.probst.ba.core.media.transfer.Transfer;
 import de.probst.ba.core.net.peer.AbstractLeecher;
 import de.probst.ba.core.net.peer.Leecher;
 import de.probst.ba.core.net.peer.PeerId;
@@ -16,6 +15,8 @@ import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.MessageQueueHandl
 import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.TrafficShapers;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.DownloadHandler;
 import de.probst.ba.core.net.peer.state.BandwidthStatisticState;
+import de.probst.ba.core.net.peer.transfer.Transfer;
+import de.probst.ba.core.util.concurrent.CancelableRunnable;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
@@ -47,8 +48,8 @@ public final class NettyLeecher extends AbstractLeecher {
     private final ChannelGroupHandler leecherChannelGroupHandler;
     private final Optional<SocketAddress> announceSocketAddress;
     private final BandwidthStatisticHandler leecherBandwidthStatisticHandler;
-    private final Optional<Runnable> leastWrittenFirstTrafficShaper;
-    private final Optional<Runnable> leastReadFirstTrafficShaper;
+    private final Optional<CancelableRunnable> leastWrittenFirstTrafficShaper;
+    private final Optional<CancelableRunnable> leastReadFirstTrafficShaper;
     private final LoggingHandler leecherLogHandler = new LoggingHandler(LogLevel.TRACE);
     private final Bootstrap leecherBootstrap;
     private final Class<? extends Channel> leecherChannelClass;
@@ -166,11 +167,11 @@ public final class NettyLeecher extends AbstractLeecher {
 
         // Traffic shaping
         leastWrittenFirstTrafficShaper = getLeakyUploadBucket().map(leakyBucket -> TrafficShapers.leastWrittenFirst(
-                leecherEventLoopGroup.next(),
+                leecherEventLoopGroup.next()::submit,
                 leakyBucket,
                 () -> MessageQueueHandler.collect(getLeecherChannelGroup())));
         leastReadFirstTrafficShaper = getLeakyDownloadBucket().map(leakyBucket -> TrafficShapers.leastReadFirst(
-                leecherEventLoopGroup.next(),
+                leecherEventLoopGroup.next()::submit,
                 leakyBucket,
                 () -> MessageQueueHandler.collect(getLeecherChannelGroup())));
 
@@ -225,6 +226,8 @@ public final class NettyLeecher extends AbstractLeecher {
     public void close() throws IOException {
         try {
             leecherEventLoopGroup.shutdownGracefully();
+            leastWrittenFirstTrafficShaper.ifPresent(CancelableRunnable::cancel);
+            leastReadFirstTrafficShaper.ifPresent(CancelableRunnable::cancel);
         } finally {
             super.close();
         }

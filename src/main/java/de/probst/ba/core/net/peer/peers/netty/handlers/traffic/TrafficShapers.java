@@ -1,10 +1,13 @@
 package de.probst.ba.core.net.peer.peers.netty.handlers.traffic;
 
+import de.probst.ba.core.util.concurrent.CancelableRunnable;
 import de.probst.ba.core.util.concurrent.LeakyBucket;
+import de.probst.ba.core.util.concurrent.Task;
 
 import java.util.Collection;
 import java.util.Optional;
-import java.util.concurrent.Executor;
+import java.util.concurrent.Future;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
@@ -16,35 +19,33 @@ public final class TrafficShapers {
 
     }
 
-    public static Runnable leastWrittenFirst(Executor executor,
-                                             LeakyBucket leakyBucket,
-                                             Supplier<Collection<MessageQueueHandler>> messageQueueHandlers) {
-        return new LeastFirstTrafficShaper(executor,
-                                           leakyBucket,
-                                           messageQueueHandlers,
-                                           MessageQueueHandler.TOTAL_WRITTEN_COMPARATOR,
-                                           MessageQueueHandler::peekWriteEvent,
-                                           MessageQueueHandler::removeWriteEvent,
-                                           Optional.empty(),
-                                           Optional.empty());
+    public static CancelableRunnable leastWrittenFirst(Function<Runnable, Future<?>> scheduleFunction,
+                                                       LeakyBucket leakyBucket,
+                                                       Supplier<Collection<MessageQueueHandler>> messageQueueHandlers) {
+        return new Task(new LeastFirstTrafficShaper(leakyBucket,
+                                                    messageQueueHandlers,
+                                                    MessageQueueHandler.TOTAL_WRITTEN_COMPARATOR,
+                                                    MessageQueueHandler::peekWriteEvent,
+                                                    MessageQueueHandler::removeWriteEvent,
+                                                    Optional.empty(),
+                                                    Optional.empty()), scheduleFunction);
     }
 
-    public static Runnable leastReadFirst(Executor executor,
-                                          LeakyBucket leakyBucket,
-                                          Supplier<Collection<MessageQueueHandler>> messageQueueHandlers) {
-        return new LeastFirstTrafficShaper(executor,
-                                           leakyBucket,
-                                           messageQueueHandlers,
-                                           MessageQueueHandler.TOTAL_READ_COMPARATOR,
-                                           MessageQueueHandler::peekReadEvent,
-                                           MessageQueueHandler::removeReadEvent,
-                                           Optional.of(m -> m.getChannelHandlerContext()
-                                                             .channel()
-                                                             .config()
-                                                             .setAutoRead(true)),
-                                           Optional.of(m -> m.getChannelHandlerContext()
-                                                             .channel()
-                                                             .config()
-                                                             .setAutoRead(false)));
+    public static CancelableRunnable leastReadFirst(Function<Runnable, Future<?>> scheduleFunction,
+                                                    LeakyBucket leakyBucket,
+                                                    Supplier<Collection<MessageQueueHandler>> messageQueueHandlers) {
+        return new Task(new LeastFirstTrafficShaper(leakyBucket,
+                                                    messageQueueHandlers,
+                                                    MessageQueueHandler.TOTAL_READ_COMPARATOR,
+                                                    MessageQueueHandler::peekReadEvent,
+                                                    MessageQueueHandler::removeReadEvent,
+                                                    Optional.of(m -> m.getChannelHandlerContext()
+                                                                      .channel()
+                                                                      .config()
+                                                                      .setAutoRead(true)),
+                                                    Optional.of(m -> m.getChannelHandlerContext()
+                                                                      .channel()
+                                                                      .config()
+                                                                      .setAutoRead(false))), scheduleFunction);
     }
 }

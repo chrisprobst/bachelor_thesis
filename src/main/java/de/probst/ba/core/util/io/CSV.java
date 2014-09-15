@@ -8,7 +8,7 @@ import java.util.stream.Stream;
 /**
  * Created by chrisprobst on 03.09.14.
  */
-public class CSV {
+public final class CSV {
 
     public static final int DEFAULT_ELEMENT_WIDTH = 30;
 

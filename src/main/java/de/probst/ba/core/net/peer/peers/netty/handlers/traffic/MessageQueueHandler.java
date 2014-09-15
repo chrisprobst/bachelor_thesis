@@ -34,14 +34,14 @@ public final class MessageQueueHandler extends ChannelHandlerAdapter {
     }
 
     private volatile ChannelHandlerContext ctx;
-    private final Optional<Runnable> writeTask;
-    private final Optional<Runnable> readTask;
+    private final Optional<? extends Runnable> writeTask;
+    private final Optional<? extends Runnable> readTask;
     private final AtomicLong totalWritten = new AtomicLong();
     private final AtomicLong totalRead = new AtomicLong();
     private final Queue<WriteEvent> writeEventQueue = new ConcurrentLinkedQueue<>();
     private final Queue<ReadEvent> readEventQueue = new ConcurrentLinkedQueue<>();
 
-    public MessageQueueHandler(Optional<Runnable> writeTask, Optional<Runnable> readTask) {
+    public MessageQueueHandler(Optional<? extends Runnable> writeTask, Optional<? extends Runnable> readTask) {
         Objects.requireNonNull(writeTask);
         Objects.requireNonNull(readTask);
         this.writeTask = writeTask;

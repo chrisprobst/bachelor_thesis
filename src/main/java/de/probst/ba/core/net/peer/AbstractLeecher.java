@@ -3,7 +3,7 @@ package de.probst.ba.core.net.peer;
 import de.probst.ba.core.distribution.LeecherDistributionAlgorithm;
 import de.probst.ba.core.media.database.DataBase;
 import de.probst.ba.core.media.database.DataInfo;
-import de.probst.ba.core.media.transfer.Transfer;
+import de.probst.ba.core.net.peer.transfer.Transfer;
 import de.probst.ba.core.net.peer.handler.LeecherPeerHandler;
 import de.probst.ba.core.net.peer.handler.LeecherPeerHandlerAdapter;
 import de.probst.ba.core.net.peer.state.LeecherDataInfoState;

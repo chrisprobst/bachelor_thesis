@@ -2,7 +2,6 @@ package de.probst.ba.core.net.peer.peers.netty;
 
 import de.probst.ba.core.distribution.SeederDistributionAlgorithm;
 import de.probst.ba.core.media.database.DataBase;
-import de.probst.ba.core.media.transfer.Transfer;
 import de.probst.ba.core.net.peer.AbstractSeeder;
 import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.handler.SeederPeerHandler;
@@ -14,6 +13,8 @@ import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.MessageQueueHandl
 import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.TrafficShapers;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.UploadHandler;
 import de.probst.ba.core.net.peer.state.BandwidthStatisticState;
+import de.probst.ba.core.net.peer.transfer.Transfer;
+import de.probst.ba.core.util.concurrent.CancelableRunnable;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -40,8 +41,8 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
     private final EventLoopGroup seederEventLoopGroup;
     private final ChannelGroupHandler seederChannelGroupHandler;
     private final BandwidthStatisticHandler seederBandwidthStatisticHandler;
-    private final Optional<Runnable> leastWrittenFirstTrafficShaper;
-    private final Optional<Runnable> leastReadFirstTrafficShaper;
+    private final Optional<CancelableRunnable> leastWrittenFirstTrafficShaper;
+    private final Optional<CancelableRunnable> leastReadFirstTrafficShaper;
     private final LoggingHandler seederLogHandler = new LoggingHandler(LogLevel.TRACE);
     private final Class<? extends Channel> seederChannelClass;
     private final ChannelInitializer<Channel> seederChannelInitializer = new ChannelInitializer<Channel>() {
@@ -140,11 +141,11 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
 
         // Traffic shaping
         leastWrittenFirstTrafficShaper = getLeakyUploadBucket().map(leakyBucket -> TrafficShapers.leastWrittenFirst(
-                seederEventLoopGroup.next(),
+                seederEventLoopGroup.next()::submit,
                 leakyBucket,
                 () -> MessageQueueHandler.collect(getSeederChannelGroup())));
         leastReadFirstTrafficShaper = getLeakyDownloadBucket().map(leakyBucket -> TrafficShapers.leastReadFirst(
-                seederEventLoopGroup.next(),
+                seederEventLoopGroup.next()::submit,
                 leakyBucket,
                 () -> MessageQueueHandler.collect(getSeederChannelGroup())));
 
@@ -169,6 +170,8 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
     public void close() throws IOException {
         try {
             seederEventLoopGroup.shutdownGracefully();
+            leastWrittenFirstTrafficShaper.ifPresent(CancelableRunnable::cancel);
+            leastReadFirstTrafficShaper.ifPresent(CancelableRunnable::cancel);
         } finally {
             super.close();
         }

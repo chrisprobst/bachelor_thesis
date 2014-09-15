@@ -14,7 +14,6 @@ public abstract class AbstractScheduledStatistic extends AbstractFileStatistic i
 
     private final ScheduledExecutorService scheduledExecutorService;
     private final long delay;
-
     private Future<?> schedulation;
 
     public AbstractScheduledStatistic(Path csvPath, ScheduledExecutorService scheduledExecutorService, long delay) {
@@ -37,7 +36,7 @@ public abstract class AbstractScheduledStatistic extends AbstractFileStatistic i
             return;
         }
         schedulation = null;
-        doWriteStatistic();
+        writeStatistic();
         schedule();
     }
 

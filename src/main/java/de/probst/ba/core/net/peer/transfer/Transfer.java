@@ -1,4 +1,4 @@
-package de.probst.ba.core.media.transfer;
+package de.probst.ba.core.net.peer.transfer;
 
 import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.net.peer.PeerId;
@@ -18,7 +18,7 @@ public final class Transfer implements Serializable {
 
     // The remote peer id
     private final PeerId remotePeerId;
-    
+
     // The data info which describes this transfer
     private final DataInfo dataInfo;
 
@@ -45,7 +45,6 @@ public final class Transfer implements Serializable {
     }
 
     public Transfer(PeerId remotePeerId, DataInfo dataInfo, boolean download, long completedSize) {
-
         Objects.requireNonNull(remotePeerId);
         Objects.requireNonNull(dataInfo);
 
@@ -91,7 +90,7 @@ public final class Transfer implements Serializable {
      * is an upload, otherwise false.
      */
     public boolean isUpload() {
-        return !isDownload();
+        return !download;
     }
 
     /**
@@ -181,7 +180,7 @@ public final class Transfer implements Serializable {
      * @return The percentage of this transfer.
      */
     public double getPercentage() {
-        return completedSize / (double) size;
+        return getCompletedSize() / (double) getSize();
     }
 
     @Override

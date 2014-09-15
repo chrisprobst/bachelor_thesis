@@ -5,8 +5,10 @@ import de.probst.ba.core.media.database.DataBase;
 import de.probst.ba.core.net.peer.handler.PeerHandler;
 import de.probst.ba.core.net.peer.handler.PeerHandlerAdapter;
 import de.probst.ba.core.net.peer.state.DataInfoState;
+import de.probst.ba.core.util.concurrent.CancelableRunnable;
 import de.probst.ba.core.util.concurrent.LeakyBucket;
-import de.probst.ba.core.util.concurrent.LeakyBucketRefillTask;
+import de.probst.ba.core.util.concurrent.LeakyBucketRefiller;
+import de.probst.ba.core.util.concurrent.Task;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,6 +17,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by chrisprobst on 17.08.14.
@@ -25,7 +28,7 @@ public abstract class AbstractPeer implements Peer {
 
     private final Logger logger = LoggerFactory.getLogger(AbstractPeer.class);
 
-    private final Optional<LeakyBucketRefillTask> leakyBucketRefillTask;
+    private final Optional<CancelableRunnable> leakyBucketRefillTask;
 
     private final Optional<LeakyBucket> leakyUploadBucket;
 
@@ -43,11 +46,11 @@ public abstract class AbstractPeer implements Peer {
 
     private volatile Optional<PeerId> peerId;
 
-    public Optional<LeakyBucket> getLeakyDownloadBucket() {
+    protected Optional<LeakyBucket> getLeakyDownloadBucket() {
         return leakyDownloadBucket;
     }
 
-    public Optional<LeakyBucket> getLeakyUploadBucket() {
+    protected Optional<LeakyBucket> getLeakyUploadBucket() {
         return leakyUploadBucket;
     }
 
@@ -91,10 +94,19 @@ public abstract class AbstractPeer implements Peer {
                 maxDownloadRate > 0 ? Optional.of(new LeakyBucket(maxDownloadRate, maxDownloadRate)) : Optional.empty();
 
         if (leakyUploadBucket.isPresent() || leakyDownloadBucket.isPresent()) {
-            leakyBucketRefillTask = Optional.of(new LeakyBucketRefillTask(leakyBucketRefillTaskScheduler,
-                                                                          LEAKY_BUCKET_REFILL_INTERVAL));
-            leakyUploadBucket.ifPresent(leakyBucketRefillTask.get()::add);
-            leakyDownloadBucket.ifPresent(leakyBucketRefillTask.get()::add);
+            // Setup runnable
+            LeakyBucketRefiller leakyBucketRefiller = new LeakyBucketRefiller();
+            leakyUploadBucket.ifPresent(leakyBucketRefiller::add);
+            leakyDownloadBucket.ifPresent(leakyBucketRefiller::add);
+
+            // Create task
+            CancelableRunnable task =
+                    new Task(leakyBucketRefiller,
+                             runnable -> leakyBucketRefillTaskScheduler.schedule(runnable,
+                                                                                 LEAKY_BUCKET_REFILL_INTERVAL,
+                                                                                 TimeUnit.MILLISECONDS));
+            leakyBucketRefillTask = Optional.of(task);
+            task.run();
         } else {
             leakyBucketRefillTask = Optional.empty();
         }
@@ -133,7 +145,7 @@ public abstract class AbstractPeer implements Peer {
     @Override
     public void close() throws IOException {
         try {
-            leakyBucketRefillTask.ifPresent(LeakyBucketRefillTask::cancel);
+            leakyBucketRefillTask.ifPresent(CancelableRunnable::cancel);
         } finally {
             getDataBase().flush();
         }

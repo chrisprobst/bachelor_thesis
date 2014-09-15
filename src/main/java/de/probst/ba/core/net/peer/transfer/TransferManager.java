@@ -1,4 +1,4 @@
-package de.probst.ba.core.media.transfer;
+package de.probst.ba.core.net.peer.transfer;
 
 import de.probst.ba.core.media.database.DataBase;
 import io.netty.buffer.ByteBuf;
@@ -96,22 +96,25 @@ public final class TransferManager {
             return false;
         }
 
+        // Get volatile transfer
+        Transfer transfer = getTransfer();
+
         // Is download or upload ?
-        boolean isDownload = getTransfer().isDownload();
+        boolean isDownload = transfer.isDownload();
 
         // Calculate the buffer length
         int remaining = isDownload ? byteBuf.readableBytes() : byteBuf.writableBytes();
         int bufferLength = (int) Math.min(remaining, chunkSize - offset);
 
         // Advance the transfer
-        transfer = transfer.advance(bufferLength);
+        this.transfer = transfer = transfer.advance(bufferLength);
 
         // Do we have finished the chunk
         boolean chunkCompleted = offset + bufferLength == chunkSize;
 
         if (chunkCompleted) {
             // We can complete the chunk
-            dataBase.processBufferAndComplete(getTransfer().getDataInfo(),
+            dataBase.processBufferAndComplete(transfer.getDataInfo(),
                                               chunkIndex,
                                               offset,
                                               byteBuf,
@@ -120,7 +123,7 @@ public final class TransferManager {
 
         } else {
             // Fill the chunk
-            dataBase.processBuffer(getTransfer().getDataInfo(),
+            dataBase.processBuffer(transfer.getDataInfo(),
                                    chunkIndex,
                                    offset,
                                    byteBuf,

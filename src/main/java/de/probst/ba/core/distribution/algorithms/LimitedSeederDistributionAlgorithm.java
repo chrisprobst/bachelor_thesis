@@ -2,7 +2,7 @@ package de.probst.ba.core.distribution.algorithms;
 
 import de.probst.ba.core.distribution.SeederDistributionAlgorithm;
 import de.probst.ba.core.media.database.DataInfo;
-import de.probst.ba.core.media.transfer.TransferManager;
+import de.probst.ba.core.net.peer.transfer.TransferManager;
 import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.Seeder;
 import de.probst.ba.core.net.peer.state.SeederDataInfoState;

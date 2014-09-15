@@ -1,7 +1,7 @@
 package de.probst.ba.core.net.peer.state;
 
 import de.probst.ba.core.media.database.DataInfo;
-import de.probst.ba.core.media.transfer.Transfer;
+import de.probst.ba.core.net.peer.transfer.Transfer;
 import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.Seeder;
 

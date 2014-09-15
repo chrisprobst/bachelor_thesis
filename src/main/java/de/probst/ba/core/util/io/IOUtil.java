@@ -14,7 +14,7 @@ import java.util.zip.GZIPOutputStream;
 /**
  * Created by chrisprobst on 18.08.14.
  */
-public class IOUtil {
+public final class IOUtil {
 
     private IOUtil() {
 
