@@ -95,7 +95,7 @@ public abstract class AbstractPeer implements Peer {
         this.peerHandler = peerHandler.orElseGet(PeerHandlerAdapter::new);
 
         // Leaky bucket
-        double factor = PeerConfig.getLeakyBucketMaxTokensFactor();
+        double factor = AbstractPeerConfig.getLeakyBucketMaxTokensFactor();
         long maxUploadTokens = (long) (maxUploadRate * factor);
         leakyUploadBucket = maxUploadRate > 0 ?
                             Optional.of(new LeakyBucket(maxUploadTokens, maxUploadRate)) :
@@ -113,7 +113,7 @@ public abstract class AbstractPeer implements Peer {
             leakyDownloadBucket.ifPresent(leakyBucketRefiller::add);
 
             // Create task
-            long interval = PeerConfig.getLeakyBucketRefillInterval();
+            long interval = AbstractPeerConfig.getLeakyBucketRefillInterval();
             CancelableRunnable task =
                     new Task(leakyBucketRefiller,
                              runnable -> leakyBucketRefillTaskScheduler.schedule(runnable,
@@ -131,7 +131,7 @@ public abstract class AbstractPeer implements Peer {
         Instant now = Instant.now();
         if ((lastBandwidthStatisticTimeStamp == null || cachedBandwidthStatisticState == null) ||
             Duration.between(lastBandwidthStatisticTimeStamp, now).toMillis() >
-            PeerConfig.getMinimalBandwidthStatisticStateCreationDelay()) {
+            AbstractPeerConfig.getMinimalBandwidthStatisticStateCreationDelay()) {
             lastBandwidthStatisticTimeStamp = now;
             return cachedBandwidthStatisticState = createBandwidthStatisticState();
         } else {

@@ -3,9 +3,9 @@ package de.probst.ba.core.net.peer;
 /**
  * Created by chrisprobst on 15.09.14.
  */
-public final class PeerConfig {
+public final class AbstractPeerConfig {
 
-    private PeerConfig() {
+    private AbstractPeerConfig() {
     }
 
     private static final int leakyBucketRefillInterval = 250;
