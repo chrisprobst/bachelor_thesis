@@ -1,4 +1,4 @@
-package de.probst.ba.core.app;
+package de.probst.ba.cli;
 
 import com.beust.jcommander.Parameter;
 import io.netty.channel.EventLoopGroup;

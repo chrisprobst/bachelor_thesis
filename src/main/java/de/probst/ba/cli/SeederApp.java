@@ -1,4 +1,4 @@
-package de.probst.ba.core.app;
+package de.probst.ba.cli;
 
 import de.probst.ba.core.media.database.databases.DataBases;
 import de.probst.ba.core.net.peer.Seeder;

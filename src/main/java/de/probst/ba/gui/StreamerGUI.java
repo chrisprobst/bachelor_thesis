@@ -1,4 +1,4 @@
-package de.probst.ba.core.gui;
+package de.probst.ba.gui;
 
 import de.probst.ba.core.media.database.DataBase;
 import de.probst.ba.core.media.database.DataInfo;

@@ -35,6 +35,7 @@ build/
 
 # Ignore tmp files
 *~
+*odt#
 
 # Ignore svn folders
 .svn

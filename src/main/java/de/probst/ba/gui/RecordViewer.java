@@ -1,4 +1,4 @@
-package de.probst.ba.core.gui;
+package de.probst.ba.gui;
 
 import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.net.peer.PeerId;

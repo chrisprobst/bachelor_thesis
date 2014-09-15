@@ -1,7 +1,7 @@
-package de.probst.ba.core.app;
+package de.probst.ba.cli;
 
 import com.beust.jcommander.Parameter;
-import de.probst.ba.core.gui.StreamerGUI;
+import de.probst.ba.gui.StreamerGUI;
 import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.media.database.databases.DataBases;
 import de.probst.ba.core.net.peer.Leecher;

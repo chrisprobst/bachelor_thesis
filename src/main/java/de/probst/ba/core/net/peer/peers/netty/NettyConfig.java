@@ -36,7 +36,6 @@ public final class NettyConfig {
         NettyConfig.useCodec = useCodec;
     }
 
-
     public static Collection<ChannelHandler> getCodecPipeline() {
         if (useCodec) {
             return Arrays.asList(new LengthFieldBasedFrameDecoder(1024 * 1024, 0, 4, 0, 4),

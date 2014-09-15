@@ -1,4 +1,4 @@
-package de.probst.ba.core.app;
+package de.probst.ba.cli;
 
 import com.beust.jcommander.IValueValidator;
 import com.beust.jcommander.JCommander;
