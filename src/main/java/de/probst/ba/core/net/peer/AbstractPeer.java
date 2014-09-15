@@ -4,6 +4,7 @@ import de.probst.ba.core.distribution.DistributionAlgorithm;
 import de.probst.ba.core.media.database.DataBase;
 import de.probst.ba.core.net.peer.handler.PeerHandler;
 import de.probst.ba.core.net.peer.handler.PeerHandlerAdapter;
+import de.probst.ba.core.net.peer.state.BandwidthStatisticState;
 import de.probst.ba.core.net.peer.state.DataInfoState;
 import de.probst.ba.core.util.concurrent.CancelableRunnable;
 import de.probst.ba.core.util.concurrent.LeakyBucket;
@@ -13,6 +14,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -23,8 +26,6 @@ import java.util.concurrent.TimeUnit;
  * Created by chrisprobst on 17.08.14.
  */
 public abstract class AbstractPeer implements Peer {
-
-    public static final int LEAKY_BUCKET_REFILL_INTERVAL = 250;
 
     private final Logger logger = LoggerFactory.getLogger(AbstractPeer.class);
 
@@ -43,6 +44,10 @@ public abstract class AbstractPeer implements Peer {
     private final CompletableFuture<? extends Peer> initFuture = new CompletableFuture<>();
 
     private final CompletableFuture<? extends Peer> closeFuture = new CompletableFuture<>();
+
+    private Instant lastBandwidthStatisticTimeStamp;
+
+    private BandwidthStatisticState cachedBandwidthStatisticState;
 
     private volatile Optional<PeerId> peerId;
 
@@ -67,6 +72,8 @@ public abstract class AbstractPeer implements Peer {
         }
     }
 
+    protected abstract BandwidthStatisticState createBandwidthStatisticState();
+
     public AbstractPeer(long maxUploadRate,
                         long maxDownloadRate,
                         Optional<PeerId> peerId,
@@ -88,10 +95,16 @@ public abstract class AbstractPeer implements Peer {
         this.peerHandler = peerHandler.orElseGet(PeerHandlerAdapter::new);
 
         // Leaky bucket
-        leakyUploadBucket =
-                maxUploadRate > 0 ? Optional.of(new LeakyBucket(maxUploadRate, maxUploadRate)) : Optional.empty();
-        leakyDownloadBucket =
-                maxDownloadRate > 0 ? Optional.of(new LeakyBucket(maxDownloadRate, maxDownloadRate)) : Optional.empty();
+        double factor = PeerConfig.getLeakyBucketMaxTokensFactor();
+        long maxUploadTokens = (long) (maxUploadRate * factor);
+        leakyUploadBucket = maxUploadRate > 0 ?
+                            Optional.of(new LeakyBucket(maxUploadTokens, maxUploadRate)) :
+                            Optional.empty();
+
+        long maxDownloadTokens = (long) (maxDownloadRate * factor);
+        leakyDownloadBucket = maxDownloadRate > 0 ?
+                              Optional.of(new LeakyBucket(maxDownloadTokens, maxDownloadRate)) :
+                              Optional.empty();
 
         if (leakyUploadBucket.isPresent() || leakyDownloadBucket.isPresent()) {
             // Setup runnable
@@ -100,15 +113,29 @@ public abstract class AbstractPeer implements Peer {
             leakyDownloadBucket.ifPresent(leakyBucketRefiller::add);
 
             // Create task
+            long interval = PeerConfig.getLeakyBucketRefillInterval();
             CancelableRunnable task =
                     new Task(leakyBucketRefiller,
                              runnable -> leakyBucketRefillTaskScheduler.schedule(runnable,
-                                                                                 LEAKY_BUCKET_REFILL_INTERVAL,
+                                                                                 interval,
                                                                                  TimeUnit.MILLISECONDS));
             leakyBucketRefillTask = Optional.of(task);
             task.run();
         } else {
             leakyBucketRefillTask = Optional.empty();
+        }
+    }
+
+    @Override
+    public synchronized BandwidthStatisticState getBandwidthStatisticState() {
+        Instant now = Instant.now();
+        if ((lastBandwidthStatisticTimeStamp == null || cachedBandwidthStatisticState == null) ||
+            Duration.between(lastBandwidthStatisticTimeStamp, now).toMillis() >
+            PeerConfig.getMinimalBandwidthStatisticStateCreationDelay()) {
+            lastBandwidthStatisticTimeStamp = now;
+            return cachedBandwidthStatisticState = createBandwidthStatisticState();
+        } else {
+            return cachedBandwidthStatisticState;
         }
     }
 

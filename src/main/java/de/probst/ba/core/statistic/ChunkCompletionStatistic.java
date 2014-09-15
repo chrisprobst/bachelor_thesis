@@ -15,13 +15,6 @@ public final class ChunkCompletionStatistic extends AbstractStatistic {
     private final String dataInfoHash;
     private final boolean total;
 
-    public ChunkCompletionStatistic(Collection<Peer> peers, String dataInfoHash, boolean total) {
-        Objects.requireNonNull(peers);
-        this.peers = peers;
-        this.dataInfoHash = dataInfoHash;
-        this.total = total;
-    }
-
     private void writeHeader() {
         csv.writeElement("Time");
 
@@ -76,5 +69,17 @@ public final class ChunkCompletionStatistic extends AbstractStatistic {
         }
 
         csv.writeLine();
+    }
+
+    public ChunkCompletionStatistic(String name, Collection<Peer> peers, String dataInfoHash, boolean total) {
+        super(name);
+        Objects.requireNonNull(peers);
+        this.peers = peers;
+        this.dataInfoHash = dataInfoHash;
+        this.total = total;
+    }
+
+    public boolean isTotal() {
+        return total;
     }
 }

@@ -16,7 +16,17 @@ public final class NettyConfig {
     private NettyConfig() {
     }
 
+    private static final long discoveryExchangeDelay = 1000;
+    private static final long announceDelay = 250;
     private static volatile boolean useCodec;
+
+    public static long getDiscoveryExchangeDelay() {
+        return discoveryExchangeDelay;
+    }
+
+    public static long getAnnounceDelay() {
+        return announceDelay;
+    }
 
     public static boolean isUseCodec() {
         return useCodec;
@@ -25,6 +35,7 @@ public final class NettyConfig {
     public static void setUseCodec(boolean useCodec) {
         NettyConfig.useCodec = useCodec;
     }
+
 
     public static Collection<ChannelHandler> getCodecPipeline() {
         if (useCodec) {

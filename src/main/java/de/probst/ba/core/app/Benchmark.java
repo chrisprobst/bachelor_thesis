@@ -161,7 +161,9 @@ public class Benchmark extends AbstractPeerApp {
 
         setupStart(eventLoopGroup);
         dataInfoCompletionHandler.getCountDownLatch().await();
-        setupStop();
+        setupStopTime();
+        Thread.sleep(500);
+        setupStopRecords();
 
         Peers.closeAndWait(peerQueue);
     }

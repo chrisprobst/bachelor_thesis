@@ -1,6 +1,7 @@
 package de.probst.ba.core.net.peer.peers.netty.handlers.discovery;
 
 import de.probst.ba.core.net.peer.Seeder;
+import de.probst.ba.core.net.peer.peers.netty.NettyConfig;
 import de.probst.ba.core.net.peer.peers.netty.handlers.discovery.messages.SocketAddressMessage;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -8,8 +9,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.util.concurrent.Future;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.net.SocketAddress;
 import java.util.Collections;
@@ -25,12 +24,6 @@ import java.util.stream.Collectors;
  */
 public final class DiscoverSocketAddressHandler extends SimpleChannelInboundHandler<SocketAddressMessage> {
 
-    /**
-     * This delay determines in milliseconds how often the discovered
-     * peers will be exchanged.
-     */
-    public static final long DISCOVERY_EXCHANGE_DELAY = 1000;
-
     public static Set<SocketAddress> collectSocketAddresses(ChannelGroup channelGroup) {
         return Collections.unmodifiableSet(channelGroup.stream()
                                                        .map(DiscoverSocketAddressHandler::get)
@@ -44,7 +37,6 @@ public final class DiscoverSocketAddressHandler extends SimpleChannelInboundHand
         return remotePeer.pipeline().get(DiscoverSocketAddressHandler.class);
     }
 
-    private final Logger logger = LoggerFactory.getLogger(DiscoverSocketAddressHandler.class);
     private final Seeder seeder;
     private final ChannelGroup channelGroup;
 
@@ -55,7 +47,7 @@ public final class DiscoverSocketAddressHandler extends SimpleChannelInboundHand
 
     private void schedule(ChannelHandlerContext ctx) {
         scheduleFuture = ctx.channel().eventLoop().schedule(() -> writeSocketAddresses(ctx, true),
-                                                            DISCOVERY_EXCHANGE_DELAY,
+                                                            NettyConfig.getDiscoveryExchangeDelay(),
                                                             TimeUnit.MILLISECONDS);
     }
 

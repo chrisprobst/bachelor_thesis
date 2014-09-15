@@ -87,6 +87,11 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
         return UploadHandler.collectUploads(getSeederChannelGroup());
     }
 
+    @Override
+    protected BandwidthStatisticState createBandwidthStatisticState() {
+        return seederBandwidthStatisticHandler.getBandwidthStatisticState();
+    }
+
     protected abstract ChannelFuture initSeederBootstrap(SocketAddress socketAddress);
 
     public AbstractNettySeeder(long maxUploadRate,
@@ -145,11 +150,6 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
                 getInitFuture().completeExceptionally(fut.cause());
             }
         });
-    }
-
-    @Override
-    public BandwidthStatisticState getBandwidthStatisticState() {
-        return seederBandwidthStatisticHandler.getBandwidthStatisticState();
     }
 
     @Override

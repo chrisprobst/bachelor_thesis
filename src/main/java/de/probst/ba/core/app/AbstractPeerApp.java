@@ -16,6 +16,7 @@ import de.probst.ba.core.net.peer.peers.Peers;
 import de.probst.ba.core.net.peer.peers.netty.NettyConfig;
 import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.TrafficUtil;
 import de.probst.ba.core.net.peer.state.BandwidthStatisticState;
+import de.probst.ba.core.statistic.AbstractStatistic;
 import de.probst.ba.core.statistic.BandwidthStatistic;
 import de.probst.ba.core.statistic.ChunkCompletionStatistic;
 import de.probst.ba.core.util.concurrent.CancelableRunnable;
@@ -154,17 +155,18 @@ public abstract class AbstractPeerApp {
         return true;
     }
 
+    protected final Queue<Peer> dataBaseUpdatePeers = new ConcurrentLinkedQueue<>();
+    protected Logger logger;
+
+    // Events
+    protected RecordPeerHandler recordPeerHandler;
+
+    // Statistics
     protected final Queue<Peer> uploadBandwidthStatisticPeers = new ConcurrentLinkedQueue<>();
     protected final Queue<Peer> downloadBandwidthStatisticPeers = new ConcurrentLinkedQueue<>();
     protected final Queue<Peer> chunkCompletionStatisticPeers = new ConcurrentLinkedQueue<>();
-    protected final Queue<Peer> dataBaseUpdatePeers = new ConcurrentLinkedQueue<>();
-    private final BandwidthStatistic.BandwidthStatisticMode bandwidthStatisticMode =
-            BandwidthStatistic.BandwidthStatisticMode.TotalMedian;
-    protected Logger logger;
-    protected RecordPeerHandler recordPeerHandler;
-    protected BandwidthStatistic uploadBandwidthStatistic;
-    protected BandwidthStatistic downloadBandwidthStatistic;
-    protected ChunkCompletionStatistic chunkCompletionStatistic;
+    protected final List<AbstractStatistic> statistics = new LinkedList<>();
+
     protected CancelableRunnable statisticTask;
     protected DataInfo[] dataInfo;
     protected Instant startTime;
@@ -255,27 +257,115 @@ public abstract class AbstractPeerApp {
 
             Collection<Peer> copy = new ArrayList<>(chunkCompletionStatisticPeers);
             if (dataInfo != null && dataInfo.length > 0 && !copy.isEmpty()) {
-                chunkCompletionStatistic = new ChunkCompletionStatistic(copy,
-                                                                        dataInfo[0].getHash(),
-                                                                        false);
-                statisticRunnables.add(chunkCompletionStatistic::writeStatistic);
+                ChunkCompletionStatistic chunkCompletionStatistic = new ChunkCompletionStatistic("ChunkCompletion",
+                                                                                                 copy,
+                                                                                                 dataInfo[0].getHash(),
+                                                                                                 false);
+                ChunkCompletionStatistic totalChunkCompletionStatistic =
+                        new ChunkCompletionStatistic("TotalChunkCompletion",
+                                                     copy,
+                                                     dataInfo[0].getHash(),
+                                                     true);
+
+
+                statistics.add(chunkCompletionStatistic);
+                statistics.add(totalChunkCompletionStatistic);
             }
 
             copy = new ArrayList<>(uploadBandwidthStatisticPeers);
             if (!copy.isEmpty()) {
-                uploadBandwidthStatistic = new BandwidthStatistic(copy,
-                                                                  BandwidthStatisticState::getCurrentUploadRate,
-                                                                  bandwidthStatisticMode);
-                statisticRunnables.add(uploadBandwidthStatistic::writeStatistic);
+                BandwidthStatistic currentTotalMedian =
+                        new BandwidthStatistic("CurrentUploadTotalMedian",
+                                               copy,
+                                               BandwidthStatisticState::getCurrentUploadRate,
+                                               BandwidthStatistic.BandwidthStatisticMode.TotalMedian);
+
+                BandwidthStatistic currentTotalAccumulated =
+                        new BandwidthStatistic("CurrentUploadTotalAccumulated",
+                                               copy,
+                                               BandwidthStatisticState::getCurrentUploadRate,
+                                               BandwidthStatistic.BandwidthStatisticMode.TotalAccumulated);
+
+                BandwidthStatistic currentPeer =
+                        new BandwidthStatistic("CurrentUploadPeer",
+                                               copy,
+                                               BandwidthStatisticState::getCurrentUploadRate,
+                                               BandwidthStatistic.BandwidthStatisticMode.Peer);
+
+                BandwidthStatistic averageTotalMedian =
+                        new BandwidthStatistic("AverageUploadTotalMedian",
+                                               copy,
+                                               BandwidthStatisticState::getAverageUploadRate,
+                                               BandwidthStatistic.BandwidthStatisticMode.TotalMedian);
+
+                BandwidthStatistic averageTotalAccumulated =
+                        new BandwidthStatistic("AverageUploadTotalAccumulated",
+                                               copy,
+                                               BandwidthStatisticState::getAverageUploadRate,
+                                               BandwidthStatistic.BandwidthStatisticMode.TotalAccumulated);
+
+                BandwidthStatistic averagePeer =
+                        new BandwidthStatistic("AverageUploadPeer",
+                                               copy,
+                                               BandwidthStatisticState::getAverageUploadRate,
+                                               BandwidthStatistic.BandwidthStatisticMode.Peer);
+
+                statistics.add(currentTotalMedian);
+                statistics.add(currentTotalAccumulated);
+                statistics.add(currentPeer);
+                statistics.add(averageTotalMedian);
+                statistics.add(averageTotalAccumulated);
+                statistics.add(averagePeer);
             }
 
             copy = new ArrayList<>(downloadBandwidthStatisticPeers);
             if (!copy.isEmpty()) {
-                downloadBandwidthStatistic = new BandwidthStatistic(copy,
-                                                                    BandwidthStatisticState::getCurrentDownloadRate,
-                                                                    bandwidthStatisticMode);
-                statisticRunnables.add(downloadBandwidthStatistic::writeStatistic);
+                BandwidthStatistic currentTotalMedian =
+                        new BandwidthStatistic("CurrentDownloadTotalMedian",
+                                               copy,
+                                               BandwidthStatisticState::getCurrentDownloadRate,
+                                               BandwidthStatistic.BandwidthStatisticMode.TotalMedian);
+
+                BandwidthStatistic currentTotalAccumulated =
+                        new BandwidthStatistic("CurrentDownloadTotalAccumulated",
+                                               copy,
+                                               BandwidthStatisticState::getCurrentDownloadRate,
+                                               BandwidthStatistic.BandwidthStatisticMode.TotalAccumulated);
+
+                BandwidthStatistic currentPeer =
+                        new BandwidthStatistic("CurrentDownloadPeer",
+                                               copy,
+                                               BandwidthStatisticState::getCurrentDownloadRate,
+                                               BandwidthStatistic.BandwidthStatisticMode.Peer);
+
+                BandwidthStatistic averageTotalMedian =
+                        new BandwidthStatistic("AverageDownloadTotalMedian",
+                                               copy,
+                                               BandwidthStatisticState::getAverageDownloadRate,
+                                               BandwidthStatistic.BandwidthStatisticMode.TotalMedian);
+
+                BandwidthStatistic averageTotalAccumulated =
+                        new BandwidthStatistic("AverageDownloadTotalAccumulated",
+                                               copy,
+                                               BandwidthStatisticState::getAverageDownloadRate,
+                                               BandwidthStatistic.BandwidthStatisticMode.TotalAccumulated);
+
+                BandwidthStatistic averagePeer =
+                        new BandwidthStatistic("AverageDownloadPeer",
+                                               copy,
+                                               BandwidthStatisticState::getAverageDownloadRate,
+                                               BandwidthStatistic.BandwidthStatisticMode.Peer);
+
+                statistics.add(currentTotalMedian);
+                statistics.add(currentTotalAccumulated);
+                statistics.add(currentPeer);
+                statistics.add(averageTotalMedian);
+                statistics.add(averageTotalAccumulated);
+                statistics.add(averagePeer);
             }
+
+            // Add all statistics to task
+            statistics.forEach(statistic -> statisticRunnables.add(statistic::writeStatistic));
 
             // Setup task
             if (!statisticRunnables.isEmpty()) {
@@ -324,31 +414,14 @@ public abstract class AbstractPeerApp {
                 statisticTask.cancel();
             }
 
-            if (chunkCompletionStatistic != null) {
-                Path chunkCompletionStatisticPath = new File(recordsDirectory,
-                                                             algorithmType + getClass().getSimpleName() +
-                                                             "ChunkCompletion.csv").toPath();
+            // Write statistics
+            for (AbstractStatistic statistic : statistics) {
+                Path statisticPath = new File(recordsDirectory,
+                                              algorithmType + getClass().getSimpleName() +
+                                              statistic.getName() + ".csv").toPath();
 
-                logger.info(">>> [ Writing " + chunkCompletionStatisticPath + " ]");
-                Files.write(chunkCompletionStatisticPath, chunkCompletionStatistic.toString().getBytes());
-            }
-
-            if (uploadBandwidthStatistic != null) {
-                Path uploadStatisticPath = new File(recordsDirectory,
-                                                    algorithmType + getClass().getSimpleName() + "Upload" +
-                                                    bandwidthStatisticMode + ".csv").toPath();
-
-                logger.info(">>> [ Writing " + uploadStatisticPath + " ]");
-                Files.write(uploadStatisticPath, uploadBandwidthStatistic.toString().getBytes());
-            }
-
-            if (downloadBandwidthStatistic != null) {
-                Path downloadStatisticPath = new File(recordsDirectory,
-                                                      algorithmType + getClass().getSimpleName() + "Download" +
-                                                      bandwidthStatisticMode + ".csv").toPath();
-
-                logger.info(">>> [ Writing " + downloadStatisticPath + " ]");
-                Files.write(downloadStatisticPath, downloadBandwidthStatistic.toString().getBytes());
+                logger.info(">>> [ Writing " + statisticPath + " ]");
+                Files.write(statisticPath, statistic.toString().getBytes());
             }
 
             Duration duration = Duration.between(timeStamp, Instant.now());

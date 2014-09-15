@@ -22,17 +22,6 @@ public final class BandwidthStatistic extends AbstractStatistic {
     private final Function<BandwidthStatisticState, Number> bandwidthMapper;
     private final BandwidthStatisticMode bandwidthStatisticMode;
 
-    public BandwidthStatistic(Collection<Peer> peers,
-                              Function<BandwidthStatisticState, Number> bandwidthMapper,
-                              BandwidthStatisticMode bandwidthStatisticMode) {
-        Objects.requireNonNull(peers);
-        Objects.requireNonNull(bandwidthMapper);
-        Objects.requireNonNull(bandwidthStatisticMode);
-        this.peers = peers;
-        this.bandwidthMapper = bandwidthMapper;
-        this.bandwidthStatisticMode = bandwidthStatisticMode;
-    }
-
     private void writeHeader() {
         csv.writeElement("Time");
 
@@ -79,5 +68,23 @@ public final class BandwidthStatistic extends AbstractStatistic {
         }
 
         csv.writeLine();
+    }
+
+    public BandwidthStatistic(String name,
+                              Collection<Peer> peers,
+                              Function<BandwidthStatisticState, Number> bandwidthMapper,
+                              BandwidthStatisticMode bandwidthStatisticMode) {
+        super(name);
+        Objects.requireNonNull(peers);
+        Objects.requireNonNull(bandwidthMapper);
+        Objects.requireNonNull(bandwidthStatisticMode);
+        this.peers = peers;
+        this.bandwidthMapper = bandwidthMapper;
+        this.bandwidthStatisticMode = bandwidthStatisticMode;
+    }
+
+
+    public BandwidthStatisticMode getBandwidthStatisticMode() {
+        return bandwidthStatisticMode;
     }
 }

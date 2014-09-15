@@ -3,6 +3,7 @@ package de.probst.ba.core.net.peer.peers.netty.handlers.datainfo;
 import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.Seeder;
+import de.probst.ba.core.net.peer.peers.netty.NettyConfig;
 import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.messages.DataInfoMessage;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
@@ -17,7 +18,6 @@ import java.util.concurrent.TimeUnit;
 
 public final class AnnounceDataInfoHandler extends ChannelHandlerAdapter implements Runnable {
 
-    public static final long ANNOUNCE_DELAY = 250;
 
     private final Logger logger = LoggerFactory.getLogger(AnnounceDataInfoHandler.class);
 
@@ -28,7 +28,7 @@ public final class AnnounceDataInfoHandler extends ChannelHandlerAdapter impleme
     private Map<String, DataInfo> lastDataInfo = Collections.emptyMap();
 
     private void schedule() {
-        timer = ctx.channel().eventLoop().schedule(this, ANNOUNCE_DELAY, TimeUnit.MILLISECONDS);
+        timer = ctx.channel().eventLoop().schedule(this, NettyConfig.getAnnounceDelay(), TimeUnit.MILLISECONDS);
     }
 
     private void cancel() {

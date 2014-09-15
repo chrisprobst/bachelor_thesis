@@ -67,11 +67,12 @@ public final class BandwidthStatisticHandler extends ChannelHandlerAdapter {
         synchronized (currentWritten) {
             Instant now = Instant.now();
             Duration duration = Duration.between(startCurrentWrittenTimeStamp, now);
-            startCurrentWrittenTimeStamp = now;
-
             double seconds = duration.toMillis() / 1000.0;
             long rate = seconds > 0 ? (long) (currentWritten.get() / seconds) : 0;
+
+            startCurrentWrittenTimeStamp = now;
             currentWritten.set(0);
+
             return rate;
         }
     }
@@ -94,11 +95,12 @@ public final class BandwidthStatisticHandler extends ChannelHandlerAdapter {
         synchronized (currentRead) {
             Instant now = Instant.now();
             Duration duration = Duration.between(startCurrentReadTimeStamp, now);
-            startCurrentReadTimeStamp = now;
-
             double seconds = duration.toMillis() / 1000.0;
             long rate = seconds > 0 ? (long) (currentRead.get() / seconds) : 0;
+
+            startCurrentReadTimeStamp = now;
             currentRead.set(0);
+
             return rate;
         }
     }

@@ -106,6 +106,11 @@ public final class NettyLeecher extends AbstractLeecher {
         }
     }
 
+    @Override
+    protected BandwidthStatisticState createBandwidthStatisticState() {
+        return leecherBandwidthStatisticHandler.getBandwidthStatisticState();
+    }
+
     private Bootstrap initLeecherBootstrap() {
         return new Bootstrap().group(leecherEventLoopGroup)
                               .channel(leecherChannelClass)
@@ -171,11 +176,6 @@ public final class NettyLeecher extends AbstractLeecher {
 
         // Set init future
         getInitFuture().complete(this);
-    }
-
-    @Override
-    public BandwidthStatisticState getBandwidthStatisticState() {
-        return leecherBandwidthStatisticHandler.getBandwidthStatisticState();
     }
 
     @Override
