@@ -15,6 +15,7 @@ import de.probst.ba.core.net.peer.handler.handlers.RecordPeerHandler;
 import de.probst.ba.core.net.peer.peers.Peers;
 import de.probst.ba.core.net.peer.state.BandwidthStatisticState;
 import de.probst.ba.core.statistic.BandwidthStatistic;
+import de.probst.ba.core.statistic.ChunkCompletionStatistic;
 import de.probst.ba.core.util.concurrent.CancelableRunnable;
 import de.probst.ba.core.util.concurrent.Task;
 import de.probst.ba.core.util.io.IOUtil;
@@ -34,6 +35,8 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -129,15 +132,16 @@ public abstract class AbstractPeerApp {
 
     protected final Queue<Peer> uploadBandwidthStatisticPeers = new ConcurrentLinkedQueue<>();
     protected final Queue<Peer> downloadBandwidthStatisticPeers = new ConcurrentLinkedQueue<>();
+    protected final Queue<Peer> chunkCompletionStatisticPeers = new ConcurrentLinkedQueue<>();
     protected final Queue<Peer> dataBaseUpdatePeers = new ConcurrentLinkedQueue<>();
     private final BandwidthStatistic.BandwidthStatisticMode bandwidthStatisticMode =
             BandwidthStatistic.BandwidthStatisticMode.TotalMedian;
     protected Logger logger;
     protected RecordPeerHandler recordPeerHandler;
     protected BandwidthStatistic uploadBandwidthStatistic;
-    protected CancelableRunnable uploadBandwidthStatisticTask;
     protected BandwidthStatistic downloadBandwidthStatistic;
-    protected CancelableRunnable downloadBandwidthStatisticTask;
+    protected ChunkCompletionStatistic chunkCompletionStatistic;
+    protected CancelableRunnable statisticTask;
     protected DataInfo[] dataInfo;
     protected Instant startTime;
 
@@ -198,17 +202,22 @@ public abstract class AbstractPeerApp {
         // Start stats
         if (recordStats) {
 
+            List<Runnable> statisticRunnables = new LinkedList<>();
 
-            Collection<Peer> copy = new ArrayList<>(uploadBandwidthStatisticPeers);
+            Collection<Peer> copy = new ArrayList<>(chunkCompletionStatisticPeers);
+            if (dataInfo != null && dataInfo.length > 0 && !copy.isEmpty()) {
+                chunkCompletionStatistic = new ChunkCompletionStatistic(copy,
+                                                                        dataInfo[0].getHash(),
+                                                                        false);
+                statisticRunnables.add(chunkCompletionStatistic::writeStatistic);
+            }
+
+            copy = new ArrayList<>(uploadBandwidthStatisticPeers);
             if (!copy.isEmpty()) {
                 uploadBandwidthStatistic = new BandwidthStatistic(copy,
                                                                   BandwidthStatisticState::getCurrentUploadRate,
                                                                   bandwidthStatisticMode);
-                uploadBandwidthStatisticTask = new Task(t -> {
-                    uploadBandwidthStatistic.writeStatistic();
-                    t.run();
-                }, runnable -> scheduledExecutorService.schedule(runnable, STATISTIC_INTERVAL, TimeUnit.MILLISECONDS));
-                uploadBandwidthStatisticTask.run();
+                statisticRunnables.add(uploadBandwidthStatistic::writeStatistic);
             }
 
             copy = new ArrayList<>(downloadBandwidthStatisticPeers);
@@ -216,11 +225,16 @@ public abstract class AbstractPeerApp {
                 downloadBandwidthStatistic = new BandwidthStatistic(copy,
                                                                     BandwidthStatisticState::getCurrentDownloadRate,
                                                                     bandwidthStatisticMode);
-                downloadBandwidthStatisticTask = new Task(t -> {
-                    downloadBandwidthStatistic.writeStatistic();
-                    t.run();
+                statisticRunnables.add(downloadBandwidthStatistic::writeStatistic);
+            }
+
+            // Setup task
+            if (!statisticRunnables.isEmpty()) {
+                statisticTask = new Task(task -> {
+                    statisticRunnables.forEach(Runnable::run);
+                    task.run();
                 }, runnable -> scheduledExecutorService.schedule(runnable, STATISTIC_INTERVAL, TimeUnit.MILLISECONDS));
-                downloadBandwidthStatisticTask.run();
+                statisticTask.run();
             }
         }
 
@@ -257,13 +271,25 @@ public abstract class AbstractPeerApp {
             logger.info("[== Writing stats now ==]");
             Instant timeStamp = Instant.now();
 
+            if (statisticTask != null) {
+                statisticTask.cancel();
+            }
+
+            if (chunkCompletionStatistic != null) {
+                Path chunkCompletionStatisticPath = new File(recordsDirectory,
+                                                             algorithmType + getClass().getSimpleName() +
+                                                             "ChunkCompletion.csv").toPath();
+
+                logger.info("[== Writing " + chunkCompletionStatisticPath + " ==]");
+                Files.write(chunkCompletionStatisticPath, chunkCompletionStatistic.toString().getBytes());
+            }
+
             if (uploadBandwidthStatistic != null) {
                 Path uploadStatisticPath = new File(recordsDirectory,
                                                     algorithmType + getClass().getSimpleName() + "Upload" +
                                                     bandwidthStatisticMode + ".csv").toPath();
 
                 logger.info("[== Writing " + uploadStatisticPath + " ==]");
-                uploadBandwidthStatisticTask.cancel();
                 Files.write(uploadStatisticPath, uploadBandwidthStatistic.toString().getBytes());
             }
 
@@ -273,7 +299,6 @@ public abstract class AbstractPeerApp {
                                                       bandwidthStatisticMode + ".csv").toPath();
 
                 logger.info("[== Writing " + downloadStatisticPath + " ==]");
-                downloadBandwidthStatisticTask.cancel();
                 Files.write(downloadStatisticPath, downloadBandwidthStatistic.toString().getBytes());
             }
 

@@ -104,6 +104,7 @@ public class Benchmark extends AbstractPeerApp {
             Seeder seeder = tuple.first();
             Leecher leecher = tuple.second();
 
+            chunkCompletionStatisticPeers.add(leecher);
             downloadBandwidthStatisticPeers.add(leecher);
             uploadBandwidthStatisticPeers.add(seeder);
             peerQueue.add(seeder);
