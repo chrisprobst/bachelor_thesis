@@ -66,7 +66,7 @@ public abstract class AbstractPeerApp {
 
     @Parameter(names = {"-bc", "--binary-codec"},
                description = "Use a binary codec for the meta data instead of using refs " +
-                             "(This option is implicitly true if non-local is used)")
+                             "(This option is implicitly true if non-local transport is used)")
     protected Boolean binaryCodec = false;
 
     @Parameter(names = {"--help"},
@@ -93,8 +93,9 @@ public abstract class AbstractPeerApp {
     protected Integer parts = 1;
 
     @Parameter(names = {"-ms", "--meta-size"},
-               description = "The size of the meta data expressed in percentage relative to the chunk size(" +
-                             PercentageValidator.MSG + ")",
+               description =
+                       "The simulated size of the meta data expressed in percentage relative to the chunk size (" +
+                       PercentageValidator.MSG + ") (Ignored if binary codec is activated)",
                validateValueWith = PercentageValidator.class)
     protected Double metaDataSize = 0.0;
 
