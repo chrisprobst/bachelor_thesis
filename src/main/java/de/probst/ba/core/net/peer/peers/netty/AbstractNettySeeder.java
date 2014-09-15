@@ -49,34 +49,20 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
         @Override
         public void initChannel(Channel ch) {
 
-            // Build pipeline
-            ch.pipeline().addLast(
+            // Statistic & Traffic
+            ch.pipeline().addLast(seederBandwidthStatisticHandler,
+                                  new MessageQueueHandler(leastWrittenFirstTrafficShaper, leastReadFirstTrafficShaper));
 
-                    // Statistic handler
-                    seederBandwidthStatisticHandler,
+            // Codec pipeline
+            NettyConfig.getCodecPipeline().forEach(ch.pipeline()::addLast);
 
-                    // Traffic shaper
-                    new MessageQueueHandler(leastWrittenFirstTrafficShaper, leastReadFirstTrafficShaper),
-
-                    // Codec stuff
-                    //new ComplexCodec(),
-                    //new LengthFieldBasedFrameDecoder(1024 * 1024, 0, 4, 0, 4),
-                    //new LengthFieldPrepender(4),
-                    //new SimpleCodec(),
-
-                    // Logging
-                    seederLogHandler,
-
-                    // Group
-                    seederChannelGroupHandler,
-
-                    // Chunked uploads
-                    new ChunkedWriteHandler(),
-
-                    // Logic
-                    new DiscoverSocketAddressHandler(AbstractNettySeeder.this, getSeederChannelGroup()),
-                    new UploadHandler(AbstractNettySeeder.this, allowLock),
-                    new AnnounceDataInfoHandler(AbstractNettySeeder.this));
+            // Log & Logic
+            ch.pipeline().addLast(seederLogHandler,
+                                  seederChannelGroupHandler,
+                                  new ChunkedWriteHandler(),
+                                  new DiscoverSocketAddressHandler(AbstractNettySeeder.this, getSeederChannelGroup()),
+                                  new UploadHandler(AbstractNettySeeder.this, allowLock),
+                                  new AnnounceDataInfoHandler(AbstractNettySeeder.this));
         }
     };
 

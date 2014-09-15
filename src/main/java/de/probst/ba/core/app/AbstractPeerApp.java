@@ -13,6 +13,8 @@ import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.net.peer.Peer;
 import de.probst.ba.core.net.peer.handler.handlers.RecordPeerHandler;
 import de.probst.ba.core.net.peer.peers.Peers;
+import de.probst.ba.core.net.peer.peers.netty.NettyConfig;
+import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.TrafficUtil;
 import de.probst.ba.core.net.peer.state.BandwidthStatisticState;
 import de.probst.ba.core.statistic.BandwidthStatistic;
 import de.probst.ba.core.statistic.ChunkCompletionStatistic;
@@ -58,9 +60,14 @@ public abstract class AbstractPeerApp {
     protected Peers.PeerType peerType = Peers.PeerType.TCP;
 
     @Parameter(names = {"-da", "--distribution-algorithm"},
-               description = "Distribution algorithm type [ChunkedSwarm, Logarithmic]",
+               description = "Distribution algorithm type [SuperSeederChunkedSwarm, ChunkedSwarm, Logarithmic]",
                converter = AlgorithmTypeConverter.class)
     protected Algorithms.AlgorithmType algorithmType = Algorithms.AlgorithmType.ChunkedSwarm;
+
+    @Parameter(names = {"-bc", "--binary-codec"},
+               description = "Use a binary codec for the meta data instead of using refs " +
+                             "(This option is implicitly true if non-local is used)")
+    protected Boolean binaryCodec = false;
 
     @Parameter(names = {"--help"},
                description = "Show usage")
@@ -84,6 +91,12 @@ public abstract class AbstractPeerApp {
                description = "(Experimental) The number of parts (" + PartsValidator.MSG + ")",
                validateValueWith = PartsValidator.class)
     protected Integer parts = 1;
+
+    @Parameter(names = {"-ms", "--meta-size"},
+               description = "The size of the meta data expressed in percentage relative to the chunk size(" +
+                             PercentageValidator.MSG + ")",
+               validateValueWith = PercentageValidator.class)
+    protected Double metaDataSize = 0.0;
 
     @Parameter(names = {"-c", "--chunk-count"},
                description = "The number of chunks (" + ChunkCountValidator.MSG + ")",
@@ -127,6 +140,16 @@ public abstract class AbstractPeerApp {
             return false;
         }
 
+        if (!binaryCodec && peerType != Peers.PeerType.Local) {
+            System.out.println("Binary codec implicitly activated (Non-local transport is used)");
+            binaryCodec = true;
+        }
+
+        if (binaryCodec && metaDataSize > 0.0) {
+            System.out.println("Ignoring meta data size (Binary codec is activated)");
+            metaDataSize = 0.0;
+        }
+
         return true;
     }
 
@@ -145,6 +168,10 @@ public abstract class AbstractPeerApp {
     protected DataInfo[] dataInfo;
     protected Instant startTime;
 
+    protected SeederDistributionAlgorithm getSeederOnlyDistributionAlgorithm() {
+        return Algorithms.getSeederOnlyDistributionAlgorithm(algorithmType);
+    }
+
     protected SeederDistributionAlgorithm getSeederDistributionAlgorithm() {
         return Algorithms.getSeederDistributionAlgorithm(algorithmType);
     }
@@ -158,11 +185,31 @@ public abstract class AbstractPeerApp {
         logger = LoggerFactory.getLogger(getClass());
     }
 
+    protected void setupConfig() {
+        TrafficUtil.setDefaultMessageSize((long) (totalSize / chunkCount * (metaDataSize) / 100));
+        NettyConfig.setUseCodec(binaryCodec);
+
+        logger.info(">>> [ Config ]");
+        logger.info(">>> Peer type:                 " + peerType);
+        logger.info(">>> Algorithm type:            " + algorithmType);
+        logger.info(">>> Simulated meta data size:  " + TrafficUtil.getDefaultMessageSize() + " bytes");
+        logger.info(">>> Using codec:               " + NettyConfig.isUseCodec());
+        logger.info(">>> Total size:                " + totalSize);
+        logger.info(">>> Chunk count:               " + chunkCount);
+        logger.info(">>> Upload rate:               " + uploadRate);
+        logger.info(">>> Download rate:             " + downloadRate);
+        logger.info(">>> Parts:                     " + parts);
+    }
+
     protected void setupRecords() {
         // Setup events
         if (recordEvents) {
             recordPeerHandler = new RecordPeerHandler();
         }
+
+        logger.info(">>> Record directory:          " + recordsDirectory.getAbsolutePath());
+        logger.info(">>> Record events:             " + recordEvents);
+        logger.info(">>> Record stats:              " + recordStats);
     }
 
     protected void setupDataInfo() {
@@ -186,6 +233,7 @@ public abstract class AbstractPeerApp {
 
     protected void setup() throws Exception {
         setupVerbosity();
+        setupConfig();
         setupRecords();
         setupDataInfo();
         setupPeerHandlers();
@@ -194,7 +242,7 @@ public abstract class AbstractPeerApp {
 
     protected void setupStartTime() {
         startTime = Instant.now();
-        logger.info("[== Starting " + getClass().getSimpleName() + " ==]");
+        logger.info(">>> [ Starting " + getClass().getSimpleName() + " ]");
     }
 
     protected void setupStartRecords(ScheduledExecutorService scheduledExecutorService) {
@@ -255,8 +303,8 @@ public abstract class AbstractPeerApp {
 
     protected void setupStopTime() {
         Duration duration = Duration.between(startTime, Instant.now());
-        logger.info("[== Completed " + getClass().getSimpleName() + " in " + (duration.toMillis() / 1000.0) +
-                    " seconds ==]");
+        logger.info(">>> [ Completed " + getClass().getSimpleName() + " in " + (duration.toMillis() / 1000.0) +
+                    " seconds ]");
     }
 
     protected void setupStopRecords() throws IOException {
@@ -268,7 +316,7 @@ public abstract class AbstractPeerApp {
         // Stop stats
         if (recordStats) {
             // CSV
-            logger.info("[== Writing stats now ==]");
+            logger.info(">>> [ Writing stats now ]");
             Instant timeStamp = Instant.now();
 
             if (statisticTask != null) {
@@ -280,7 +328,7 @@ public abstract class AbstractPeerApp {
                                                              algorithmType + getClass().getSimpleName() +
                                                              "ChunkCompletion.csv").toPath();
 
-                logger.info("[== Writing " + chunkCompletionStatisticPath + " ==]");
+                logger.info(">>> [ Writing " + chunkCompletionStatisticPath + " ]");
                 Files.write(chunkCompletionStatisticPath, chunkCompletionStatistic.toString().getBytes());
             }
 
@@ -289,7 +337,7 @@ public abstract class AbstractPeerApp {
                                                     algorithmType + getClass().getSimpleName() + "Upload" +
                                                     bandwidthStatisticMode + ".csv").toPath();
 
-                logger.info("[== Writing " + uploadStatisticPath + " ==]");
+                logger.info(">>> [ Writing " + uploadStatisticPath + " ]");
                 Files.write(uploadStatisticPath, uploadBandwidthStatistic.toString().getBytes());
             }
 
@@ -298,27 +346,27 @@ public abstract class AbstractPeerApp {
                                                       algorithmType + getClass().getSimpleName() + "Download" +
                                                       bandwidthStatisticMode + ".csv").toPath();
 
-                logger.info("[== Writing " + downloadStatisticPath + " ==]");
+                logger.info(">>> [ Writing " + downloadStatisticPath + " ]");
                 Files.write(downloadStatisticPath, downloadBandwidthStatistic.toString().getBytes());
             }
 
             Duration duration = Duration.between(timeStamp, Instant.now());
-            logger.info("[== Done in: " + (duration.toMillis() / 1000.0) + " seconds ==]");
+            logger.info(">>> [ Done in: " + (duration.toMillis() / 1000.0) + " seconds ]");
         }
 
         // Save events
         if (recordEvents) {
 
             // Get records and serialize
-            logger.info("[== Writing events now ==]");
+            logger.info(">>> [ Writing events now ]");
             Instant timeStamp = Instant.now();
 
             File file = new File(recordsDirectory, algorithmType + getClass().getSimpleName() + "Events.dat");
-            logger.info("[== Writing " + file + " ==]");
+            logger.info(">>> [ Writing " + file + " ]");
             IOUtil.serialize(file, recordPeerHandler.sortAndGetRecords());
 
             Duration duration = Duration.between(timeStamp, Instant.now());
-            logger.info("[== Done in: " + (duration.toMillis() / 1000.0) + " seconds ==]");
+            logger.info(">>> [ Done in: " + (duration.toMillis() / 1000.0) + " seconds ]");
         }
     }
 
@@ -478,6 +526,20 @@ public abstract class AbstractPeerApp {
 
         @Override
         public void validate(String name, Integer value) throws ParameterException {
+            if (value < MIN || value > MAX) {
+                throw new ParameterException("Parameter " + name + ": " + MSG + " (found: " + value + ")");
+            }
+        }
+    }
+
+    public static class PercentageValidator implements IValueValidator<Double> {
+
+        public static final double MIN = 0;
+        public static final double MAX = 100;
+        public static final String MSG = "Must be between " + MIN + " and " + MAX;
+
+        @Override
+        public void validate(String name, Double value) throws ParameterException {
             if (value < MIN || value > MAX) {
                 throw new ParameterException("Parameter " + name + ": " + MSG + " (found: " + value + ")");
             }

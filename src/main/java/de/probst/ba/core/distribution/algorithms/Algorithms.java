@@ -2,6 +2,7 @@ package de.probst.ba.core.distribution.algorithms;
 
 import de.probst.ba.core.distribution.LeecherDistributionAlgorithm;
 import de.probst.ba.core.distribution.SeederDistributionAlgorithm;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 /**
  * Created by chrisprobst on 01.09.14.
@@ -9,21 +10,42 @@ import de.probst.ba.core.distribution.SeederDistributionAlgorithm;
 public final class Algorithms {
 
     public enum AlgorithmType {
-        Logarithmic, ChunkedSwarm
+        SuperSeederChunkedSwarm, ChunkedSwarm, Logarithmic,
     }
 
     private Algorithms() {
     }
 
     public static LeecherDistributionAlgorithm getLeecherDistributionAlgorithm(AlgorithmType algorithmType) {
-        return algorithmType == AlgorithmType.Logarithmic ?
-               new OrderedLogarithmicLeecherDistributionAlgorithm() :
-               new OrderedChunkedSwarmLeecherDistributionAlgorithm();
+        switch (algorithmType) {
+            case SuperSeederChunkedSwarm:
+            case ChunkedSwarm:
+                return new OrderedChunkedSwarmLeecherDistributionAlgorithm();
+            case Logarithmic:
+                new OrderedLogarithmicLeecherDistributionAlgorithm();
+            default:
+                throw new NotImplementedException();
+        }
     }
 
     public static SeederDistributionAlgorithm getSeederDistributionAlgorithm(AlgorithmType algorithmType) {
-        return algorithmType == AlgorithmType.Logarithmic ?
-               new LimitedSeederDistributionAlgorithm(1) :
-               new DefaultSeederDistributionAlgorithm();
+        switch (algorithmType) {
+            case SuperSeederChunkedSwarm:
+            case ChunkedSwarm:
+                return new DefaultSeederDistributionAlgorithm();
+            case Logarithmic:
+                return new LimitedSeederDistributionAlgorithm(1);
+            default:
+                throw new NotImplementedException();
+        }
+    }
+
+    public static SeederDistributionAlgorithm getSeederOnlyDistributionAlgorithm(AlgorithmType algorithmType) {
+        switch (algorithmType) {
+            case SuperSeederChunkedSwarm:
+                return new SuperSeederDistributionAlgorithm();
+            default:
+                return getSeederDistributionAlgorithm(algorithmType);
+        }
     }
 }

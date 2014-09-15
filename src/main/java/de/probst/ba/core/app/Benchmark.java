@@ -1,7 +1,6 @@
 package de.probst.ba.core.app;
 
 import com.beust.jcommander.Parameter;
-import de.probst.ba.core.distribution.algorithms.SuperSeederDistributionAlgorithm;
 import de.probst.ba.core.media.database.databases.DataBases;
 import de.probst.ba.core.net.peer.Leecher;
 import de.probst.ba.core.net.peer.Peer;
@@ -72,8 +71,7 @@ public class Benchmark extends AbstractPeerApp {
                                          downloadRate,
                                          getSeederSocketAddress(i),
                                          DataBases.fakeDataBase(),
-                                         new SuperSeederDistributionAlgorithm(),
-                                         //getSeederDistributionAlgorithm(),
+                                         getSeederOnlyDistributionAlgorithm(),
                                          Optional.ofNullable(recordPeerHandler),
                                          Optional.of(eventLoopGroup)).getInitFuture().get();
 
@@ -121,6 +119,7 @@ public class Benchmark extends AbstractPeerApp {
     }
 
     private void logTransferInfo() {
+        logger.info(">>> [ Transfer info ]");
         if (uploadRate > 0) {
             // Setup status flags
             double timePerTransfer = totalSize / uploadRate;
@@ -136,12 +135,12 @@ public class Benchmark extends AbstractPeerApp {
                     timePerTransfer * Math.ceil(Math.log(1 + leechers / (double) seeders) / Math.log(2));
 
             // A small info for all waiters
-            logger.info("[== One transfer needs approx.: " + timePerTransfer + " seconds ==]");
-            logger.info("[== A dumb algorithm needs approx.: " + dumbTime + " seconds ==]");
-            logger.info("[== A Logarithmic algorithm needs approx.: " + logarithmicTime + " seconds ==]");
-            logger.info("[== A ChunkedSwarm algorithm needs approx.: " + chunkSwarmTime + " seconds ==]");
+            logger.info(">>> One transfer needs approx.:                            " + timePerTransfer + " seconds");
+            logger.info(">>> A dumb algorithm needs approx.:                        " + dumbTime + " seconds");
+            logger.info(">>> A Logarithmic algorithm needs approx.:                 " + logarithmicTime + " seconds");
+            logger.info(">>> A (SuperSeeder)ChunkedSwarm algorithm needs approx.:   " + chunkSwarmTime + " seconds");
         } else {
-            logger.info("[== Cannot estimate time because upload rate is infinity (0) ==]");
+            logger.info(">>> Cannot estimate time because upload rate is infinity (0)");
         }
     }
 
@@ -153,7 +152,7 @@ public class Benchmark extends AbstractPeerApp {
         Thread.sleep(3000);
 
         Scanner scanner = new Scanner(System.in);
-        logger.info("[== Press [ENTER] to start benchmark ==]");
+        logger.warn(">>> [ Press [ENTER] to start benchmark ]");
         if (scanner.hasNextLine()) {
             scanner.nextLine();
         } else {

@@ -6,6 +6,9 @@ import io.netty.buffer.ByteBuf;
  * Created by chrisprobst on 13.09.14.
  */
 public final class TrafficUtil {
+
+    private static volatile long defaultMessageSize;
+
     private TrafficUtil() {
 
     }
@@ -16,7 +19,15 @@ public final class TrafficUtil {
         } else if (msg instanceof byte[]) {
             return ((byte[]) msg).length;
         } else {
-            return 0;
+            return getDefaultMessageSize();
         }
+    }
+
+    public static long getDefaultMessageSize() {
+        return defaultMessageSize;
+    }
+
+    public static void setDefaultMessageSize(long defaultMessageSize) {
+        TrafficUtil.defaultMessageSize = defaultMessageSize;
     }
 }

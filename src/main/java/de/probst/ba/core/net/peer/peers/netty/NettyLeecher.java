@@ -58,30 +58,20 @@ public final class NettyLeecher extends AbstractLeecher {
 
         @Override
         public void initChannel(Channel ch) {
-            ch.pipeline().addLast(
 
-                    // Statistic handler
-                    leecherBandwidthStatisticHandler,
+            // Statistic & Traffic
+            ch.pipeline().addLast(leecherBandwidthStatisticHandler,
+                                  new MessageQueueHandler(leastWrittenFirstTrafficShaper, leastReadFirstTrafficShaper));
 
-                    // Traffic shaper
-                    new MessageQueueHandler(leastWrittenFirstTrafficShaper, leastReadFirstTrafficShaper),
+            // Codec pipeline
+            NettyConfig.getCodecPipeline().forEach(ch.pipeline()::addLast);
 
-                    // Codec stuff
-                    //new ComplexCodec(),
-                    //new LengthFieldBasedFrameDecoder(1024 * 1024, 0, 4, 0, 4),
-                    //new LengthFieldPrepender(4),
-                    //new SimpleCodec(),
-
-                    // Logging
-                    leecherLogHandler,
-
-                    // Group
-                    leecherChannelGroupHandler,
-
-                    // Logic
-                    new AnnounceSocketAddressHandler(NettyLeecher.this, announceSocketAddress),
-                    new DownloadHandler(NettyLeecher.this),
-                    new CollectDataInfoHandler(NettyLeecher.this));
+            // Log & Logic
+            ch.pipeline().addLast(leecherLogHandler,
+                                  leecherChannelGroupHandler,
+                                  new AnnounceSocketAddressHandler(NettyLeecher.this, announceSocketAddress),
+                                  new DownloadHandler(NettyLeecher.this),
+                                  new CollectDataInfoHandler(NettyLeecher.this));
         }
     };
 
