@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -54,6 +55,7 @@ public final class NettyLeecher extends AbstractLeecher {
     private final Bootstrap leecherBootstrap;
     private final Class<? extends Channel> leecherChannelClass;
     private final ConcurrentMap<SocketAddress, Boolean> connections = new ConcurrentHashMap<>();
+    private final Map<SocketAddress, Boolean> connectionsView = Collections.unmodifiableMap(connections);
     private final ChannelInitializer<Channel> leecherChannelInitializer = new ChannelInitializer<Channel>() {
 
         @Override
@@ -210,6 +212,11 @@ public final class NettyLeecher extends AbstractLeecher {
         }
 
         return connectionFuture;
+    }
+
+    @Override
+    public Map<SocketAddress, Boolean> getConnections() {
+        return connectionsView;
     }
 
     @Override

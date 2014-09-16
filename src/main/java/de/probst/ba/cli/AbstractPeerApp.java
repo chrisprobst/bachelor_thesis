@@ -116,6 +116,12 @@ public abstract class AbstractPeerApp {
                validateValueWith = TransferRateValidator.class)
     protected Integer uploadRate = 1_000_000;
 
+    @Parameter(names = {"-su", "--super-upload-rate"},
+               description = "The super seeder upload rate in bytes per second, " +
+                             "must be less-equal than the download rate (" + TransferRateValidator.MSG + ")",
+               validateValueWith = TransferRateValidator.class)
+    protected Integer superUploadRate = 1_000_000;
+
     @Parameter(names = {"-d", "--download-rate"},
                description = "The download rate in bytes per second, " +
                              "must greater-equal than the upload rate (" + TransferRateValidator.MSG + ")",
@@ -171,8 +177,8 @@ public abstract class AbstractPeerApp {
     protected DataInfo[] dataInfo;
     protected Instant startTime;
 
-    protected SeederDistributionAlgorithm getSeederOnlyDistributionAlgorithm() {
-        return Algorithms.getSeederOnlyDistributionAlgorithm(algorithmType);
+    protected SeederDistributionAlgorithm getSuperSeederDistributionAlgorithm() {
+        return Algorithms.getSuperSeederOnlyDistributionAlgorithm(algorithmType);
     }
 
     protected SeederDistributionAlgorithm getSeederDistributionAlgorithm() {
@@ -200,6 +206,7 @@ public abstract class AbstractPeerApp {
         logger.info(">>> Total size:                " + totalSize);
         logger.info(">>> Chunk count:               " + chunkCount);
         logger.info(">>> Upload rate:               " + uploadRate);
+        logger.info(">>> Super seeder upload rate:  " + superUploadRate);
         logger.info(">>> Download rate:             " + downloadRate);
         logger.info(">>> Parts:                     " + parts);
     }

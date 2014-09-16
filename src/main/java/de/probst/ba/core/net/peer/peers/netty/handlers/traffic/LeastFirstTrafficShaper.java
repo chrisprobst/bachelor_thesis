@@ -4,6 +4,7 @@ import de.probst.ba.core.util.concurrent.CancelableRunnable;
 import de.probst.ba.core.util.concurrent.LeakyBucket;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -55,6 +56,9 @@ public final class LeastFirstTrafficShaper implements Consumer<CancelableRunnabl
         // Get all message queue handlers
         List<MessageQueueHandler> messageQueueHandlerList =
                 messageQueueHandlers.get().stream().filter(handler -> handler != null).collect(Collectors.toList());
+
+        // Shuffle all message queue handlers
+        Collections.shuffle(messageQueueHandlerList);
 
         // Initialize all handlers
         startConsumer.ifPresent(messageQueueHandlerList::forEach);

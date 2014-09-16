@@ -17,9 +17,10 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Instant;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Queue;
-import java.util.Scanner;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -38,6 +39,7 @@ public class Benchmark extends AbstractPeerApp {
     private Integer leechers = 7;
 
     private final Queue<Peer> peerQueue = new ConcurrentLinkedQueue<>();
+    private final Queue<Leecher> leecherQueue = new ConcurrentLinkedQueue<>();
     private final Queue<Peer> seederQueue = new ConcurrentLinkedQueue<>();
     private final EventLoopGroup eventLoopGroup = new NioEventLoopGroup();
     private DataInfoCompletionHandler dataInfoCompletionHandler;
@@ -71,11 +73,11 @@ public class Benchmark extends AbstractPeerApp {
         // Setup all seeders
         for (int i = 0; i < seeders; i++) {
             Seeder seeder = Peers.seeder(peerType,
-                                         uploadRate,
+                                         superUploadRate,
                                          downloadRate,
                                          getSeederSocketAddress(i),
                                          DataBases.fakeDataBase(),
-                                         getSeederOnlyDistributionAlgorithm(),
+                                         getSuperSeederDistributionAlgorithm(),
                                          Optional.ofNullable(recordPeerHandler),
                                          Optional.of(eventLoopGroup)).getInitFuture().get();
 
@@ -111,6 +113,7 @@ public class Benchmark extends AbstractPeerApp {
             uploadBandwidthStatisticPeers.add(seeder);
             peerQueue.add(seeder);
             peerQueue.add(leecher);
+            leecherQueue.add(leecher);
 
             seederQueue.stream()
                        .map(Peer::getPeerId)
@@ -148,20 +151,34 @@ public class Benchmark extends AbstractPeerApp {
         }
     }
 
+    private void waitForConnections() throws InterruptedException {
+
+        // The expected number of connections
+        int expectedConnections = leechers * (leechers - 1 + seeders);
+        logger.info(">>> [ Waiting for " + expectedConnections + " connections ]");
+        while (true) {
+            long activeConnections = leecherQueue.stream()
+                                                 .map(Leecher::getConnections)
+                                                 .map(Map::entrySet)
+                                                 .flatMap(Set::stream)
+                                                 .filter(Map.Entry::getValue)
+                                                 .count();
+
+            if (activeConnections != expectedConnections) {
+                logger.info(">>> Found: " + activeConnections);
+                Thread.sleep(500);
+            } else {
+                break;
+            }
+        }
+        logger.info(">>> [ All connections established ]");
+    }
+
     @Override
     protected void start() throws Exception {
         setup();
         logTransferInfo();
-
-        Thread.sleep(3000);
-
-        Scanner scanner = new Scanner(System.in);
-        logger.warn(">>> [ Press [ENTER] to start benchmark ]");
-        if (scanner.hasNextLine()) {
-            scanner.nextLine();
-        } else {
-            return;
-        }
+        waitForConnections();
 
         setupStart(eventLoopGroup);
         dataInfoCompletionHandler.getCountDownLatch().await();

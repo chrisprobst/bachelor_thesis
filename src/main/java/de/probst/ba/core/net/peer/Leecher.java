@@ -5,6 +5,7 @@ import de.probst.ba.core.net.peer.handler.LeecherPeerHandler;
 import de.probst.ba.core.net.peer.state.LeecherDataInfoState;
 
 import java.net.SocketAddress;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -23,6 +24,8 @@ public interface Leecher extends Peer {
      * @return
      */
     CompletableFuture<Leecher> connect(SocketAddress socketAddress);
+
+    Map<SocketAddress, Boolean> getConnections();
 
     /**
      * This method runs the distribution algorithm

@@ -40,7 +40,7 @@ public final class Algorithms {
         }
     }
 
-    public static SeederDistributionAlgorithm getSeederOnlyDistributionAlgorithm(AlgorithmType algorithmType) {
+    public static SeederDistributionAlgorithm getSuperSeederOnlyDistributionAlgorithm(AlgorithmType algorithmType) {
         switch (algorithmType) {
             case SuperSeederChunkedSwarm:
                 return new SuperSeederDistributionAlgorithm();

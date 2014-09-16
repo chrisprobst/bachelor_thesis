@@ -22,7 +22,7 @@ public class SeederApp extends AbstractSocketAddressApp {
                               downloadRate,
                               getSocketAddress(),
                               DataBases.fakeDataBase(),
-                              getSeederOnlyDistributionAlgorithm(),
+                              getSuperSeederDistributionAlgorithm(),
                               Optional.ofNullable(recordPeerHandler),
                               Optional.of(eventLoopGroup)).getInitFuture().get();
         dataBaseUpdatePeers.add(seeder);
