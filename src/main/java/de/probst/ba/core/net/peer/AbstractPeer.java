@@ -6,6 +6,7 @@ import de.probst.ba.core.net.peer.handler.PeerHandler;
 import de.probst.ba.core.net.peer.handler.PeerHandlerAdapter;
 import de.probst.ba.core.net.peer.state.BandwidthStatisticState;
 import de.probst.ba.core.net.peer.state.DataInfoState;
+import de.probst.ba.core.util.concurrent.CachedSupplier;
 import de.probst.ba.core.util.concurrent.CancelableRunnable;
 import de.probst.ba.core.util.concurrent.LeakyBucket;
 import de.probst.ba.core.util.concurrent.LeakyBucketRefiller;
@@ -14,8 +15,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -45,9 +44,9 @@ public abstract class AbstractPeer implements Peer {
 
     private final CompletableFuture<? extends Peer> closeFuture = new CompletableFuture<>();
 
-    private Instant lastBandwidthStatisticTimeStamp;
-
-    private BandwidthStatisticState cachedBandwidthStatisticState;
+    private final CachedSupplier<BandwidthStatisticState> cachedBandwidthStatisticState =
+            new CachedSupplier<>(this::createBandwidthStatisticState,
+                                 AbstractPeerConfig.getMinimalBandwidthStatisticStateCreationDelay());
 
     private volatile Optional<PeerId> peerId;
 
@@ -127,16 +126,8 @@ public abstract class AbstractPeer implements Peer {
     }
 
     @Override
-    public synchronized BandwidthStatisticState getBandwidthStatisticState() {
-        Instant now = Instant.now();
-        if ((lastBandwidthStatisticTimeStamp == null || cachedBandwidthStatisticState == null) ||
-            Duration.between(lastBandwidthStatisticTimeStamp, now).toMillis() >
-            AbstractPeerConfig.getMinimalBandwidthStatisticStateCreationDelay()) {
-            lastBandwidthStatisticTimeStamp = now;
-            return cachedBandwidthStatisticState = createBandwidthStatisticState();
-        } else {
-            return cachedBandwidthStatisticState;
-        }
+    public BandwidthStatisticState getBandwidthStatisticState() {
+        return cachedBandwidthStatisticState.get();
     }
 
     @Override

@@ -74,10 +74,18 @@ public final class LeastFirstTrafficShaper implements Consumer<CancelableRunnabl
                 continue;
             }
 
-            // Check tokens
-            if (leakyBucket.take(abstractMessageEvent.getMessageSize(), cancelableRunnable)) {
+            // Get message size and try to take the tokens from the bucket
+            long messageSize = abstractMessageEvent.getMessageSize();
+            long removedTokens = leakyBucket.take(messageSize, cancelableRunnable);
+
+            if (removedTokens >= messageSize) {
+                // Dispatch the event
                 removeMessageFunction.apply(messageQueueHandler).dispatch();
             } else {
+
+                // Decrease the message size for the next time
+                abstractMessageEvent.decreaseMessageSize(removedTokens);
+
                 // Make sure all handlers are stopped
                 stopConsumer.ifPresent(messageQueueHandlerList::forEach);
                 return;

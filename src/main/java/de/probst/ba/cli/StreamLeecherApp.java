@@ -1,7 +1,6 @@
 package de.probst.ba.cli;
 
 import com.beust.jcommander.Parameter;
-import de.probst.ba.gui.StreamerGUI;
 import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.media.database.databases.DataBases;
 import de.probst.ba.core.net.peer.Leecher;
@@ -13,10 +12,12 @@ import de.probst.ba.core.net.peer.handler.handlers.DataInfoCompletionHandler;
 import de.probst.ba.core.net.peer.peers.Peers;
 import de.probst.ba.core.net.peer.transfer.TransferManager;
 import de.probst.ba.core.util.collections.Tuple2;
+import de.probst.ba.gui.StreamerGUI;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.Scanner;
 import java.util.concurrent.CompletableFuture;
@@ -137,7 +138,7 @@ public class StreamLeecherApp extends AbstractSocketAddressApp {
         logger.info(">>> [ Leeching ]");
 
         dataInfoCompletionHandler.getCountDownLatch().await();
-        setupStop();
+        setupStop(Instant.now());
         logger.info(">>> [ Press [ENTER] to stop seeding ]");
 
         if (scanner.hasNextLine()) {

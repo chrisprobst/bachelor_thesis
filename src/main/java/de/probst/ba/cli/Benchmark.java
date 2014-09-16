@@ -16,6 +16,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.Scanner;
@@ -64,6 +65,9 @@ public class Benchmark extends AbstractPeerApp {
 
     @Override
     protected void setupPeers() throws Exception {
+        logger.info(">>> Seeders:                   " + seeders);
+        logger.info(">>> Leechers:                  " + leechers);
+
         // Setup all seeders
         for (int i = 0; i < seeders; i++) {
             Seeder seeder = Peers.seeder(peerType,
@@ -161,9 +165,9 @@ public class Benchmark extends AbstractPeerApp {
 
         setupStart(eventLoopGroup);
         dataInfoCompletionHandler.getCountDownLatch().await();
-        setupStopTime();
-        Thread.sleep(500);
-        setupStopRecords();
+        Instant now = Instant.now();
+        Thread.sleep(1000);
+        setupStop(now);
 
         Peers.closeAndWait(peerQueue);
     }

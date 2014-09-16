@@ -17,7 +17,7 @@ import java.util.Objects;
 public interface DataBase extends Flushable {
 
     /**
-     * Flushes all changes to the file system.
+     * Flushes all changes to the data base.
      *
      * @throws IOException
      */

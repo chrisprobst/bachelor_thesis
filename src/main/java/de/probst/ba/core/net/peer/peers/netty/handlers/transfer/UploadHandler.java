@@ -1,11 +1,12 @@
 package de.probst.ba.core.net.peer.peers.netty.handlers.transfer;
 
-import de.probst.ba.core.net.peer.transfer.Transfer;
-import de.probst.ba.core.net.peer.transfer.TransferManager;
 import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.Seeder;
+import de.probst.ba.core.net.peer.peers.netty.NettyConfig;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.messages.UploadRejectedMessage;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.messages.UploadRequestMessage;
+import de.probst.ba.core.net.peer.transfer.Transfer;
+import de.probst.ba.core.net.peer.transfer.TransferManager;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -151,7 +152,7 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
 
         @Override
         public ByteBuf readChunk(ChannelHandlerContext ctx) throws Exception {
-            ByteBuf byteBuf = Unpooled.buffer(0xFFFF);
+            ByteBuf byteBuf = Unpooled.buffer(NettyConfig.getUploadBufferSize());
             try {
                 transferManager.process(byteBuf);
             } catch (Exception e) {

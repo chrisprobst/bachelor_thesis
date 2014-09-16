@@ -120,7 +120,7 @@ public abstract class AbstractPeerApp {
                description = "The download rate in bytes per second, " +
                              "must greater-equal than the upload rate (" + TransferRateValidator.MSG + ")",
                validateValueWith = TransferRateValidator.class)
-    protected Integer downloadRate = 1_000_000;
+    protected Integer downloadRate = 0;
 
     protected boolean checkParameters(JCommander jCommander) {
         if (showUsage) {
@@ -392,8 +392,8 @@ public abstract class AbstractPeerApp {
     }
 
 
-    protected void setupStopTime() {
-        Duration duration = Duration.between(startTime, Instant.now());
+    protected void setupStopTime(Instant now) {
+        Duration duration = Duration.between(startTime, now);
         logger.info(">>> [ Completed " + getClass().getSimpleName() + " in " + (duration.toMillis() / 1000.0) +
                     " seconds ]");
     }
@@ -444,8 +444,8 @@ public abstract class AbstractPeerApp {
         }
     }
 
-    protected void setupStop() throws IOException, ExecutionException, InterruptedException {
-        setupStopTime();
+    protected void setupStop(Instant now) throws IOException, ExecutionException, InterruptedException {
+        setupStopTime(now);
         setupStopRecords();
     }
 

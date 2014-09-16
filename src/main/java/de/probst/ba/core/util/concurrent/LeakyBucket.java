@@ -14,6 +14,14 @@ public final class LeakyBucket {
     private long tokens;
 
     public LeakyBucket(long maxTokens, long refillRate) {
+        if (maxTokens < 1) {
+            throw new IllegalArgumentException("maxTokens < 1");
+        }
+
+        if (refillRate < 0) {
+            throw new IllegalArgumentException("refillRate < 0");
+        }
+
         this.maxTokens = maxTokens;
         this.refillRate = refillRate;
         tokens = maxTokens;
@@ -23,17 +31,31 @@ public final class LeakyBucket {
         return tokens <= 0;
     }
 
-    public synchronized boolean take(long tokens, Runnable runnable) {
-        if (this.tokens >= tokens) {
-            this.tokens -= tokens;
-            return true;
-        } else {
+    public synchronized long take(long tokens, Runnable runnable) {
+        if (tokens < 0) {
+            throw new IllegalArgumentException("tokens < 0");
+        }
+
+        if (tokens == 0) {
+            return 0;
+        }
+
+        if (this.tokens < tokens) {
+            long removedTokens = this.tokens;
+            this.tokens = 0;
             runnables.add(runnable);
-            return false;
+            return removedTokens;
+        } else {
+            this.tokens -= tokens;
+            return tokens;
         }
     }
 
     public void refill(double seconds) {
+        if (seconds < 0) {
+            throw new IllegalArgumentException("seconds < 0");
+        }
+
         Queue<Runnable> oldRunnables;
         synchronized (this) {
             tokens = Math.min(maxTokens, Math.round(tokens + refillRate * seconds));

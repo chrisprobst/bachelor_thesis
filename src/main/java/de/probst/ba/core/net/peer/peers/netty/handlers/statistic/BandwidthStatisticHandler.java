@@ -8,8 +8,6 @@ import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 
-import java.time.Duration;
-import java.time.Instant;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -22,13 +20,13 @@ public final class BandwidthStatisticHandler extends ChannelHandlerAdapter {
     private final Peer peer;
     private final long maxUploadRate;
     private final long maxDownloadRate;
-    private final Instant startTotalTimeStamp = Instant.now();
+    private final long startTotalTimeStamp = System.currentTimeMillis();
     private final AtomicLong totalWritten = new AtomicLong();
     private final AtomicLong totalRead = new AtomicLong();
 
-    private Instant startCurrentWrittenTimeStamp = Instant.now();
+    private long startCurrentWrittenTimeStamp = System.currentTimeMillis();
     private final AtomicLong currentWritten = new AtomicLong();
-    private Instant startCurrentReadTimeStamp = Instant.now();
+    private long startCurrentReadTimeStamp = System.currentTimeMillis();
     private final AtomicLong currentRead = new AtomicLong();
 
     public BandwidthStatisticHandler(Peer peer, long maxUploadRate, long maxDownloadRate) {
@@ -58,21 +56,17 @@ public final class BandwidthStatisticHandler extends ChannelHandlerAdapter {
     }
 
     private long getAverageUploadRate() {
-        Duration duration = Duration.between(startTotalTimeStamp, Instant.now());
-        double seconds = duration.toMillis() / 1000.0;
+        double seconds = (System.currentTimeMillis() - startTotalTimeStamp) / 1000.0;
         return seconds > 0 ? (long) (totalWritten.get() / seconds) : 0;
     }
 
     private long getCurrentUploadRate() {
         synchronized (currentWritten) {
-            Instant now = Instant.now();
-            Duration duration = Duration.between(startCurrentWrittenTimeStamp, now);
-            double seconds = duration.toMillis() / 1000.0;
+            long now = System.currentTimeMillis();
+            double seconds = (now - startCurrentWrittenTimeStamp) / 1000.0;
             long rate = seconds > 0 ? (long) (currentWritten.get() / seconds) : 0;
-
             startCurrentWrittenTimeStamp = now;
             currentWritten.set(0);
-
             return rate;
         }
     }
@@ -86,21 +80,17 @@ public final class BandwidthStatisticHandler extends ChannelHandlerAdapter {
     }
 
     private long getAverageDownloadRate() {
-        Duration duration = Duration.between(startTotalTimeStamp, Instant.now());
-        double seconds = duration.toMillis() / 1000.0;
+        double seconds = (System.currentTimeMillis() - startTotalTimeStamp) / 1000.0;
         return seconds > 0 ? (long) (totalRead.get() / seconds) : 0;
     }
 
     private long getCurrentDownloadRate() {
         synchronized (currentRead) {
-            Instant now = Instant.now();
-            Duration duration = Duration.between(startCurrentReadTimeStamp, now);
-            double seconds = duration.toMillis() / 1000.0;
+            long now = System.currentTimeMillis();
+            double seconds = (now - startCurrentReadTimeStamp) / 1000.0;
             long rate = seconds > 0 ? (long) (currentRead.get() / seconds) : 0;
-
             startCurrentReadTimeStamp = now;
             currentRead.set(0);
-
             return rate;
         }
     }

@@ -12,6 +12,7 @@ import de.probst.ba.core.util.collections.Tuple2;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.Scanner;
 import java.util.concurrent.CompletableFuture;
@@ -86,7 +87,7 @@ public class LeecherApp extends AbstractSocketAddressApp {
         logger.info(">>> [ Leeching ]");
 
         dataInfoCompletionHandler.getCountDownLatch().await();
-        setupStop();
+        setupStop(Instant.now());
 
         logger.info(">>> [ Press [ENTER] to stop seeding ]");
 

@@ -1,7 +1,5 @@
 package de.probst.ba.core.util.io;
 
-import java.time.Duration;
-import java.time.Instant;
 import java.util.Objects;
 import java.util.stream.Stream;
 
@@ -14,7 +12,7 @@ public final class CSV {
 
     private final StringBuilder stringBuilder = new StringBuilder();
     private boolean firstElement = true;
-    private Instant timeStamp;
+    private long timeStamp = -1;
 
     private void write(String element) {
         if (firstElement) {
@@ -28,11 +26,10 @@ public final class CSV {
     }
 
     public void writeDuration(int elementWidth) {
-        if (timeStamp == null) {
+        if (timeStamp < 0) {
             resetTimeStamp();
         }
-        Duration duration = Duration.between(timeStamp, Instant.now());
-        writeElement(duration.toMillis() / 1000.0, elementWidth);
+        writeElement((System.currentTimeMillis() - timeStamp) / 1000.0, elementWidth);
     }
 
     public boolean isFirstElement() {
@@ -40,7 +37,7 @@ public final class CSV {
     }
 
     public void resetTimeStamp() {
-        timeStamp = Instant.now();
+        timeStamp = System.currentTimeMillis();
     }
 
     public void writeLine() {

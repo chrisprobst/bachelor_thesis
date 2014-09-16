@@ -16,9 +16,19 @@ public final class NettyConfig {
     private NettyConfig() {
     }
 
+    private static final int uploadBufferSize = 65535;
+    private static final long messageQueueResetDelay = 2500;
     private static final long discoveryExchangeDelay = 1000;
-    private static final long announceDelay = 250;
+    private static final long announceDelay = 200;
     private static volatile boolean useCodec;
+
+    public static int getUploadBufferSize() {
+        return uploadBufferSize;
+    }
+
+    public static long getMessageQueueResetDelay() {
+        return messageQueueResetDelay;
+    }
 
     public static long getDiscoveryExchangeDelay() {
         return discoveryExchangeDelay;

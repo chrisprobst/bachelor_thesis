@@ -4,6 +4,7 @@ import de.probst.ba.core.media.database.databases.DataBases;
 import de.probst.ba.core.net.peer.Seeder;
 import de.probst.ba.core.net.peer.peers.Peers;
 
+import java.time.Instant;
 import java.util.Optional;
 import java.util.Scanner;
 
@@ -48,7 +49,7 @@ public class SeederApp extends AbstractSocketAddressApp {
             scanner.nextLine();
         }
 
-        setupStop();
+        setupStop(Instant.now());
         seeder.close();
         seeder.getCloseFuture().get();
     }

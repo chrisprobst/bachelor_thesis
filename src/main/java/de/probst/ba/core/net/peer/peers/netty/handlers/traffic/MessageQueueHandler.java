@@ -1,5 +1,7 @@
 package de.probst.ba.core.net.peer.peers.netty.handlers.traffic;
 
+import de.probst.ba.core.net.peer.peers.netty.NettyConfig;
+import de.probst.ba.core.util.concurrent.TimeoutSupplier;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
@@ -41,6 +43,16 @@ public final class MessageQueueHandler extends ChannelHandlerAdapter {
     private final Queue<WriteEvent> writeEventQueue = new ConcurrentLinkedQueue<>();
     private final Queue<ReadEvent> readEventQueue = new ConcurrentLinkedQueue<>();
 
+    private final TimeoutSupplier<Long> totalWrittenSupplier =
+            new TimeoutSupplier<>(totalWritten::get,
+                                  () -> totalWritten.getAndSet(0),
+                                  NettyConfig.getMessageQueueResetDelay());
+
+    private final TimeoutSupplier<Long> totalReadSupplier =
+            new TimeoutSupplier<>(totalRead::get,
+                                  () -> totalRead.getAndSet(0),
+                                  NettyConfig.getMessageQueueResetDelay());
+
     public MessageQueueHandler(Optional<? extends Runnable> writeTask, Optional<? extends Runnable> readTask) {
         Objects.requireNonNull(writeTask);
         Objects.requireNonNull(readTask);
@@ -69,11 +81,11 @@ public final class MessageQueueHandler extends ChannelHandlerAdapter {
     }
 
     public long getTotalWritten() {
-        return totalWritten.get();
+        return totalWrittenSupplier.get();
     }
 
     public long getTotalRead() {
-        return totalRead.get();
+        return totalReadSupplier.get();
     }
 
     public ChannelHandlerContext getChannelHandlerContext() {
