@@ -195,13 +195,18 @@ public abstract class AbstractPeerApp {
     }
 
     protected void setupConfig() {
+
+
         TrafficUtil.setDefaultMessageSize((long) (totalSize / chunkCount * (metaDataSize) / 100));
+        NettyConfig.setUploadBufferSize((int) (totalSize / chunkCount * NettyConfig.getUploadBufferChunkRatio()));
         NettyConfig.setUseCodec(binaryCodec);
 
         logger.info(">>> [ Config ]");
         logger.info(">>> Peer type:                 " + peerType);
         logger.info(">>> Algorithm type:            " + algorithmType);
         logger.info(">>> Simulated meta data size:  " + TrafficUtil.getDefaultMessageSize() + " bytes");
+        logger.info(">>> Upload buffer size:        " + NettyConfig.getUploadBufferSize() + " bytes (" +
+                    "Nearest power of 2 of " + NettyConfig.getUploadBufferChunkRatio() + "x chunk size)");
         logger.info(">>> Using codec:               " + NettyConfig.isUseCodec());
         logger.info(">>> Total size:                " + totalSize);
         logger.info(">>> Chunk count:               " + chunkCount);

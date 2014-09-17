@@ -16,14 +16,26 @@ public final class NettyConfig {
     private NettyConfig() {
     }
 
-    private static final int uploadBufferSize = 65535;
+    private static final double uploadBufferChunkRatio = 0.2;
+    private static volatile int uploadBufferSize = 8192;
     private static final long messageQueueResetDelay = 2500;
     private static final long discoveryExchangeDelay = 1000;
     private static final long announceDelay = 200;
     private static volatile boolean useCodec;
 
+    public static double getUploadBufferChunkRatio() {
+        return uploadBufferChunkRatio;
+    }
+
     public static int getUploadBufferSize() {
         return uploadBufferSize;
+    }
+
+    public static void setUploadBufferSize(int uploadBufferSize) {
+        if (uploadBufferSize <= 0) {
+            throw new IllegalArgumentException("uploadBufferSize <= 0");
+        }
+        NettyConfig.uploadBufferSize = Integer.highestOneBit(uploadBufferSize - 1) << 1;
     }
 
     public static long getMessageQueueResetDelay() {
