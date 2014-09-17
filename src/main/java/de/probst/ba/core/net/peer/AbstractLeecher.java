@@ -36,8 +36,8 @@ public abstract class AbstractLeecher extends AbstractPeer implements Leecher {
 
     protected abstract Map<PeerId, Map<String, DataInfo>> getRemoteDataInfo();
 
-    protected void leech() {
-        leecherDistributionAlgorithmWorker.execute();
+    protected Runnable getLeechRunnable() {
+        return leecherDistributionAlgorithmWorker::execute;
     }
 
     public AbstractLeecher(long maxUploadRate,
