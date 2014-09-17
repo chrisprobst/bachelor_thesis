@@ -25,6 +25,10 @@ public interface Leecher extends Peer {
      */
     CompletableFuture<Leecher> connect(SocketAddress socketAddress);
 
+    /**
+     * @return A map with all socket addresses we are connecting
+     * or connected to represented by the boolean value.
+     */
     Map<SocketAddress, Boolean> getConnections();
 
     /**
