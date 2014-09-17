@@ -28,21 +28,6 @@ public interface Leecher extends Peer {
     Map<SocketAddress, Boolean> getConnections();
 
     /**
-     * This method runs the distribution algorithm
-     * to request new downloads.
-     * <p>
-     * Please not, that this method is already called
-     * by the framework internally at undefined intervals
-     * and can be triggered by network metrics, timers and
-     * events randomly.
-     * <p>
-     * Please only call this method if you think that you are
-     * smarter than the framework because running the algorithm
-     * is not for free.
-     */
-    void leech();
-
-    /**
      * @return True if this leecher automatically connects to
      * new discovered peers or not.
      */

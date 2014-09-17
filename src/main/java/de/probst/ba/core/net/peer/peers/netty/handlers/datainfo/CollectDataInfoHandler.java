@@ -1,7 +1,7 @@
 package de.probst.ba.core.net.peer.peers.netty.handlers.datainfo;
 
 import de.probst.ba.core.media.database.DataInfo;
-import de.probst.ba.core.net.peer.AbstractLeecher;
+import de.probst.ba.core.net.peer.Leecher;
 import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.messages.DataInfoMessage;
 import de.probst.ba.core.util.collections.Tuple;
@@ -39,7 +39,8 @@ public final class CollectDataInfoHandler extends SimpleChannelInboundHandler<Da
     }
 
     private final Logger logger = LoggerFactory.getLogger(CollectDataInfoHandler.class);
-    private final AbstractLeecher leecher;
+    private final Leecher leecher;
+    private final Runnable leech;
 
     private Map<String, DataInfo> lastRemoteDataInfo = Collections.emptyMap();
     private Map<String, DataInfo> lastNonEmptyRemoteDataInfo = Collections.emptyMap();
@@ -74,7 +75,7 @@ public final class CollectDataInfoHandler extends SimpleChannelInboundHandler<Da
 
         // Suggest leeching if there are new non empty data info
         if (!nonEmptyRemoteDataInfo.equals(lastNonEmptyRemoteDataInfo)) {
-            leecher.leech();
+            leech.run();
         }
 
         // Set last non empty remote data info
@@ -86,9 +87,11 @@ public final class CollectDataInfoHandler extends SimpleChannelInboundHandler<Da
         leecher.getPeerHandler().collected(leecher, peerId, remoteDataInfo);
     }
 
-    public CollectDataInfoHandler(AbstractLeecher leecher) {
+    public CollectDataInfoHandler(Leecher leecher, Runnable leech) {
         Objects.requireNonNull(leecher);
+        Objects.requireNonNull(leech);
         this.leecher = leecher;
+        this.leech = leech;
     }
 
     /**

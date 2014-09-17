@@ -72,8 +72,8 @@ public final class NettyLeecher extends AbstractLeecher {
             ch.pipeline().addLast(leecherLogHandler,
                                   leecherChannelGroupHandler,
                                   new AnnounceSocketAddressHandler(NettyLeecher.this, announceSocketAddress),
-                                  new DownloadHandler(NettyLeecher.this),
-                                  new CollectDataInfoHandler(NettyLeecher.this));
+                                  new DownloadHandler(NettyLeecher.this, NettyLeecher.this::leech),
+                                  new CollectDataInfoHandler(NettyLeecher.this, NettyLeecher.this::leech));
         }
     };
 

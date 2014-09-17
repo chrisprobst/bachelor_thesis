@@ -3,10 +3,10 @@ package de.probst.ba.core.net.peer;
 import de.probst.ba.core.distribution.LeecherDistributionAlgorithm;
 import de.probst.ba.core.media.database.DataBase;
 import de.probst.ba.core.media.database.DataInfo;
-import de.probst.ba.core.net.peer.transfer.Transfer;
 import de.probst.ba.core.net.peer.handler.LeecherPeerHandler;
 import de.probst.ba.core.net.peer.handler.LeecherPeerHandlerAdapter;
 import de.probst.ba.core.net.peer.state.LeecherDataInfoState;
+import de.probst.ba.core.net.peer.transfer.Transfer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,6 +35,10 @@ public abstract class AbstractLeecher extends AbstractPeer implements Leecher {
     protected abstract Map<PeerId, Transfer> getDownloads();
 
     protected abstract Map<PeerId, Map<String, DataInfo>> getRemoteDataInfo();
+
+    protected void leech() {
+        leecherDistributionAlgorithmWorker.execute();
+    }
 
     public AbstractLeecher(long maxUploadRate,
                            long maxDownloadRate,
@@ -71,11 +75,6 @@ public abstract class AbstractLeecher extends AbstractPeer implements Leecher {
     @Override
     public LeecherDistributionAlgorithm getDistributionAlgorithm() {
         return (LeecherDistributionAlgorithm) super.getDistributionAlgorithm();
-    }
-
-    @Override
-    public void leech() {
-        leecherDistributionAlgorithmWorker.execute();
     }
 
     @SuppressWarnings("unchecked")

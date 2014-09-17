@@ -1,13 +1,13 @@
 package de.probst.ba.core.net.peer.peers.netty.handlers.transfer;
 
 import de.probst.ba.core.media.database.DataInfo;
-import de.probst.ba.core.net.peer.transfer.Transfer;
-import de.probst.ba.core.net.peer.transfer.TransferManager;
 import de.probst.ba.core.net.peer.Leecher;
 import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.CollectDataInfoHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.messages.UploadRejectedMessage;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.messages.UploadRequestMessage;
+import de.probst.ba.core.net.peer.transfer.Transfer;
+import de.probst.ba.core.net.peer.transfer.TransferManager;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerAdapter;
@@ -65,13 +65,16 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
 
     private final Logger logger = LoggerFactory.getLogger(DownloadHandler.class);
     private final Leecher leecher;
+    private final Runnable leech;
     private final AtomicReference<Transfer> transfer = new AtomicReference<>();
     private TransferManager transferManager;
     private boolean receivedBuffer;
 
-    public DownloadHandler(Leecher leecher) {
+    public DownloadHandler(Leecher leecher, Runnable leech) {
         Objects.requireNonNull(leecher);
+        Objects.requireNonNull(leech);
         this.leecher = leecher;
+        this.leech = leech;
     }
 
     private void download(Transfer transfer) {
@@ -96,7 +99,7 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
     private void reset() {
         transferManager = null;
         transfer.set(null);
-        leecher.leech();
+        leech.run();
     }
 
     private Optional<Transfer> getTransfer() {
