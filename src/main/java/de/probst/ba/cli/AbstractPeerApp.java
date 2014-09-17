@@ -298,7 +298,7 @@ public abstract class AbstractPeerApp {
                                                copy,
                                                BandwidthStatisticState::getCurrentUploadRate,
                                                BandwidthStatistic.BandwidthStatisticMode.Peer);
-
+/*
                 BandwidthStatistic averageTotalMedian =
                         new BandwidthStatistic("AverageUploadTotalMedian",
                                                copy,
@@ -315,14 +315,14 @@ public abstract class AbstractPeerApp {
                         new BandwidthStatistic("AverageUploadPeer",
                                                copy,
                                                BandwidthStatisticState::getAverageUploadRate,
-                                               BandwidthStatistic.BandwidthStatisticMode.Peer);
+                                               BandwidthStatistic.BandwidthStatisticMode.Peer);*/
 
                 statistics.add(currentTotalMedian);
                 statistics.add(currentTotalAccumulated);
                 statistics.add(currentPeer);
-                statistics.add(averageTotalMedian);
+                /*statistics.add(averageTotalMedian);
                 statistics.add(averageTotalAccumulated);
-                statistics.add(averagePeer);
+                statistics.add(averagePeer);*/
             }
 
             copy = new ArrayList<>(downloadBandwidthStatisticPeers);
@@ -345,7 +345,7 @@ public abstract class AbstractPeerApp {
                                                BandwidthStatisticState::getCurrentDownloadRate,
                                                BandwidthStatistic.BandwidthStatisticMode.Peer);
 
-                BandwidthStatistic averageTotalMedian =
+          /*      BandwidthStatistic averageTotalMedian =
                         new BandwidthStatistic("AverageDownloadTotalMedian",
                                                copy,
                                                BandwidthStatisticState::getAverageDownloadRate,
@@ -361,14 +361,14 @@ public abstract class AbstractPeerApp {
                         new BandwidthStatistic("AverageDownloadPeer",
                                                copy,
                                                BandwidthStatisticState::getAverageDownloadRate,
-                                               BandwidthStatistic.BandwidthStatisticMode.Peer);
+                                               BandwidthStatistic.BandwidthStatisticMode.Peer);*/
 
                 statistics.add(currentTotalMedian);
                 statistics.add(currentTotalAccumulated);
                 statistics.add(currentPeer);
-                statistics.add(averageTotalMedian);
+          /*      statistics.add(averageTotalMedian);
                 statistics.add(averageTotalAccumulated);
-                statistics.add(averagePeer);
+                statistics.add(averagePeer);*/
             }
 
             // Add all statistics to task
