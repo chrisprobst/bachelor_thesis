@@ -9,6 +9,7 @@ import de.probst.ba.core.net.peer.Seeder;
 import de.probst.ba.core.net.peer.handler.LeecherHandlerList;
 import de.probst.ba.core.net.peer.handler.handlers.DataInfoCompletionHandler;
 import de.probst.ba.core.net.peer.peers.Peers;
+import de.probst.ba.core.net.peer.peers.netty.NettyConfig;
 import de.probst.ba.core.util.collections.Tuple2;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalAddress;
@@ -154,7 +155,9 @@ public class Benchmark extends AbstractPeerApp {
     private void waitForConnections() throws InterruptedException {
 
         // The expected number of connections
-        int expectedConnections = leechers * (leechers - 1 + seeders);
+        int limit = NettyConfig.getMaxConnectionsPerLeecher();
+        limit = limit < 1 ? Integer.MAX_VALUE : limit;
+        int expectedConnections = leechers * (Math.min(leechers - 1 + seeders, limit));
         logger.info(">>> [ Waiting for " + expectedConnections + " connections ]");
         while (true) {
             long activeConnections = leecherQueue.stream()

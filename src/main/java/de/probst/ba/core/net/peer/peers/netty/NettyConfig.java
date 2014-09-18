@@ -16,12 +16,24 @@ public final class NettyConfig {
     private NettyConfig() {
     }
 
+    private static volatile int maxConnectionsPerLeecher = 0;
     private static final double uploadBufferChunkRatio = 0.2;
     private static volatile int uploadBufferSize = 8192;
     private static final long messageQueueResetDelay = 2500;
     private static final long discoveryExchangeDelay = 1000;
     private static final long announceDelay = 200;
     private static volatile boolean useCodec;
+
+    public static void setMaxConnectionsPerLeecher(int maxConnectionsPerLeecher) {
+        if (maxConnectionsPerLeecher < 0) {
+            throw new IllegalArgumentException("maxConnectionsPerLeecher < 0");
+        }
+        NettyConfig.maxConnectionsPerLeecher = maxConnectionsPerLeecher;
+    }
+
+    public static int getMaxConnectionsPerLeecher() {
+        return maxConnectionsPerLeecher;
+    }
 
     public static double getUploadBufferChunkRatio() {
         return uploadBufferChunkRatio;

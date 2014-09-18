@@ -70,6 +70,11 @@ public abstract class AbstractPeerApp {
                              "(This option is implicitly true if non-local transport is used)")
     protected Boolean binaryCodec = false;
 
+    @Parameter(names = {"-mc", "--max-connections"},
+               description = "Maximum number of leecher connections (" + MaxConnectionsValidator.MSG + ")",
+               validateValueWith = MaxConnectionsValidator.class)
+    protected Integer maxConnections = 0;
+
     @Parameter(names = {"--help"},
                description = "Show usage")
     protected Boolean showUsage = false;
@@ -195,11 +200,10 @@ public abstract class AbstractPeerApp {
     }
 
     protected void setupConfig() {
-
-
         TrafficUtil.setDefaultMessageSize((long) (totalSize / chunkCount * (metaDataSize) / 100));
         NettyConfig.setUploadBufferSize((int) (totalSize / chunkCount * NettyConfig.getUploadBufferChunkRatio()));
         NettyConfig.setUseCodec(binaryCodec);
+        NettyConfig.setMaxConnectionsPerLeecher(maxConnections);
 
         logger.info(">>> [ Config ]");
         logger.info(">>> Peer type:                 " + peerType);
@@ -208,6 +212,7 @@ public abstract class AbstractPeerApp {
         logger.info(">>> Upload buffer size:        " + NettyConfig.getUploadBufferSize() + " bytes (" +
                     "Nearest power of 2 of " + NettyConfig.getUploadBufferChunkRatio() + "x chunk size)");
         logger.info(">>> Using codec:               " + NettyConfig.isUseCodec());
+        logger.info(">>> Leecher connection limit:  " + NettyConfig.getMaxConnectionsPerLeecher());
         logger.info(">>> Total size:                " + totalSize);
         logger.info(">>> Chunk count:               " + chunkCount);
         logger.info(">>> Upload rate:               " + uploadRate);
@@ -538,6 +543,20 @@ public abstract class AbstractPeerApp {
 
         public static final int MIN = 0;
         public static final int MAX = 65535;
+        public static final String MSG = "Must be between " + MIN + " and " + MAX;
+
+        @Override
+        public void validate(String name, Integer value) throws ParameterException {
+            if (value < MIN || value > MAX) {
+                throw new ParameterException("Parameter " + name + ": " + MSG + " (found: " + value + ")");
+            }
+        }
+    }
+
+    public static class MaxConnectionsValidator implements IValueValidator<Integer> {
+
+        public static final int MIN = 0;
+        public static final int MAX = Integer.MAX_VALUE;
         public static final String MSG = "Must be between " + MIN + " and " + MAX;
 
         @Override

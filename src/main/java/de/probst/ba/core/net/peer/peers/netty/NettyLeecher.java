@@ -181,11 +181,17 @@ public final class NettyLeecher extends AbstractLeecher {
     }
 
     @Override
-    public CompletableFuture<Leecher> connect(SocketAddress socketAddress) {
+    public synchronized CompletableFuture<Leecher> connect(SocketAddress socketAddress) {
         Objects.requireNonNull(socketAddress);
         CompletableFuture<Leecher> connectionFuture = new CompletableFuture<>();
         Boolean previous;
 
+        // Do not exceed the connection limit
+        int limit = NettyConfig.getMaxConnectionsPerLeecher();
+        if (limit > 0 && connections.size() >= limit) {
+            connectionFuture.completeExceptionally(new IllegalStateException("Max connections reached"));
+            return connectionFuture;
+        }
 
         if ((previous = connections.putIfAbsent(socketAddress, false)) == null) {
             logger.debug("Leecher " + getPeerId() + " connecting to " + socketAddress);
