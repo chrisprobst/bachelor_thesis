@@ -19,7 +19,9 @@ public final class ChunkCompletionStatistic extends AbstractStatistic {
         csv.writeElement("Time");
 
         if (total) {
-            csv.writeElement("Total percentage");
+            csv.writeElement("TotalAverage");
+            csv.writeElement("TotalLowerDeviation");
+            csv.writeElement("TotalUpperDeviation");
         } else {
             for (Peer peer : peers) {
                 csv.writeElement(peer.getPeerId().getSocketAddress());
@@ -30,17 +32,45 @@ public final class ChunkCompletionStatistic extends AbstractStatistic {
     }
 
     private void writeTotalStatus() {
-        double totalPercentage = 0;
         int cnt = 0;
+        double totalAverage = 0;
         for (Peer peer : peers) {
             DataInfo dataInfo = peer.getDataBase().get(dataInfoHash);
             if (dataInfo != null) {
-                totalPercentage += dataInfo.getPercentage();
+                totalAverage += dataInfo.getPercentage();
+                cnt++;
             }
-            cnt++;
         }
-        totalPercentage /= cnt;
-        csv.writeElement(totalPercentage);
+        totalAverage /= cnt;
+
+        double totalLowerDeviation = 0;
+        double totalUpperDeviation = 0;
+        for (Peer peer : peers) {
+            DataInfo dataInfo = peer.getDataBase().get(dataInfoHash);
+            if (dataInfo == null) {
+                continue;
+            }
+            double peerChunkCompletion = dataInfo.getPercentage();
+
+            if (peerChunkCompletion >= totalAverage) {
+                totalUpperDeviation += peerChunkCompletion - totalAverage;
+            } else {
+                totalLowerDeviation += totalAverage - peerChunkCompletion;
+            }
+        }
+
+        totalUpperDeviation /= cnt;
+        totalLowerDeviation /= cnt;
+
+        if (Double.isFinite(totalAverage)) {
+            csv.writeElement(totalAverage);
+        }
+        if (Double.isFinite(totalLowerDeviation)) {
+            csv.writeElement(totalLowerDeviation);
+        }
+        if (Double.isFinite(totalUpperDeviation)) {
+            csv.writeElement(totalUpperDeviation);
+        }
     }
 
     private void writeIndividualStatus() {

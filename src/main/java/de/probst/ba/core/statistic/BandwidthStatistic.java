@@ -12,21 +12,18 @@ import java.util.function.Function;
  */
 public final class BandwidthStatistic extends AbstractStatistic {
 
-    public enum BandwidthStatisticMode {
-        Peer,
-        TotalMedian,
-        TotalAccumulated
-    }
-
     private final Collection<Peer> peers;
     private final Function<BandwidthStatisticState, Number> bandwidthMapper;
-    private final BandwidthStatisticMode bandwidthStatisticMode;
+    private final boolean total;
 
     private void writeHeader() {
         csv.writeElement("Time");
 
-        if (bandwidthStatisticMode != BandwidthStatisticMode.Peer) {
-            csv.writeElement("Total bandwidth");
+        if (total) {
+            csv.writeElement("TotalAccumulated");
+            csv.writeElement("TotalAverage");
+            csv.writeElement("TotalLowerDeviation");
+            csv.writeElement("TotalUpperDeviation");
         } else {
             peers.stream()
                  .forEach(peer -> csv.writeElement(peer.getPeerId().getSocketAddress()));
@@ -36,15 +33,37 @@ public final class BandwidthStatistic extends AbstractStatistic {
     }
 
     private void writeTotalBandwidth() {
-        double totalUpload = 0;
+        double totalAccumulated = 0;
         for (Peer peer : peers) {
-            totalUpload += bandwidthMapper.apply(peer.getBandwidthStatisticState()).doubleValue();
+            totalAccumulated += bandwidthMapper.apply(peer.getBandwidthStatisticState()).doubleValue();
         }
-        double upload =
-                bandwidthStatisticMode == BandwidthStatisticMode.TotalMedian ? totalUpload / peers.size() : totalUpload;
+        double totalAverage = totalAccumulated / peers.size();
 
-        if (Double.isFinite(upload)) {
-            csv.writeElement(upload);
+        double totalLowerDeviation = 0;
+        double totalUpperDeviation = 0;
+        for (Peer peer : peers) {
+            double peerBandwidth = bandwidthMapper.apply(peer.getBandwidthStatisticState()).doubleValue();
+
+            if (peerBandwidth >= totalAverage) {
+                totalUpperDeviation += peerBandwidth - totalAverage;
+            } else {
+                totalLowerDeviation += totalAverage - peerBandwidth;
+            }
+        }
+        totalLowerDeviation /= peers.size();
+        totalUpperDeviation /= peers.size();
+
+        if (Double.isFinite(totalAccumulated)) {
+            csv.writeElement(totalAccumulated);
+        }
+        if (Double.isFinite(totalAverage)) {
+            csv.writeElement(totalAverage);
+        }
+        if (Double.isFinite(totalLowerDeviation)) {
+            csv.writeElement(totalLowerDeviation);
+        }
+        if (Double.isFinite(totalUpperDeviation)) {
+            csv.writeElement(totalUpperDeviation);
         }
     }
 
@@ -61,10 +80,10 @@ public final class BandwidthStatistic extends AbstractStatistic {
 
         csv.writeDuration();
 
-        if (bandwidthStatisticMode == BandwidthStatisticMode.Peer) {
-            writeIndividualBandwidth();
-        } else {
+        if (total) {
             writeTotalBandwidth();
+        } else {
+            writeIndividualBandwidth();
         }
 
         csv.writeLine();
@@ -73,18 +92,12 @@ public final class BandwidthStatistic extends AbstractStatistic {
     public BandwidthStatistic(String name,
                               Collection<Peer> peers,
                               Function<BandwidthStatisticState, Number> bandwidthMapper,
-                              BandwidthStatisticMode bandwidthStatisticMode) {
+                              boolean total) {
         super(name);
         Objects.requireNonNull(peers);
         Objects.requireNonNull(bandwidthMapper);
-        Objects.requireNonNull(bandwidthStatisticMode);
         this.peers = peers;
         this.bandwidthMapper = bandwidthMapper;
-        this.bandwidthStatisticMode = bandwidthStatisticMode;
-    }
-
-
-    public BandwidthStatisticMode getBandwidthStatisticMode() {
-        return bandwidthStatisticMode;
+        this.total = total;
     }
 }

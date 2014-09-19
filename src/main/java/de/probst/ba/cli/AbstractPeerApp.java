@@ -53,8 +53,6 @@ import java.util.stream.IntStream;
  */
 public abstract class AbstractPeerApp {
 
-    public static final int STATISTIC_INTERVAL = 250;
-
     @Parameter(names = {"-pt", "--peer-type"},
                description = "Peer type [Local, TCP]",
                converter = PeerTypeConverter.class)
@@ -277,37 +275,28 @@ public abstract class AbstractPeerApp {
                 ChunkCompletionStatistic chunkCompletionStatistic = new ChunkCompletionStatistic("ChunkCompletion",
                                                                                                  copy,
                                                                                                  dataInfo[0].getHash(),
-                                                                                                 false);
-                ChunkCompletionStatistic totalChunkCompletionStatistic =
-                        new ChunkCompletionStatistic("TotalChunkCompletion",
-                                                     copy,
-                                                     dataInfo[0].getHash(),
-                                                     true);
-
+                                                                                                 true);
 
                 statistics.add(chunkCompletionStatistic);
-                statistics.add(totalChunkCompletionStatistic);
             }
 
             copy = new ArrayList<>(uploadBandwidthStatisticPeers);
             if (!copy.isEmpty()) {
-                BandwidthStatistic currentTotalMedian =
-                        new BandwidthStatistic("CurrentUploadTotalMedian",
-                                               copy,
-                                               BandwidthStatisticState::getCurrentUploadRate,
-                                               BandwidthStatistic.BandwidthStatisticMode.TotalMedian);
 
-                BandwidthStatistic currentTotalAccumulated =
-                        new BandwidthStatistic("CurrentUploadTotalAccumulated",
+                BandwidthStatistic currentTotalBandwidth =
+                        new BandwidthStatistic("CurrentUploadTotalBandwidth",
                                                copy,
                                                BandwidthStatisticState::getCurrentUploadRate,
-                                               BandwidthStatistic.BandwidthStatisticMode.TotalAccumulated);
+                                               true);
 
-                BandwidthStatistic currentPeer =
-                        new BandwidthStatistic("CurrentUploadPeer",
+
+                BandwidthStatistic currentPeerBandwidth =
+                        new BandwidthStatistic("CurrentUploadPeerBandwidth",
                                                copy,
                                                BandwidthStatisticState::getCurrentUploadRate,
-                                               BandwidthStatistic.BandwidthStatisticMode.Peer);
+                                               false);
+
+
 /*
                 BandwidthStatistic averageTotalMedian =
                         new BandwidthStatistic("AverageUploadTotalMedian",
@@ -327,9 +316,8 @@ public abstract class AbstractPeerApp {
                                                BandwidthStatisticState::getAverageUploadRate,
                                                BandwidthStatistic.BandwidthStatisticMode.Peer);*/
 
-                statistics.add(currentTotalMedian);
-                statistics.add(currentTotalAccumulated);
-                statistics.add(currentPeer);
+                statistics.add(currentTotalBandwidth);
+                statistics.add(currentPeerBandwidth);
                 /*statistics.add(averageTotalMedian);
                 statistics.add(averageTotalAccumulated);
                 statistics.add(averagePeer);*/
@@ -337,23 +325,12 @@ public abstract class AbstractPeerApp {
 
             copy = new ArrayList<>(downloadBandwidthStatisticPeers);
             if (!copy.isEmpty()) {
-                BandwidthStatistic currentTotalMedian =
-                        new BandwidthStatistic("CurrentDownloadTotalMedian",
+                BandwidthStatistic currentTotalBandwidth =
+                        new BandwidthStatistic("CurrentDownloadTotalBandwidth",
                                                copy,
                                                BandwidthStatisticState::getCurrentDownloadRate,
-                                               BandwidthStatistic.BandwidthStatisticMode.TotalMedian);
+                                               true);
 
-                BandwidthStatistic currentTotalAccumulated =
-                        new BandwidthStatistic("CurrentDownloadTotalAccumulated",
-                                               copy,
-                                               BandwidthStatisticState::getCurrentDownloadRate,
-                                               BandwidthStatistic.BandwidthStatisticMode.TotalAccumulated);
-
-                BandwidthStatistic currentPeer =
-                        new BandwidthStatistic("CurrentDownloadPeer",
-                                               copy,
-                                               BandwidthStatisticState::getCurrentDownloadRate,
-                                               BandwidthStatistic.BandwidthStatisticMode.Peer);
 
           /*      BandwidthStatistic averageTotalMedian =
                         new BandwidthStatistic("AverageDownloadTotalMedian",
@@ -373,9 +350,7 @@ public abstract class AbstractPeerApp {
                                                BandwidthStatisticState::getAverageDownloadRate,
                                                BandwidthStatistic.BandwidthStatisticMode.Peer);*/
 
-                statistics.add(currentTotalMedian);
-                statistics.add(currentTotalAccumulated);
-                statistics.add(currentPeer);
+                statistics.add(currentTotalBandwidth);
           /*      statistics.add(averageTotalMedian);
                 statistics.add(averageTotalAccumulated);
                 statistics.add(averagePeer);*/
@@ -389,7 +364,9 @@ public abstract class AbstractPeerApp {
                 statisticTask = new Task(task -> {
                     statisticRunnables.forEach(Runnable::run);
                     task.run();
-                }, runnable -> scheduledExecutorService.schedule(runnable, STATISTIC_INTERVAL, TimeUnit.MILLISECONDS));
+                }, runnable -> scheduledExecutorService.schedule(runnable,
+                                                                 AppConfig.getStatisticInterval(),
+                                                                 TimeUnit.MILLISECONDS));
                 statisticTask.run();
             }
         }
