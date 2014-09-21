@@ -141,13 +141,14 @@ public abstract class AbstractPeerApp {
             return false;
         }
 
-        if (!recordsDirectory.exists()) {
-            System.out.println("The directory path does not exist");
+        recordsDirectory = recordsDirectory.toPath().toAbsolutePath().normalize().toFile();
+        if (!recordsDirectory.mkdirs() && !recordsDirectory.exists()) {
+            System.out.println("The records directory could not be created");
             return false;
         }
 
         if (!recordsDirectory.isDirectory()) {
-            System.out.println("The directory path must point to a directory");
+            System.out.println("The records directory is not a directory");
             return false;
         }
 
@@ -225,7 +226,7 @@ public abstract class AbstractPeerApp {
             recordPeerHandler = new RecordPeerHandler();
         }
 
-        logger.info(">>> Record directory:          " + recordsDirectory.getAbsolutePath());
+        logger.info(">>> Record directory:          " + recordsDirectory);
         logger.info(">>> Record events:             " + recordEvents);
         logger.info(">>> Record stats:              " + recordStats);
     }
@@ -260,7 +261,7 @@ public abstract class AbstractPeerApp {
 
     protected void setupStartTime() {
         startTime = Instant.now();
-        logger.info(">>> [ Starting " + getClass().getSimpleName() + " ]");
+        logger.info(">>> [ Starting " + getClass().getSimpleName() + " ]");
     }
 
     protected void setupStartRecords(ScheduledExecutorService scheduledExecutorService) {
@@ -274,8 +275,7 @@ public abstract class AbstractPeerApp {
             if (dataInfo != null && dataInfo.length > 0 && !copy.isEmpty()) {
                 ChunkCompletionStatistic chunkCompletionStatistic = new ChunkCompletionStatistic("ChunkCompletion",
                                                                                                  copy,
-                                                                                                 dataInfo[0].getHash(),
-                                                                                                 true);
+                                                                                                 dataInfo[0].getHash());
 
                 statistics.add(chunkCompletionStatistic);
             }
@@ -283,77 +283,22 @@ public abstract class AbstractPeerApp {
             copy = new ArrayList<>(uploadBandwidthStatisticPeers);
             if (!copy.isEmpty()) {
 
-                BandwidthStatistic currentTotalBandwidth =
-                        new BandwidthStatistic("CurrentUploadTotalBandwidth",
+                BandwidthStatistic currentBandwidthStatistic =
+                        new BandwidthStatistic("CurrentUploadBandwidth",
                                                copy,
-                                               BandwidthStatisticState::getCurrentUploadRate,
-                                               true);
+                                               BandwidthStatisticState::getCurrentUploadRate);
 
-
-                BandwidthStatistic currentPeerBandwidth =
-                        new BandwidthStatistic("CurrentUploadPeerBandwidth",
-                                               copy,
-                                               BandwidthStatisticState::getCurrentUploadRate,
-                                               false);
-
-
-/*
-                BandwidthStatistic averageTotalMedian =
-                        new BandwidthStatistic("AverageUploadTotalMedian",
-                                               copy,
-                                               BandwidthStatisticState::getAverageUploadRate,
-                                               BandwidthStatistic.BandwidthStatisticMode.TotalMedian);
-
-                BandwidthStatistic averageTotalAccumulated =
-                        new BandwidthStatistic("AverageUploadTotalAccumulated",
-                                               copy,
-                                               BandwidthStatisticState::getAverageUploadRate,
-                                               BandwidthStatistic.BandwidthStatisticMode.TotalAccumulated);
-
-                BandwidthStatistic averagePeer =
-                        new BandwidthStatistic("AverageUploadPeer",
-                                               copy,
-                                               BandwidthStatisticState::getAverageUploadRate,
-                                               BandwidthStatistic.BandwidthStatisticMode.Peer);*/
-
-                statistics.add(currentTotalBandwidth);
-                statistics.add(currentPeerBandwidth);
-                /*statistics.add(averageTotalMedian);
-                statistics.add(averageTotalAccumulated);
-                statistics.add(averagePeer);*/
+                statistics.add(currentBandwidthStatistic);
             }
 
             copy = new ArrayList<>(downloadBandwidthStatisticPeers);
             if (!copy.isEmpty()) {
-                BandwidthStatistic currentTotalBandwidth =
-                        new BandwidthStatistic("CurrentDownloadTotalBandwidth",
+                BandwidthStatistic currentBandwidthStatistic =
+                        new BandwidthStatistic("CurrentDownloadBandwidth",
                                                copy,
-                                               BandwidthStatisticState::getCurrentDownloadRate,
-                                               true);
+                                               BandwidthStatisticState::getCurrentDownloadRate);
 
-
-          /*      BandwidthStatistic averageTotalMedian =
-                        new BandwidthStatistic("AverageDownloadTotalMedian",
-                                               copy,
-                                               BandwidthStatisticState::getAverageDownloadRate,
-                                               BandwidthStatistic.BandwidthStatisticMode.TotalMedian);
-
-                BandwidthStatistic averageTotalAccumulated =
-                        new BandwidthStatistic("AverageDownloadTotalAccumulated",
-                                               copy,
-                                               BandwidthStatisticState::getAverageDownloadRate,
-                                               BandwidthStatistic.BandwidthStatisticMode.TotalAccumulated);
-
-                BandwidthStatistic averagePeer =
-                        new BandwidthStatistic("AverageDownloadPeer",
-                                               copy,
-                                               BandwidthStatisticState::getAverageDownloadRate,
-                                               BandwidthStatistic.BandwidthStatisticMode.Peer);*/
-
-                statistics.add(currentTotalBandwidth);
-          /*      statistics.add(averageTotalMedian);
-                statistics.add(averageTotalAccumulated);
-                statistics.add(averagePeer);*/
+                statistics.add(currentBandwidthStatistic);
             }
 
             // Add all statistics to task

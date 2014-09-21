@@ -10,7 +10,7 @@ public final class PeerConfig {
 
     private static final int leakyBucketRefillInterval = 250;
     private static final double leakyBucketMaxTokensFactor = leakyBucketRefillInterval / 1000.0;
-    private static final long minimalBandwidthStatisticStateCreationDelay = leakyBucketRefillInterval * 2;
+    private static final long minimalBandwidthStatisticStateCreationDelay = leakyBucketRefillInterval;
 
     public static int getLeakyBucketRefillInterval() {
         return leakyBucketRefillInterval;

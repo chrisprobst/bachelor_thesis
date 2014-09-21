@@ -4,11 +4,13 @@
       <w>chrisprobst</w>
       <w>chunkedswarm</w>
       <w>connectable</w>
+      <w>csvfile</w>
       <w>guid</w>
       <w>leecher</w>
       <w>refiller</w>
       <w>runnables</w>
       <w>schedulation</w>
+      <w>stdout</w>
     </words>
   </dictionary>
 </component>

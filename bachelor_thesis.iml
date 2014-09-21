@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <module external.linked.project.path="$MODULE_DIR$" external.root.project.path="$MODULE_DIR$" external.system.id="GRADLE" external.system.module.group="" external.system.module.version="1.0" type="JAVA_MODULE" version="4">
+  <component name="FacetManager">
+    <facet type="Python" name="Python">
+      <configuration sdkName="Python 3.4.0 virtualenv at ~/Programming/bachelor_thesis/tools/python/venv" />
+    </facet>
+  </component>
   <component name="NewModuleRootManager" inherit-compiler-output="false">
     <output url="file://$MODULE_DIR$/build/classes/main" />
     <output-test url="file://$MODULE_DIR$/build/classes/test" />
@@ -21,6 +26,7 @@
     <orderEntry type="library" exported="" name="Gradle: slf4j-api-1.7.7" level="project" />
     <orderEntry type="library" exported="" name="Gradle: jcommander-1.30" level="project" />
     <orderEntry type="library" exported="" name="Gradle: netty-all-5.0.0.Alpha2-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Python 3.4.0 virtualenv at ~/Programming/bachelor_thesis/tools/python/venv interpreter library" level="application" />
   </component>
 </module>
 

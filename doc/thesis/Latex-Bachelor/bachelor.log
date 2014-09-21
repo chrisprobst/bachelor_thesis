@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.15 (TeX Live 2014) (preloaded format=pdflatex 2014.8.19)  15 SEP 2014 19:56
+This is pdfTeX, Version 3.14159265-2.6-1.40.15 (TeX Live 2014) (preloaded format=pdflatex 2014.8.19)  21 SEP 2014 15:34
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -772,7 +772,7 @@ LaTeX Info: Redefining \nameref on input line 53.
 \openout2 = `bachelor-titlepage.aux'.
 
  (./bachelor-titlepage.tex
-<fig/unilogo.pdf, id=32, 809.0225pt x 467.7475pt>
+<fig/unilogo.pdf, id=60, 809.0225pt x 467.7475pt>
 File: fig/unilogo.pdf Graphic file (type pdf)
  <use fig/unilogo.pdf>
 Package pdftex.def Info: fig/unilogo.pdf used on input line 5.
@@ -820,7 +820,43 @@ LaTeX Font Info:    Font shape `T1/phv/bx/n' in size <20.74> not available
 LaTeX Font Info:    Font shape `T1/phv/b/n' will be
 (Font)              scaled to size 19.08076pt on input line 73.
 
-(./bachelor.toc)
+(./bachelor.toc
+LaTeX Font Info:    Try loading font information for OT1+ztmcm on input line 7.
+
+
+(/usr/local/texlive/2014/texmf-dist/tex/latex/psnfss/ot1ztmcm.fd
+File: ot1ztmcm.fd 2000/01/03 Fontinst v1.801 font definitions for OT1/ztmcm.
+)
+LaTeX Font Info:    Try loading font information for OML+ztmcm on input line 7.
+
+
+(/usr/local/texlive/2014/texmf-dist/tex/latex/psnfss/omlztmcm.fd
+File: omlztmcm.fd 2000/01/03 Fontinst v1.801 font definitions for OML/ztmcm.
+)
+LaTeX Font Info:    Try loading font information for OMS+ztmcm on input line 7.
+
+
+(/usr/local/texlive/2014/texmf-dist/tex/latex/psnfss/omsztmcm.fd
+File: omsztmcm.fd 2000/01/03 Fontinst v1.801 font definitions for OMS/ztmcm.
+)
+LaTeX Font Info:    Try loading font information for OMX+ztmcm on input line 7.
+
+
+(/usr/local/texlive/2014/texmf-dist/tex/latex/psnfss/omxztmcm.fd
+File: omxztmcm.fd 2000/01/03 Fontinst v1.801 font definitions for OMX/ztmcm.
+)
+LaTeX Font Info:    Try loading font information for OT1+ptm on input line 7.
+
+(/usr/local/texlive/2014/texmf-dist/tex/latex/psnfss/ot1ptm.fd
+File: ot1ptm.fd 2001/06/04 font definitions for OT1/ptm.
+)
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <10.95> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 7.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <8> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 7.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <6> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 7.
+)
 \tf@toc=\write4
 \openout4 = `bachelor.toc'.
 
@@ -830,7 +866,8 @@ LaTeX Font Info:    Font shape `T1/phv/b/n' will be
 ] [8
 
 
-] (./bachelor.lof)
+]
+(./bachelor.lof)
 \tf@lof=\write5
 \openout5 = `bachelor.lof'.
 
@@ -841,18 +878,12 @@ LaTeX Font Info:    Font shape `T1/phv/b/n' will be
 \tf@lot=\write6
 \openout6 = `bachelor.lot'.
 
- [11]
-[12
+ [11] [12
 
 
 ] (./chapter-intro.tex
 Chapter 1.
-LaTeX Font Info:    Font shape `T1/ptm/bx/n' in size <10.95> not available
-(Font)              Font shape `T1/ptm/b/n' tried instead on input line 4.
-
-LaTeX Warning: Citation `peerfactsim' on page 1 undefined on input line 4.
-
-) [1
+) (./chapter-related-work.tex [1
 
 
 
@@ -861,53 +892,42 @@ LaTeX Warning: Citation `peerfactsim' on page 1 undefined on input line 4.
 
 
 ]
-No file bachelor.bbl.
+Chapter 2.
+) (./chapter-main.tex [3] [4
+
+
+]
+Chapter 3.
+LaTeX Font Info:    Font shape `T1/phv/bx/n' in size <14.4> not available
+(Font)              Font shape `T1/phv/b/n' tried instead on input line 3.
+LaTeX Font Info:    Font shape `T1/phv/b/n' will be
+(Font)              scaled to size 13.24796pt on input line 3.
+) (./chapter-evaluation.tex [5] [6
+
+
+]
+Chapter 4.
+) [7] [8
+
+
+] (./bachelor.bbl) [9
+
+
+]
 \openout2 = `bachelor-declaration.aux'.
 
-(./bachelor-declaration.tex) [3
+ (./bachelor-declaration.tex [10
 
 
 
-] [4
+]) [11] [12
 
 
 
-] (./bachelor-cd.tex
-LaTeX Font Info:    Try loading font information for OT1+ztmcm on input line 6.
-
-
-(/usr/local/texlive/2014/texmf-dist/tex/latex/psnfss/ot1ztmcm.fd
-File: ot1ztmcm.fd 2000/01/03 Fontinst v1.801 font definitions for OT1/ztmcm.
-)
-LaTeX Font Info:    Try loading font information for OML+ztmcm on input line 6.
-
-
-(/usr/local/texlive/2014/texmf-dist/tex/latex/psnfss/omlztmcm.fd
-File: omlztmcm.fd 2000/01/03 Fontinst v1.801 font definitions for OML/ztmcm.
-)
-LaTeX Font Info:    Try loading font information for OMS+ztmcm on input line 6.
-
-
-(/usr/local/texlive/2014/texmf-dist/tex/latex/psnfss/omsztmcm.fd
-File: omsztmcm.fd 2000/01/03 Fontinst v1.801 font definitions for OMS/ztmcm.
-)
-LaTeX Font Info:    Try loading font information for OMX+ztmcm on input line 6.
-
-
-(/usr/local/texlive/2014/texmf-dist/tex/latex/psnfss/omxztmcm.fd
-File: omxztmcm.fd 2000/01/03 Fontinst v1.801 font definitions for OMX/ztmcm.
-)
-LaTeX Font Info:    Try loading font information for OT1+ptm on input line 6.
-
-(/usr/local/texlive/2014/texmf-dist/tex/latex/psnfss/ot1ptm.fd
-File: ot1ptm.fd 2001/06/04 font definitions for OT1/ptm.
-)
-LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <10.95> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 6.
-LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <8> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 6.
-LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <6> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 6.
+]
+(./bachelor-cd.tex
+LaTeX Font Info:    Font shape `T1/ptm/bx/n' in size <10.95> not available
+(Font)              Font shape `T1/ptm/b/n' tried instead on input line 11.
 LaTeX Font Info:    Try loading font information for OMS+ptm on input line 13.
 
 (/usr/local/texlive/2014/texmf-dist/tex/latex/psnfss/omsptm.fd
@@ -916,15 +936,15 @@ File: omsptm.fd
 LaTeX Font Info:    Font shape `OMS/ptm/m/n' in size <10.95> not available
 (Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 13.
 )
-Package atveryend Info: Empty hook `BeforeClearDocument' on input line 110.
- [5
+Package atveryend Info: Empty hook `BeforeClearDocument' on input line 115.
+ [13
 
 
 ]
-Package atveryend Info: Empty hook `AfterLastShipout' on input line 110.
+Package atveryend Info: Empty hook `AfterLastShipout' on input line 115.
 
 (./bachelor.aux (./bachelor-titlepage.aux) (./bachelor-declaration.aux))
-Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 110.
+Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 115.
 
 
  *File List*
@@ -1019,31 +1039,38 @@ fig/unilogo.pdf
 chapter-abstract.tex
 chapter-acknowledgements.tex
    t1phv.fd    2001/06/04 scalable font definitions for T1/phv.
-chapter-intro.tex
-bachelor-declaration.tex
-bachelor-cd.tex
 ot1ztmcm.fd    2000/01/03 Fontinst v1.801 font definitions for OT1/ztmcm.
 omlztmcm.fd    2000/01/03 Fontinst v1.801 font definitions for OML/ztmcm.
 omsztmcm.fd    2000/01/03 Fontinst v1.801 font definitions for OMS/ztmcm.
 omxztmcm.fd    2000/01/03 Fontinst v1.801 font definitions for OMX/ztmcm.
   ot1ptm.fd    2001/06/04 font definitions for OT1/ptm.
+chapter-intro.tex
+chapter-related-work.tex
+chapter-main.tex
+chapter-evaluation.tex
+bachelor.bbl
+bachelor-declaration.tex
+bachelor-cd.tex
   omsptm.fd    
  ***********
 
-Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 110.
-Package rerunfilecheck Info: File `bachelor.out' has not changed.
-(rerunfilecheck)             Checksum: 6816732D790F8095D2474BBF3747CEEB;319.
+Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 115.
 
-LaTeX Warning: There were undefined references.
+Package rerunfilecheck Warning: File `bachelor.out' has changed.
+(rerunfilecheck)                Rerun to get outlines right
+(rerunfilecheck)                or use package `bookmark'.
 
-Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 110.
+Package rerunfilecheck Info: Checksums for `bachelor.out':
+(rerunfilecheck)             Before: 955278F639F3821D729B3E6F8E8FF427;663
+(rerunfilecheck)             After:  FB13B682CB95C4C86415E9769B1132AE;683.
+Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 115.
  ) 
 Here is how much of TeX's memory you used:
- 8874 strings out of 493117
- 132678 string characters out of 6135433
- 264563 words of memory out of 5000000
- 12094 multiletter control sequences out of 15000+600000
- 45173 words of font info for 63 fonts, out of 8000000 for 9000
+ 8931 strings out of 493117
+ 133523 string characters out of 6135433
+ 264507 words of memory out of 5000000
+ 12121 multiletter control sequences out of 15000+600000
+ 53119 words of font info for 67 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  40i,8n,59p,824b,405s stack positions out of 5000i,500n,10000p,200000b,80000s
 {/usr/local/texlive/2014/texmf-dist/fonts/enc/dvips/base/8r.enc}</usr/local/t
@@ -1052,10 +1079,10 @@ xlive/2014/texmf-dist/fonts/type1/urw/helvetic/uhvb8a.pfb></usr/local/texlive/2
 014/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/local/texlive/2014/texmf-
 dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2014/texmf-dist/fonts
 /type1/urw/times/utmri8a.pfb>
-Output written on bachelor.pdf (17 pages, 72580 bytes).
+Output written on bachelor.pdf (25 pages, 84048 bytes).
 PDF statistics:
- 151 PDF objects out of 1000 (max. 8388607)
- 123 compressed objects within 2 object streams
- 28 named destinations out of 1000 (max. 500000)
- 62 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 226 PDF objects out of 1000 (max. 8388607)
+ 190 compressed objects within 2 object streams
+ 44 named destinations out of 1000 (max. 500000)
+ 118 words of extra memory for PDF output out of 10000 (max. 10000000)
 
