@@ -6,12 +6,12 @@ import os.path as path
 from plumbum import local
 
 
-def start_process(process):
+def start_process(process, k):
     for line in process.stderr:
         stdout.write(line.decode('utf-8'))
     for line in process.stdout:
         stdout.write(line.decode('utf-8'))
-        process.wait()
+    process.wait()
 
 
 def main():
@@ -26,17 +26,21 @@ def main():
     mod = importlib.import_module(script)
     log_level = 'org.slf4j.simpleLogger.defaultLogLevel=warn'
     command = local['java']['-D' + log_level, '-jar', '../../../out/artifacts/benchmark_jar/benchmark.jar']
-    apps = [mod.setup(command, path.join('.', 'results', script, str(i))) for i in range(number)]
+
+    def path_maker(k):
+        return path.join('.', 'results', script, str(k))
+
+    apps = [(path_maker(i), mod.setup(command, path_maker(i))) for i in range(number)]
 
     if parallel:
         print('Started all iterations in parallel')
-        for idx, process_handle in enumerate([app.popen() for app in apps]):
-            print('Waiting for %i. iteration' % idx)
-            start_process(process_handle)
+        for idx, (k, process_handle) in enumerate([(k, app.popen()) for k, app in apps]):
+            print('Waiting for %i. iteration at %s' % (idx, k))
+            start_process(process_handle, k)
     else:
-        for idx, app in enumerate(apps):
-            print('Running %i. iteration' % idx)
-            start_process(app.popen())
+        for idx, (k, app) in enumerate(apps):
+            print('Running %i. iteration at %s' % (idx, k))
+            start_process(app.popen(), k)
 
 
 if __name__ == '__main__':

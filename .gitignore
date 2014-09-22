@@ -41,7 +41,7 @@ build/
 # Ignore svn folders
 .svn
 
-# Ignore all venv folders
+# Ignore python stuff
 __pycache__/
 tools/python/venv/
 tools/python/scenarios/results/

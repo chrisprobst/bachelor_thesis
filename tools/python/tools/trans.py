@@ -1,6 +1,6 @@
 import csv
-import sys
 import statistics
+import argparse
 
 
 def mean(matrix):
@@ -14,12 +14,16 @@ def transform(matrix):
     mean(matrix)
 
 
-def main(args):
-    with open(args[0]) as csvfile:
+def main():
+    parser = argparse.ArgumentParser(description='Transforms a csv file')
+    parser.add_argument('-f', required=True, dest='file')
+    args = parser.parse_args()
+
+    with open(args.file) as csvfile:
         reader = csv.reader(csvfile, delimiter=' ', skipinitialspace=True)
         matrix = [list(filter(lambda x: x is not None and x != '', row)) for row in reader]
         transform(matrix)
 
 
 if __name__ == '__main__':
-    main(sys.argv[-1:])
+    main()
