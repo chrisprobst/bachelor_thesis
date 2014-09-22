@@ -20,9 +20,9 @@ import java.util.OptionalLong;
 /**
  * Created by chrisprobst on 01.09.14.
  */
-public final class OrderedLogarithmicLeecherDistributionAlgorithm implements LeecherDistributionAlgorithm {
+public final class OrderedSingleMostLeecherDistributionAlgorithm implements LeecherDistributionAlgorithm {
 
-    private final Logger logger = LoggerFactory.getLogger(OrderedLogarithmicLeecherDistributionAlgorithm.class);
+    private final Logger logger = LoggerFactory.getLogger(OrderedSingleMostLeecherDistributionAlgorithm.class);
 
     @Override
     public List<Transfer> requestDownloads(Leecher leecher) {

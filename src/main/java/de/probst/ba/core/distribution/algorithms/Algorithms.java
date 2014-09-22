@@ -2,7 +2,6 @@ package de.probst.ba.core.distribution.algorithms;
 
 import de.probst.ba.core.distribution.LeecherDistributionAlgorithm;
 import de.probst.ba.core.distribution.SeederDistributionAlgorithm;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 /**
  * Created by chrisprobst on 01.09.14.
@@ -10,7 +9,7 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 public final class Algorithms {
 
     public enum AlgorithmType {
-        SuperSeederChunkedSwarm, ChunkedSwarm, Logarithmic,
+        SuperSeederChunkedSwarm, ChunkedSwarm, Logarithmic, Sequential
     }
 
     private Algorithms() {
@@ -22,9 +21,10 @@ public final class Algorithms {
             case ChunkedSwarm:
                 return new OrderedChunkedSwarmLeecherDistributionAlgorithm();
             case Logarithmic:
-                new OrderedLogarithmicLeecherDistributionAlgorithm();
+            case Sequential:
+                return new OrderedSingleMostLeecherDistributionAlgorithm();
             default:
-                throw new NotImplementedException();
+                throw new UnsupportedOperationException("Not supported yet: " + algorithmType);
         }
     }
 
@@ -32,11 +32,12 @@ public final class Algorithms {
         switch (algorithmType) {
             case SuperSeederChunkedSwarm:
             case ChunkedSwarm:
+            case Sequential:
                 return new DefaultSeederDistributionAlgorithm();
             case Logarithmic:
                 return new LimitedSeederDistributionAlgorithm(1);
             default:
-                throw new NotImplementedException();
+                throw new UnsupportedOperationException("Not supported yet: " + algorithmType);
         }
     }
 

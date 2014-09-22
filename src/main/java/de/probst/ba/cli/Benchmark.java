@@ -1,6 +1,7 @@
 package de.probst.ba.cli;
 
 import com.beust.jcommander.Parameter;
+import de.probst.ba.core.distribution.algorithms.Algorithms;
 import de.probst.ba.core.media.database.databases.DataBases;
 import de.probst.ba.core.net.peer.Leecher;
 import de.probst.ba.core.net.peer.Peer;
@@ -95,34 +96,59 @@ public class Benchmark extends AbstractPeerApp {
             if (recordPeerHandler != null) {
                 leecherHandlerList.add(recordPeerHandler);
             }
-            Tuple2<Seeder, Leecher> tuple = Peers.initSeederAndLeecher(peerType,
-                                                                       uploadRate,
-                                                                       downloadRate,
-                                                                       getLeecherSocketAddress(i),
-                                                                       DataBases.fakeDataBase(),
-                                                                       getSeederDistributionAlgorithm(),
-                                                                       getLeecherDistributionAlgorithm(),
-                                                                       Optional.ofNullable(recordPeerHandler),
-                                                                       Optional.of(leecherHandlerList),
-                                                                       true,
-                                                                       Optional.of(eventLoopGroup)).get();
-            Seeder seeder = tuple.first();
-            Leecher leecher = tuple.second();
 
-            chunkCompletionStatisticPeers.add(leecher);
-            downloadBandwidthStatisticPeers.add(leecher);
-            uploadBandwidthStatisticPeers.add(seeder);
-            peerQueue.add(seeder);
-            peerQueue.add(leecher);
-            leecherQueue.add(leecher);
+            if (algorithmType != Algorithms.AlgorithmType.Sequential) {
+                Tuple2<Seeder, Leecher> tuple = Peers.initSeederAndLeecher(peerType,
+                                                                           uploadRate,
+                                                                           downloadRate,
+                                                                           getLeecherSocketAddress(i),
+                                                                           DataBases.fakeDataBase(),
+                                                                           getSeederDistributionAlgorithm(),
+                                                                           getLeecherDistributionAlgorithm(),
+                                                                           Optional.ofNullable(recordPeerHandler),
+                                                                           Optional.of(leecherHandlerList),
+                                                                           true,
+                                                                           Optional.of(eventLoopGroup)).get();
+                Seeder seeder = tuple.first();
+                Leecher leecher = tuple.second();
 
-            seederQueue.stream()
-                       .map(Peer::getPeerId)
-                       .map(PeerId::getSocketAddress)
-                       .map(Optional::get)
-                       .map(leecher::connect)
-                       .forEach(CompletableFuture::join);
+                chunkCompletionStatisticPeers.add(leecher);
+                downloadBandwidthStatisticPeers.add(leecher);
+                uploadBandwidthStatisticPeers.add(seeder);
+                peerQueue.add(seeder);
+                peerQueue.add(leecher);
+                leecherQueue.add(leecher);
 
+                seederQueue.stream()
+                           .map(Peer::getPeerId)
+                           .map(PeerId::getSocketAddress)
+                           .map(Optional::get)
+                           .map(leecher::connect)
+                           .forEach(CompletableFuture::join);
+            } else {
+                Leecher leecher = Peers.leecher(peerType,
+                                                uploadRate,
+                                                downloadRate,
+                                                Optional.empty(),
+                                                DataBases.fakeDataBase(),
+                                                getLeecherDistributionAlgorithm(),
+                                                Optional.of(leecherHandlerList),
+                                                true,
+                                                Optional.of(eventLoopGroup),
+                                                Optional.empty());
+
+                chunkCompletionStatisticPeers.add(leecher);
+                downloadBandwidthStatisticPeers.add(leecher);
+                peerQueue.add(leecher);
+                leecherQueue.add(leecher);
+
+                seederQueue.stream()
+                           .map(Peer::getPeerId)
+                           .map(PeerId::getSocketAddress)
+                           .map(Optional::get)
+                           .map(leecher::connect)
+                           .forEach(CompletableFuture::join);
+            }
         }
     }
 
@@ -144,7 +170,7 @@ public class Benchmark extends AbstractPeerApp {
 
             // A small info for all waiters
             logger.info(">>> One transfer needs approx.:                            " + timePerTransfer + " seconds");
-            logger.info(">>> A dumb algorithm needs approx.:                        " + dumbTime + " seconds");
+            logger.info(">>> A Sequential algorithm needs approx.:                  " + dumbTime + " seconds");
             logger.info(">>> A Logarithmic algorithm needs approx.:                 " + logarithmicTime + " seconds");
             logger.info(">>> A (SuperSeeder)ChunkedSwarm algorithm needs approx.:   " + chunkSwarmTime + " seconds");
         } else {
@@ -157,7 +183,9 @@ public class Benchmark extends AbstractPeerApp {
         // The expected number of connections
         int limit = NettyConfig.getMaxConnectionsPerLeecher();
         limit = limit < 1 ? Integer.MAX_VALUE : limit;
-        int expectedConnections = leechers * (Math.min(leechers - 1 + seeders, limit));
+        int expectedConnections = algorithmType == Algorithms.AlgorithmType.Sequential ?
+                                  leechers * seeders :
+                                  leechers * (Math.min(leechers - 1 + seeders, limit));
         logger.info(">>> [ Waiting for " + expectedConnections + " connections ]");
         while (true) {
             long activeConnections = leecherQueue.stream()

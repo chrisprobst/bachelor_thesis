@@ -59,7 +59,7 @@ public abstract class AbstractPeerApp {
     protected Peers.PeerType peerType = Peers.PeerType.TCP;
 
     @Parameter(names = {"-da", "--distribution-algorithm"},
-               description = "Distribution algorithm type [SuperSeederChunkedSwarm, ChunkedSwarm, Logarithmic]",
+               description = "Distribution algorithm type [SuperSeederChunkedSwarm, ChunkedSwarm, Logarithmic, Sequential]",
                converter = AlgorithmTypeConverter.class)
     protected Algorithms.AlgorithmType algorithmType = Algorithms.AlgorithmType.ChunkedSwarm;
 

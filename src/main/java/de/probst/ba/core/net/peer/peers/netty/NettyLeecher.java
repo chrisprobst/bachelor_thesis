@@ -172,7 +172,6 @@ public final class NettyLeecher extends AbstractLeecher {
                 leakyBucket,
                 () -> MessageQueueHandler.collect(getLeecherChannelGroup())));
 
-
         // Init bootstrap
         leecherBootstrap = initLeecherBootstrap();
 

@@ -15,6 +15,38 @@ import java.util.UUID;
  */
 public class PeerId implements Serializable {
 
+    private static final class EmptySocketAddress extends SocketAddress {
+
+        private final String uniqueAddress;
+
+        private EmptySocketAddress(String uniqueAddress) {
+            Objects.requireNonNull(uniqueAddress);
+            this.uniqueAddress = uniqueAddress;
+        }
+
+        @Override
+        public String toString() {
+            return getClass().getSimpleName() + "@" + uniqueAddress;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+
+            EmptySocketAddress that = (EmptySocketAddress) o;
+
+            if (!uniqueAddress.equals(that.uniqueAddress)) return false;
+
+            return true;
+        }
+
+        @Override
+        public int hashCode() {
+            return uniqueAddress.hashCode();
+        }
+    }
+
     private final SocketAddress socketAddress;
     private final Object uniqueId;
 
@@ -37,7 +69,7 @@ public class PeerId implements Serializable {
     public PeerId(Optional<SocketAddress> socketAddress, Object uniqueId) {
         Objects.requireNonNull(socketAddress);
         Objects.requireNonNull(uniqueId);
-        this.socketAddress = socketAddress.orElse(null);
+        this.socketAddress = socketAddress.orElseGet(() -> new EmptySocketAddress(uniqueId.toString()));
         this.uniqueId = uniqueId;
     }
 
@@ -64,7 +96,8 @@ public class PeerId implements Serializable {
 
         PeerId peerId = (PeerId) o;
 
-        if (!socketAddress.equals(peerId.socketAddress)) return false;
+        if (socketAddress != null ? !socketAddress.equals(peerId.socketAddress) : peerId.socketAddress != null)
+            return false;
         if (!uniqueId.equals(peerId.uniqueId)) return false;
 
         return true;
@@ -72,7 +105,7 @@ public class PeerId implements Serializable {
 
     @Override
     public int hashCode() {
-        int result = socketAddress.hashCode();
+        int result = socketAddress != null ? socketAddress.hashCode() : 0;
         result = 31 * result + uniqueId.hashCode();
         return result;
     }
