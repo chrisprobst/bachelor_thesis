@@ -15,13 +15,10 @@ import de.probst.ba.core.net.peer.handler.handlers.RecordPeerHandler;
 import de.probst.ba.core.net.peer.peers.Peers;
 import de.probst.ba.core.net.peer.peers.netty.NettyConfig;
 import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.TrafficUtil;
-import de.probst.ba.core.net.peer.state.BandwidthStatisticState;
-import de.probst.ba.core.statistic.AbstractStatistic;
-import de.probst.ba.core.statistic.BandwidthStatistic;
-import de.probst.ba.core.statistic.ChunkCompletionStatistic;
 import de.probst.ba.core.util.concurrent.CancelableRunnable;
 import de.probst.ba.core.util.concurrent.Task;
 import de.probst.ba.core.util.io.IOUtil;
+import de.probst.ba.core.util.statistic.Statistic;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import io.netty.util.internal.logging.Slf4JLoggerFactory;
 import org.slf4j.Logger;
@@ -46,6 +43,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.stream.IntStream;
 
 /**
@@ -175,11 +173,26 @@ public abstract class AbstractPeerApp {
     protected final Queue<Peer> uploadBandwidthStatisticPeers = new ConcurrentLinkedQueue<>();
     protected final Queue<Peer> downloadBandwidthStatisticPeers = new ConcurrentLinkedQueue<>();
     protected final Queue<Peer> chunkCompletionStatisticPeers = new ConcurrentLinkedQueue<>();
-    protected final List<AbstractStatistic> statistics = new LinkedList<>();
+    protected final List<Statistic<Peer>> statistics = new LinkedList<>();
 
     protected CancelableRunnable statisticTask;
     protected DataInfo[] dataInfo;
     protected Instant startTime;
+
+    // Statistics mapper functions
+    private final Function<Peer, String> socketAddressMapper = peer -> peer.getPeerId().getSocketAddress().toString();
+    private final Function<Peer, Number> totalUploadedMapper =
+            peer -> peer.getBandwidthStatisticState().getTotalUploaded();
+    private final Function<Peer, Number> totalDownloadedMapper =
+            peer -> peer.getBandwidthStatisticState().getTotalDownloaded();
+    private final Function<Peer, Number> uploadRateMapper =
+            peer -> peer.getBandwidthStatisticState().getCurrentUploadRate();
+    private final Function<Peer, Number> downloadRateMapper =
+            peer -> peer.getBandwidthStatisticState().getCurrentDownloadRate();
+    private final Function<Peer, Number> dataInfoCompletionMapper = peer -> {
+        DataInfo firstDataInfo = peer.getDataBase().get(dataInfo[0].getHash());
+        return firstDataInfo != null ? firstDataInfo.getPercentage() : 0.0;
+    };
 
     protected SeederDistributionAlgorithm getSuperSeederDistributionAlgorithm() {
         return Algorithms.getSuperSeederOnlyDistributionAlgorithm(algorithmType);
@@ -273,9 +286,8 @@ public abstract class AbstractPeerApp {
 
             Collection<Peer> copy = new ArrayList<>(chunkCompletionStatisticPeers);
             if (dataInfo != null && dataInfo.length > 0 && !copy.isEmpty()) {
-                ChunkCompletionStatistic chunkCompletionStatistic = new ChunkCompletionStatistic("ChunkCompletion",
-                                                                                                 copy,
-                                                                                                 dataInfo[0].getHash());
+                Statistic<Peer> chunkCompletionStatistic =
+                        new Statistic<>("ChunkCompletion", copy, socketAddressMapper, dataInfoCompletionMapper);
 
                 statistics.add(chunkCompletionStatistic);
             }
@@ -283,26 +295,28 @@ public abstract class AbstractPeerApp {
             copy = new ArrayList<>(uploadBandwidthStatisticPeers);
             if (!copy.isEmpty()) {
 
-                BandwidthStatistic currentBandwidthStatistic =
-                        new BandwidthStatistic("CurrentUploadBandwidth",
-                                               copy,
-                                               BandwidthStatisticState::getCurrentUploadRate);
+                Statistic<Peer> currentStatistic =
+                        new Statistic<>("CurrentUploadBandwidth", copy, socketAddressMapper, uploadRateMapper);
+                Statistic<Peer> totalStatistic =
+                        new Statistic<>("TotalUploadedBandwidth", copy, socketAddressMapper, totalUploadedMapper);
 
-                statistics.add(currentBandwidthStatistic);
+                statistics.add(currentStatistic);
+                statistics.add(totalStatistic);
             }
 
             copy = new ArrayList<>(downloadBandwidthStatisticPeers);
             if (!copy.isEmpty()) {
-                BandwidthStatistic currentBandwidthStatistic =
-                        new BandwidthStatistic("CurrentDownloadBandwidth",
-                                               copy,
-                                               BandwidthStatisticState::getCurrentDownloadRate);
+                Statistic<Peer> currentStatistic =
+                        new Statistic<>("CurrentDownloadBandwidth", copy, socketAddressMapper, downloadRateMapper);
+                Statistic<Peer> totalStatistic =
+                        new Statistic<>("TotalDownloadedBandwidth", copy, socketAddressMapper, totalDownloadedMapper);
 
-                statistics.add(currentBandwidthStatistic);
+                statistics.add(currentStatistic);
+                statistics.add(totalStatistic);
             }
 
             // Add all statistics to task
-            statistics.forEach(statistic -> statisticRunnables.add(statistic::writeStatistic));
+            statistics.forEach(statistic -> statisticRunnables.add(statistic::writeNextEntry));
 
             // Setup task
             if (!statisticRunnables.isEmpty()) {
@@ -354,7 +368,7 @@ public abstract class AbstractPeerApp {
             }
 
             // Write statistics
-            for (AbstractStatistic statistic : statistics) {
+            for (Statistic<Peer> statistic : statistics) {
                 Path statisticPath = new File(recordsDirectory,
                                               algorithmType + getClass().getSimpleName() +
                                               statistic.getName() + ".csv").toPath();
