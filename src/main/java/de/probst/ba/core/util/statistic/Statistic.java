@@ -36,15 +36,19 @@ public final class Statistic<T> {
     }
 
     public synchronized void writeNextEntry() {
-        if (csv.isFirstElement()) {
-            csv.writeElement("time");
-            elements.forEach(element -> csv.writeElement(headerMapper.apply(element)));
-            csv.writeLine();
-        }
+        try {
+            if (csv.isFirstElement()) {
+                csv.writeElement("time");
+                elements.forEach(element -> csv.writeElement(headerMapper.apply(element)));
+                csv.writeLine();
+            }
 
-        csv.writeDuration();
-        elements.forEach(element -> csv.writeElement(valueMapper.apply(element).doubleValue()));
-        csv.writeLine();
+            csv.writeDuration();
+            elements.forEach(element -> csv.writeElement(valueMapper.apply(element).doubleValue()));
+            csv.writeLine();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Override

@@ -369,9 +369,7 @@ public abstract class AbstractPeerApp {
 
             // Write statistics
             for (Statistic<Peer> statistic : statistics) {
-                Path statisticPath = new File(recordsDirectory,
-                                              algorithmType + getClass().getSimpleName() +
-                                              statistic.getName() + ".csv").toPath();
+                Path statisticPath = new File(recordsDirectory, statistic.getName() + ".csv").toPath();
 
                 logger.info(">>> [ Writing " + statisticPath + " ]");
                 Files.write(statisticPath, statistic.toString().getBytes());
@@ -388,7 +386,7 @@ public abstract class AbstractPeerApp {
             logger.info(">>> [ Writing events now ]");
             Instant timeStamp = Instant.now();
 
-            File file = new File(recordsDirectory, algorithmType + getClass().getSimpleName() + "Events.dat");
+            File file = new File(recordsDirectory, "events.dat");
             logger.info(">>> [ Writing " + file + " ]");
             IOUtil.serialize(file, recordPeerHandler.sortAndGetRecords());
 

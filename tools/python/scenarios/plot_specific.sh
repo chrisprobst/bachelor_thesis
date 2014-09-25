@@ -8,4 +8,4 @@ BASEDIR=$BASEDIR$SCENARIO'/'$DIR'/'
 cd ../../gnuplot
 pwd
 echo $BASEDIR
-gnuplot -e "prefix='SuperSeederChunkedSwarmBenchmark'; dir='$BASEDIR'" plot.cfg
+gnuplot -e "dir='$BASEDIR'" plot.cfg

@@ -6,7 +6,7 @@ import math
 
 header = [['time', 'mean', 'min', 'max', 'stdev', 'confval']]
 
-confidence_niveau = 0.90 # 0.90
+confidence_niveau = 0.90  # 0.90
 confidence_Z = 1.65  # 1.6 + 0.05 = 1.65
 
 
@@ -22,6 +22,11 @@ def write_matrix(results, outputpath):
 
 
 def get_mean_of_row(row):
+    assert len(row) > 0
+    if len(row) == 1:
+        x, = row
+        return [x, x, x, 0, 0]
+
     mean = statistics.mean(list(map(float, row)))
     stdev = statistics.stdev(list(map(float, row)))
     min_val = min(map(float, row))
@@ -44,7 +49,7 @@ def get_mean_of_matrix(matrix):
 def read_mean(inputpath):
     with open(inputpath, 'r') as infile:
         # Read matrix of values
-        reader = csv.reader(infile, delimiter=' ', skipinitialspace=True)
+        reader = csv.reader(infile, delimiter=' ')
         matrix = [list(filter(lambda x: x is not None and x != '', row)) for row in reader]
 
         # Calc the mean and return

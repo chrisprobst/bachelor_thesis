@@ -2,4 +2,5 @@
 
 cd ../../gnuplot
 pwd
-gnuplot -e "prefix='SuperSeederChunkedSwarmBenchmark'; dir='../python/scenarios/results/'" plot.cfg
+
+gnuplot -e "dir='../python/scenarios/results/'" plot.cfg

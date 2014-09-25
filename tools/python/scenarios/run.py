@@ -5,7 +5,6 @@ import os.path as path
 from shutil import rmtree
 
 from tools import trans
-
 from plumbum import local
 
 
@@ -28,6 +27,8 @@ def main():
     args = parser.parse_args()
 
     number, script, parallel = args.n, args.s, args.p
+    assert number > 0
+
     mod = importlib.import_module(script)
     log_level = 'org.slf4j.simpleLogger.defaultLogLevel=warn'
     command = local['java']['-D' + log_level, '-jar', '../../../out/artifacts/benchmark_jar/benchmark.jar']
@@ -38,8 +39,11 @@ def main():
     apps = [(path_maker(i), mod.setup(command, path_maker(i))) for i in range(number)]
 
     if not args.simulate:
-        # Make sure that all old results are removed
-        rmtree(path.join('.', 'results', script))
+        try:
+            # Make sure that all old results are removed
+            rmtree(path.join('.', 'results', script))
+        except FileNotFoundError:
+            pass
 
         if parallel:
             print('Started all iterations in parallel')
