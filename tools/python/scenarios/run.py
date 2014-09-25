@@ -2,11 +2,14 @@ import argparse
 import importlib
 from sys import stdout as stdout
 import os.path as path
+from shutil import rmtree
+
+from tools import trans
 
 from plumbum import local
 
 
-def start_process(process, k):
+def start_process(process):
     for line in process.stderr:
         stdout.write(line.decode('utf-8'))
     for line in process.stdout:
@@ -16,10 +19,12 @@ def start_process(process, k):
 
 def main():
     parser = argparse.ArgumentParser(description='Runs benchmark scenarios')
+    parser.add_argument('--simulate', action='store_true', dest='simulate')
     parser.add_argument('-s', required=True, dest='s')
     parser.add_argument('-n', required=True, dest='n', type=int)
     parser.add_argument('-p', dest='p', action='store_true')
     parser.set_defaults(p=False)
+    parser.set_defaults(simulate=False)
     args = parser.parse_args()
 
     number, script, parallel = args.n, args.s, args.p
@@ -32,15 +37,35 @@ def main():
 
     apps = [(path_maker(i), mod.setup(command, path_maker(i))) for i in range(number)]
 
-    if parallel:
-        print('Started all iterations in parallel')
-        for idx, (k, process_handle) in enumerate([(k, app.popen()) for k, app in apps]):
-            print('Waiting for %i. iteration at %s' % (idx, k))
-            start_process(process_handle, k)
+    if not args.simulate:
+        # Make sure that all old results are removed
+        rmtree(path.join('.', 'results', script))
+
+        if parallel:
+            print('Started all iterations in parallel')
+            for idx, (k, process_handle) in enumerate([(k, app.popen()) for k, app in apps]):
+                print('Waiting for %i. iteration at %s' % (idx, k))
+                start_process(process_handle)
+        else:
+            for idx, (k, app) in enumerate(apps):
+                print('Running %i. iteration at %s' % (idx, k))
+                start_process(app.popen())
+
+    # Read all files as mean
+    results = trans.read_all_mean(k for k, _ in apps)
+
+    # Write single matrices
+    for run, subresults in results.items():
+        for inputpath, matrix in subresults.items():
+            trans.write_matrix(matrix, path.join(run, 'Mean' + inputpath))
+
+    if len(results) > 1:
+        d = next(iter(results.values()))
+        for key in d:
+            matrix = trans.get_mean_of_results(results, key)
+            trans.write_matrix(matrix, path.join('.', 'results', 'Mean' + key))
     else:
-        for idx, (k, app) in enumerate(apps):
-            print('Running %i. iteration at %s' % (idx, k))
-            start_process(app.popen(), k)
+        print("Only one run, no mean values will be calculated")
 
 
 if __name__ == '__main__':

@@ -6,11 +6,16 @@
       <w>connectable</w>
       <w>csvfile</w>
       <w>guid</w>
+      <w>inputdir</w>
+      <w>inputdirs</w>
+      <w>inputpath</w>
+      <w>inputpaths</w>
       <w>leecher</w>
       <w>refiller</w>
       <w>runnables</w>
       <w>schedulation</w>
       <w>stdout</w>
+      <w>subresults</w>
     </words>
   </dictionary>
 </component>

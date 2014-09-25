@@ -44,4 +44,7 @@ build/
 # Ignore python stuff
 __pycache__/
 tools/python/venv/
-tools/python/scenarios/results/
+tools/python/scenarios/results/*.csv
+
+# Ignore gnuplot stuff
+tools/gnuplot/img/
