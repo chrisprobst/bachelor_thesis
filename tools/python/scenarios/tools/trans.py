@@ -4,10 +4,11 @@ from os import listdir
 from os.path import join
 import math
 
-header = [['time', 'mean', 'min', 'max', 'stdev', 'confval']]
+header = [['Time', 'Mean', 'Min', 'Max', 'StDev', 'ConfidenceInterval']]
 
-confidence_niveau = 0.90  # 0.90
-confidence_Z = 1.65  # 1.6 + 0.05 = 1.65
+# confidence_niveau: 0.90  # 0.90 -> CONF # 1.6 + 0.05 = 1.65
+# confidence_niveau: 0.95  # 0.95 -> CONF # 1.9 + 0.06 = 1.96
+confidence_Z = 1.96
 
 
 def get_confidence_interval(stdev, n):

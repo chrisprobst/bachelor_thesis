@@ -4,7 +4,7 @@ def setup(command, results_dir):
         '-s', 1,
         '-l', 10,
         '--total-size', 100000,
-        '-c', 40,
+        '-c', 20,
         '-pt', 'Local',
         '-da', 'SuperSeederChunkedSwarm',
         '-rs',
