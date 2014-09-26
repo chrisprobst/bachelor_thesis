@@ -55,6 +55,10 @@ def main():
                 print('Running %i. iteration at %s' % (idx, k))
                 start_process(app.popen())
 
+    #######################
+    ## CREATE MISSING FILES
+    #######################
+
     # Read the total matrices
     total_uploaded_matrices = trans.read_all_matrices((k for k, _ in apps),
                                                       lambda x: x == 'TotalUploadedBandwidth.csv')
@@ -72,6 +76,10 @@ def main():
         for inputpath, matrix in subresults.items():
             column_data = list(enumerate(sorted(map(float, matrix[-1][1:]), reverse=True)))
             trans.write_matrix(column_data, path.join(run, 'Sorted' + inputpath))
+
+    ############################
+    ## START THE MEAN-CALC CHAIN
+    ############################
 
     # Read all files as mean
     results = trans.read_all_mean(k for k, _ in apps)
