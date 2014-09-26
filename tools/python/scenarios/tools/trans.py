@@ -10,6 +10,12 @@ header = [['Time', 'Mean', 'Min', 'Max', 'StDev', 'ConfidenceInterval']]
 # confidence_niveau: 0.95  # 0.95 -> CONF # 1.9 + 0.06 = 1.96
 confidence_Z = 1.96
 
+GENERATED_PREFIX = "Generated"
+
+
+def file_input_filter(x):
+    return not x.startswith(GENERATED_PREFIX)
+
 
 def get_confidence_interval(stdev, n):
     return confidence_Z * stdev / math.sqrt(n)
@@ -20,6 +26,23 @@ def write_matrix(results, outputpath):
         writer = csv.writer(outfile, delimiter=' ')
         for row in results:
             writer.writerow(row)
+
+
+def read_matrix(inputpath):
+    with open(inputpath, 'r') as infile:
+        # Read matrix of values
+        reader = csv.reader(infile, delimiter=' ')
+        return [list(filter(lambda x: x is not None and x != '', row)) for row in reader]
+
+
+def read_all_matrices(inputdirs, name_filter):
+    results = {}
+    for inputdir in inputdirs:
+        subresults = results[inputdir] = {}
+        inputpaths = listdir(inputdir)
+        for inputpath in filter(name_filter, filter(file_input_filter, inputpaths)):
+            subresults[inputpath] = read_matrix(join(inputdir, inputpath))
+    return results
 
 
 def get_mean_of_row(row):
@@ -48,13 +71,7 @@ def get_mean_of_matrix(matrix):
 
 
 def read_mean(inputpath):
-    with open(inputpath, 'r') as infile:
-        # Read matrix of values
-        reader = csv.reader(infile, delimiter=' ')
-        matrix = [list(filter(lambda x: x is not None and x != '', row)) for row in reader]
-
-        # Calc the mean and return
-        return get_mean_of_matrix(matrix)
+    return get_mean_of_matrix(read_matrix(inputpath))
 
 
 def read_all_mean(inputdirs):
@@ -62,7 +79,7 @@ def read_all_mean(inputdirs):
     for inputdir in inputdirs:
         subresults = results[inputdir] = {}
         inputpaths = listdir(inputdir)
-        for inputpath in filter(lambda x: 'Mean' != x[:4], inputpaths):
+        for inputpath in filter(file_input_filter, inputpaths):
             subresults[inputpath] = read_mean(join(inputdir, inputpath))
     return results
 

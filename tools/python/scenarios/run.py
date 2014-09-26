@@ -55,19 +55,37 @@ def main():
                 print('Running %i. iteration at %s' % (idx, k))
                 start_process(app.popen())
 
+    # Read the total matrices
+    total_uploaded_matrices = trans.read_all_matrices((k for k, _ in apps),
+                                                      lambda x: x == 'TotalUploadedBandwidth.csv')
+    total_downloaded_matrices = trans.read_all_matrices((k for k, _ in apps),
+                                                        lambda x: x == 'TotalDownloadedBandwidth.csv')
+
+    # Create sorted total uploaded
+    for run, subresults in total_uploaded_matrices.items():
+        for inputpath, matrix in subresults.items():
+            column_data = list(enumerate(sorted(map(float, matrix[-1][1:]), reverse=True)))
+            trans.write_matrix(column_data, path.join(run, 'Sorted' + inputpath))
+
+    # Create sorted total downloaded
+    for run, subresults in total_downloaded_matrices.items():
+        for inputpath, matrix in subresults.items():
+            column_data = list(enumerate(sorted(map(float, matrix[-1][1:]), reverse=True)))
+            trans.write_matrix(column_data, path.join(run, 'Sorted' + inputpath))
+
     # Read all files as mean
     results = trans.read_all_mean(k for k, _ in apps)
 
     # Write single matrices
     for run, subresults in results.items():
         for inputpath, matrix in subresults.items():
-            trans.write_matrix(matrix, path.join(run, 'Mean' + inputpath))
+            trans.write_matrix(matrix, path.join(run, trans.GENERATED_PREFIX + 'Mean' + inputpath))
 
     if len(results) > 1:
         d = next(iter(results.values()))
         for key in d:
             matrix = trans.get_mean_of_results(results, key)
-            trans.write_matrix(matrix, path.join('.', 'results', 'Mean' + key))
+            trans.write_matrix(matrix, path.join('.', 'results', trans.GENERATED_PREFIX + 'Mean' + key))
     else:
         print("Only one run, no mean values will be calculated")
 
