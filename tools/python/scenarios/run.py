@@ -68,13 +68,13 @@ def main():
     # Create sorted total uploaded
     for run, subresults in total_uploaded_matrices.items():
         for inputpath, matrix in subresults.items():
-            column_data = list(enumerate(sorted(map(float, matrix[-1][1:]), reverse=True)))
+            column_data = [['SortedPeers', 'TotalUploaded']] + list(enumerate(sorted(map(float, matrix[-1][1:]), reverse=True)))
             trans.write_matrix(column_data, path.join(run, 'Sorted' + inputpath))
 
     # Create sorted total downloaded
     for run, subresults in total_downloaded_matrices.items():
         for inputpath, matrix in subresults.items():
-            column_data = list(enumerate(sorted(map(float, matrix[-1][1:]), reverse=True)))
+            column_data = [['SortedPeers', 'TotalDownloaded']] + list(enumerate(sorted(map(float, matrix[-1][1:]), reverse=True)))
             trans.write_matrix(column_data, path.join(run, 'Sorted' + inputpath))
 
     ############################

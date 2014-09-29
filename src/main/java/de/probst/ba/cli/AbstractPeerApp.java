@@ -212,7 +212,7 @@ public abstract class AbstractPeerApp {
     }
 
     protected void setupConfig() {
-        TrafficUtil.setDefaultMessageSize((long) (totalSize / chunkCount * (metaDataSize) / 100));
+        TrafficUtil.setDefaultMessageSize((long) (totalSize / chunkCount * metaDataSize / 100));
         NettyConfig.setUploadBufferSize((int) (totalSize / chunkCount * NettyConfig.getUploadBufferChunkRatio()));
         NettyConfig.setUseCodec(binaryCodec);
         NettyConfig.setMaxConnectionsPerLeecher(maxConnections);
