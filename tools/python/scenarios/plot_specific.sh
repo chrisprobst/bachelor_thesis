@@ -9,3 +9,5 @@ cd ../../gnuplot
 pwd
 echo $BASEDIR
 gnuplot -e "dir='$BASEDIR'" plot.cfg
+
+open img

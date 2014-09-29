@@ -11,6 +11,7 @@ import de.probst.ba.core.distribution.SeederDistributionAlgorithm;
 import de.probst.ba.core.distribution.algorithms.Algorithms;
 import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.net.peer.Peer;
+import de.probst.ba.core.net.peer.PeerConfig;
 import de.probst.ba.core.net.peer.handler.handlers.RecordPeerHandler;
 import de.probst.ba.core.net.peer.peers.Peers;
 import de.probst.ba.core.net.peer.peers.netty.NettyConfig;
@@ -212,8 +213,18 @@ public abstract class AbstractPeerApp {
     }
 
     protected void setupConfig() {
+        int actualDownloadRate = downloadRate > 0 ? downloadRate : Integer.MAX_VALUE;
+        int actualUploadRate = uploadRate > 0 ? uploadRate : Integer.MAX_VALUE;
+        int actualSuperUploadRate = superUploadRate > 0 ? superUploadRate : Integer.MAX_VALUE;
+
+        long smallestRate = Math.min(Math.min(actualDownloadRate, actualUploadRate), actualSuperUploadRate);
+        double refillRateInSeconds = PeerConfig.getLeakyBucketRefillInterval() / 1000.0;
+        int chunkSize = (int) (totalSize / chunkCount);
+        int calculatedBufferSize = (int) Math.round(smallestRate * refillRateInSeconds);
+        int bufferSize = Math.min(Math.min(chunkSize, calculatedBufferSize), NettyConfig.getUploadBufferSize());
+
+        NettyConfig.setUploadBufferSize(bufferSize);
         TrafficUtil.setDefaultMessageSize((long) (totalSize / chunkCount * metaDataSize / 100));
-        NettyConfig.setUploadBufferSize((int) (totalSize / chunkCount * NettyConfig.getUploadBufferChunkRatio()));
         NettyConfig.setUseCodec(binaryCodec);
         NettyConfig.setMaxConnectionsPerLeecher(maxConnections);
 
@@ -222,7 +233,7 @@ public abstract class AbstractPeerApp {
         logger.info(">>> Algorithm type:            " + algorithmType);
         logger.info(">>> Simulated meta data size:  " + TrafficUtil.getDefaultMessageSize() + " bytes");
         logger.info(">>> Upload buffer size:        " + NettyConfig.getUploadBufferSize() + " bytes (" +
-                    "Nearest power of 2 of " + NettyConfig.getUploadBufferChunkRatio() + "x chunk size)");
+                    "Nearest power of 2 of " + bufferSize + ")");
         logger.info(">>> Using codec:               " + NettyConfig.isUseCodec());
         logger.info(">>> Leecher connection limit:  " + NettyConfig.getMaxConnectionsPerLeecher());
         logger.info(">>> Total size:                " + totalSize);

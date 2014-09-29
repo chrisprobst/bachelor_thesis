@@ -8,11 +8,11 @@ public final class PeerConfig {
     private PeerConfig() {
     }
 
-    private static final int leakyBucketRefillInterval = 250;
+    private static final long leakyBucketRefillInterval = 250;
     private static final double leakyBucketMaxTokensFactor = leakyBucketRefillInterval / 1000.0;
     private static final long minimalBandwidthStatisticStateCreationDelay = leakyBucketRefillInterval;
 
-    public static int getLeakyBucketRefillInterval() {
+    public static long getLeakyBucketRefillInterval() {
         return leakyBucketRefillInterval;
     }
 

@@ -17,7 +17,6 @@ public final class NettyConfig {
     }
 
     private static volatile int maxConnectionsPerLeecher = 0;
-    private static final double uploadBufferChunkRatio = 0.2;
     private static volatile int uploadBufferSize = 8192;
     private static final long messageQueueResetDelay = 2500;
     private static final long discoveryExchangeDelay = 1000;
@@ -35,10 +34,6 @@ public final class NettyConfig {
         return maxConnectionsPerLeecher;
     }
 
-    public static double getUploadBufferChunkRatio() {
-        return uploadBufferChunkRatio;
-    }
-
     public static int getUploadBufferSize() {
         return uploadBufferSize;
     }
@@ -47,7 +42,11 @@ public final class NettyConfig {
         if (uploadBufferSize <= 0) {
             throw new IllegalArgumentException("uploadBufferSize <= 0");
         }
-        NettyConfig.uploadBufferSize = Integer.highestOneBit(uploadBufferSize - 1) << 1;
+        int powerOf2 = 1, nextPowerOf2 = powerOf2;
+        while ((nextPowerOf2 <<= 1) < uploadBufferSize) {
+            powerOf2 = nextPowerOf2;
+        }
+        NettyConfig.uploadBufferSize = powerOf2;
     }
 
     public static long getMessageQueueResetDelay() {
