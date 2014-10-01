@@ -190,10 +190,13 @@ public abstract class AbstractPeerApp {
             peer -> peer.getBandwidthStatisticState().getCurrentUploadRate();
     private final Function<Peer, Number> downloadRateMapper =
             peer -> peer.getBandwidthStatisticState().getCurrentDownloadRate();
-    private final Function<Peer, Number> dataInfoCompletionMapper = peer -> {
-        DataInfo firstDataInfo = peer.getDataBase().get(dataInfo[0].getHash());
-        return firstDataInfo != null ? firstDataInfo.getPercentage() : 0.0;
-    };
+    private final Function<Peer, Number> dataInfoCompletionMapper = peer -> Arrays.stream(dataInfo)
+                                                                                  .map(DataInfo::getHash)
+                                                                                  .map(peer.getDataBase()::get)
+                                                                                  .mapToDouble(x -> x != null ?
+                                                                                                    x.getPercentage() :
+                                                                                                    0.0)
+                                                                                  .sum() / dataInfo.length;
 
     protected SeederDistributionAlgorithm getSuperSeederDistributionAlgorithm() {
         return Algorithms.getSuperSeederOnlyDistributionAlgorithm(algorithmType);

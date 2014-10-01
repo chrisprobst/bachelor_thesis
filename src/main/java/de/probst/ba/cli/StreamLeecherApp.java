@@ -71,7 +71,7 @@ public class StreamLeecherApp extends AbstractSocketAddressApp {
 
                             if (di.isCompleted()) {
                                 System.out.println(" ********  FAST ENOUGH, CONTINUE STREAMING ********");
-                                eventLoopGroup.schedule(this, 20000, TimeUnit.MILLISECONDS);
+                                eventLoopGroup.schedule(this, 10000, TimeUnit.MILLISECONDS);
                             } else {
                                 System.out.println(" ******** BUG BUG BUG BUG ********");
                             }
@@ -117,15 +117,12 @@ public class StreamLeecherApp extends AbstractSocketAddressApp {
     protected void start() throws Exception {
         setup();
 
-        StreamerGUI gui = new StreamerGUI(leecher.getDataBase(), 20000);
+        StreamerGUI gui = new StreamerGUI(leecher.getDataBase(), 10000);
         Scanner scanner = new Scanner(System.in);
 
         // Connect to external seeder and wait
         leecher.connect(getExternalSocketAddress()).get();
         logger.info(">>> [ Connected to " + getExternalSocketAddress() + " ]");
-
-        Thread.sleep(3000);
-
         logger.info(">>> [ Press [ENTER] to start leeching and timers ]");
         if (scanner.hasNextLine()) {
             scanner.nextLine();

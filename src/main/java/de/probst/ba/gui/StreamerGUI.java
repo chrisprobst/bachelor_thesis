@@ -83,7 +83,7 @@ public class StreamerGUI extends JFrame {
                 } while (true);
 
 
-                double offset = 100 / 15.0 / 10;
+                double offset = 100 / 10 / 10;
                 x += offset;
                 repaint();
             });
