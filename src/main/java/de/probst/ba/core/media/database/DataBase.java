@@ -6,6 +6,7 @@ import io.netty.buffer.ByteBuf;
 
 import java.io.Flushable;
 import java.io.IOException;
+import java.nio.channels.ReadableByteChannel;
 import java.util.Map;
 import java.util.Objects;
 
@@ -28,8 +29,6 @@ public interface DataBase extends Flushable {
      * data info in this data base.
      */
     Map<String, DataInfo> getDataInfo();
-
-    void update(DataInfo dataInfo);
 
     /**
      * @param hash
@@ -84,6 +83,8 @@ public interface DataBase extends Flushable {
                        ByteBuf byteBuf,
                        int length,
                        boolean download) throws IOException;
+
+    void insert(DataInfo dataInfo, ReadableByteChannel readableByteChannel) throws IOException;
 
     default TransferManager createTransferManager(Transfer transfer) {
 

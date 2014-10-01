@@ -3,8 +3,12 @@ package de.probst.ba.core.media.database.databases;
 import de.probst.ba.core.media.database.DataBase;
 import de.probst.ba.core.media.database.DataInfo;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 
+import java.io.EOFException;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.ReadableByteChannel;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -16,8 +20,8 @@ import java.util.stream.Collectors;
  */
 public abstract class AbstractDataBase implements DataBase {
 
-    protected final Map<String, DataInfo> dataInfo = new HashMap<>();
-    protected volatile Map<String, DataInfo> nonEmptyDataInfoView = Collections.emptyMap();
+    private final Map<String, DataInfo> dataInfo = new HashMap<>();
+    private volatile Map<String, DataInfo> nonEmptyDataInfoView = Collections.emptyMap();
 
     private void createNonEmptyDataInfoView() {
         nonEmptyDataInfoView = Collections.unmodifiableMap(dataInfo.entrySet()
@@ -48,44 +52,42 @@ public abstract class AbstractDataBase implements DataBase {
     }
 
     @Override
-    public synchronized void update(DataInfo dataInfo) {
-        this.dataInfo.put(dataInfo.getHash(), dataInfo);
-        createNonEmptyDataInfoView();
-    }
-
-    @Override
     public synchronized DataInfo get(String hash) {
         return dataInfo.get(hash);
     }
 
     @Override
-    public synchronized void processBuffer(DataInfo processDataInfo,
+    public synchronized void processBuffer(DataInfo dataInfo,
                                            int chunkIndex,
                                            long offset,
                                            ByteBuf byteBuf,
                                            int length,
                                            boolean download) throws IOException {
 
-        Objects.requireNonNull(processDataInfo);
+        Objects.requireNonNull(dataInfo);
         Objects.requireNonNull(byteBuf);
-        DataInfo dataInfo = this.dataInfo.get(processDataInfo.getHash());
+        DataInfo existingDataInfo = this.dataInfo.get(dataInfo.getHash());
 
-        if (!download && dataInfo == null) {
-            throw new IllegalArgumentException("Data info for uploading does not exist: " + processDataInfo);
-        } else if (dataInfo == null) {
-            dataInfo = processDataInfo.empty();
-            this.dataInfo.put(dataInfo.getHash(), dataInfo);
+        if (existingDataInfo == null) {
+            if (download) {
+                existingDataInfo = dataInfo.empty();
+                this.dataInfo.put(existingDataInfo.getHash(), existingDataInfo);
+            } else {
+                throw new IllegalArgumentException("Data info for uploading does not exist: " + dataInfo);
+            }
+        } else if (!existingDataInfo.isCompatibleWith(dataInfo)) {
+            throw new IllegalArgumentException("!existingDataInfo.isCompatibleWith(dataInfo)");
         }
 
-        if (download && dataInfo.isChunkCompleted(chunkIndex)) {
+        if (download && existingDataInfo.isChunkCompleted(chunkIndex)) {
             throw new IllegalArgumentException("Chunk already completed: " + chunkIndex);
         }
 
-        if (!download && !dataInfo.isChunkCompleted(chunkIndex)) {
+        if (!download && !existingDataInfo.isChunkCompleted(chunkIndex)) {
             throw new IllegalArgumentException("Chunk not completed: " + chunkIndex);
         }
 
-        long chunkSize = dataInfo.getChunkSize(chunkIndex);
+        long chunkSize = existingDataInfo.getChunkSize(chunkIndex);
 
         if (offset < 0 || offset >= chunkSize) {
             throw new IllegalArgumentException("offset < 0 || offset >= chunkSize");
@@ -108,7 +110,38 @@ public abstract class AbstractDataBase implements DataBase {
         }
 
         // Do process the buffer
-        doProcessBuffer(dataInfo, chunkIndex, chunkSize, offset, byteBuf, length, download);
+        doProcessBuffer(existingDataInfo, chunkIndex, chunkSize, offset, byteBuf, length, download);
+    }
+
+    @Override
+    public synchronized void insert(DataInfo dataInfo, ReadableByteChannel readableByteChannel) throws IOException {
+        Objects.requireNonNull(dataInfo);
+        Objects.requireNonNull(readableByteChannel);
+        DataInfo existingDataInfo = this.dataInfo.get(dataInfo.getHash());
+
+        if (existingDataInfo != null && !existingDataInfo.isCompatibleWith(dataInfo)) {
+            throw new IllegalArgumentException(
+                    "existingDataInfo != null && !existingDataInfo.isCompatibleWith(dataInfo)");
+        }
+
+        for (int chunkIndex : dataInfo.getCompletedChunks().toArray()) {
+            // Read one chunk into memory
+            ByteBuffer byteBuffer = ByteBuffer.allocate((int) dataInfo.getChunkSize(chunkIndex));
+            while (byteBuffer.hasRemaining()) {
+                if (readableByteChannel.read(byteBuffer) < 0) {
+                    throw new EOFException();
+                }
+            }
+            byteBuffer.flip();
+
+            // Store buffer in data base
+            processBufferAndComplete(dataInfo,
+                                     chunkIndex,
+                                     0,
+                                     Unpooled.wrappedBuffer(byteBuffer),
+                                     byteBuffer.remaining(),
+                                     true);
+        }
     }
 
     @Override

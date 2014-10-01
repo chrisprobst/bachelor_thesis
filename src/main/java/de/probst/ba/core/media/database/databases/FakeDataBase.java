@@ -1,27 +1,14 @@
-package de.probst.ba.core.media.database.databases.fake;
+package de.probst.ba.core.media.database.databases;
 
 import de.probst.ba.core.media.database.DataInfo;
-import de.probst.ba.core.media.database.databases.AbstractDataBase;
 import io.netty.buffer.ByteBuf;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * Created by chrisprobst on 13.08.14.
  */
 public final class FakeDataBase extends AbstractDataBase {
-
-    public FakeDataBase(DataInfo... dataInfo) {
-        this(Arrays.stream(dataInfo).collect(Collectors.toMap(DataInfo::getHash, Function.identity())));
-    }
-
-    public FakeDataBase(Map<String, DataInfo> initialDataInfo) {
-        dataInfo.putAll(initialDataInfo);
-    }
 
     @Override
     protected void doProcessBuffer(DataInfo dataInfo,
@@ -41,6 +28,6 @@ public final class FakeDataBase extends AbstractDataBase {
 
     @Override
     public void flush() throws IOException {
-        
+
     }
 }

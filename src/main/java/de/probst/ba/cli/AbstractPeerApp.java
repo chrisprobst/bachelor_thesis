@@ -25,10 +25,13 @@ import io.netty.util.internal.logging.Slf4JLoggerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -352,7 +355,7 @@ public abstract class AbstractPeerApp {
         }
     }
 
-    protected void setupStart(ScheduledExecutorService scheduledExecutorService) {
+    protected void setupStart(ScheduledExecutorService scheduledExecutorService) throws IOException {
         setupStartRecords(scheduledExecutorService);
         setupStartTime();
         updatePeerDataBases();
@@ -414,8 +417,14 @@ public abstract class AbstractPeerApp {
         setupStopRecords();
     }
 
-    protected void updatePeerDataBases() {
-        dataBaseUpdatePeers.forEach(s -> Arrays.stream(dataInfo).forEach(s.getDataBase()::update));
+    protected void updatePeerDataBases() throws IOException {
+        for (Peer peer : dataBaseUpdatePeers) {
+            for (DataInfo dataInfo : this.dataInfo) {
+                ReadableByteChannel readableByteChannel =
+                        Channels.newChannel(new ByteArrayInputStream(new byte[(int) dataInfo.getSize()]));
+                peer.getDataBase().insert(dataInfo, readableByteChannel);
+            }
+        }
     }
 
     protected abstract void start() throws Exception;
