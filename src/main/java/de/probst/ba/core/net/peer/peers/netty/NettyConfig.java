@@ -42,11 +42,7 @@ public final class NettyConfig {
         if (uploadBufferSize <= 0) {
             throw new IllegalArgumentException("uploadBufferSize <= 0");
         }
-        int powerOf2 = 1, nextPowerOf2 = powerOf2;
-        while ((nextPowerOf2 <<= 1) < uploadBufferSize) {
-            powerOf2 = nextPowerOf2;
-        }
-        NettyConfig.uploadBufferSize = powerOf2;
+        NettyConfig.uploadBufferSize = Integer.highestOneBit(uploadBufferSize - 1) << 1;
     }
 
     public static long getMessageQueueResetDelay() {

@@ -216,11 +216,11 @@ public abstract class AbstractPeerApp {
         int actualDownloadRate = downloadRate > 0 ? downloadRate : Integer.MAX_VALUE;
         int actualUploadRate = uploadRate > 0 ? uploadRate : Integer.MAX_VALUE;
         int actualSuperUploadRate = superUploadRate > 0 ? superUploadRate : Integer.MAX_VALUE;
-
         long smallestRate = Math.min(Math.min(actualDownloadRate, actualUploadRate), actualSuperUploadRate);
+
         double refillRateInSeconds = PeerConfig.getLeakyBucketRefillInterval() / 1000.0;
         int chunkSize = (int) (totalSize / chunkCount);
-        int calculatedBufferSize = (int) Math.round(smallestRate * refillRateInSeconds);
+        int calculatedBufferSize = (int) Math.round(smallestRate * refillRateInSeconds * 0.5);
         int bufferSize = Math.min(Math.min(chunkSize, calculatedBufferSize), NettyConfig.getUploadBufferSize());
 
         NettyConfig.setUploadBufferSize(bufferSize);

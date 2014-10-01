@@ -59,6 +59,8 @@ def main():
     ## CREATE MISSING FILES
     #######################
 
+    #### Sorted peer bandwidth
+
     # Read the total matrices
     total_uploaded_matrices = trans.read_all_matrices((k for k, _ in apps),
                                                       lambda x: x == 'TotalUploadedBandwidth.csv')
@@ -76,6 +78,27 @@ def main():
         for inputpath, matrix in subresults.items():
             column_data = [['SortedPeers', 'TotalDownloaded']] + list(enumerate(sorted(map(float, matrix[-1][1:]), reverse=True)))
             trans.write_matrix(column_data, path.join(run, 'Sorted' + inputpath))
+
+
+    #### Sorted peer completion time
+    chunk_completion_matrices = trans.read_all_matrices((k for k, _ in apps),
+                                                        lambda x: x == 'ChunkCompletion.csv')
+
+    # Create sorted chunk completion
+    for run, subresults in chunk_completion_matrices.items():
+        for inputpath, matrix in subresults.items():
+            column_data = []
+            done = set()
+            for i in range(1, len(matrix)):
+                for j in range(1, len(matrix[i])):
+                    if j not in done:
+                        if float(matrix[i][j]) == 1.0:
+                            done.add(j)
+                            column_data.append(int(round(float(matrix[i][0]))))
+
+            column_data = [['SortedPeers', 'Time']] + list(zip(range(len(column_data)), reversed(column_data)))
+            trans.write_matrix(column_data, path.join(run, 'Sorted' + inputpath))
+
 
     ############################
     ## START THE MEAN-CALC CHAIN
