@@ -21,8 +21,12 @@ public final class FakeDataBase extends AbstractDataBase {
         if (download) {
             byteBuf.readerIndex(byteBuf.readerIndex() + length);
         } else {
-            byteBuf.writeByte((byte) chunkIndex);
-            byteBuf.writerIndex(byteBuf.writerIndex() + length - 1);
+            if (offset == 0) {
+                byteBuf.writeByte((byte) chunkIndex);
+                byteBuf.writerIndex(byteBuf.writerIndex() + length - 1);
+            } else {
+                byteBuf.writerIndex(byteBuf.writerIndex() + length);
+            }
         }
     }
 

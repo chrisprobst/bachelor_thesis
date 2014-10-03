@@ -83,7 +83,7 @@ public class Benchmark extends AbstractPeerApp {
                                          Optional.ofNullable(recordPeerHandler),
                                          Optional.of(eventLoopGroup)).getInitFuture().get();
 
-            uploadBandwidthStatisticPeers.add(seeder);
+            superSeederUploadBandwidthStatisticPeers.add(seeder);
             dataBaseUpdatePeers.add(seeder);
             seederQueue.add(seeder);
             peerQueue.add(seeder);
@@ -156,13 +156,13 @@ public class Benchmark extends AbstractPeerApp {
         logger.info(">>> [ Transfer info ]");
         if (uploadRate > 0) {
             // Setup status flags
-            double timePerTransfer = totalSize / uploadRate;
+            double timePerTransfer = totalSize / (double) uploadRate;
 
             // Server/Client like
             double dumbTime = timePerTransfer / seeders * leechers;
 
             // ~ who knows ?!
-            double chunkSwarmTime = timePerTransfer / seeders * 2;
+            double chunkSwarmTime = timePerTransfer + (leechers - 1) / (double) chunkCount * timePerTransfer;
 
             // log(n) - log(s) = log(n / s) = log((s + l) / s) = log(1 + l/s)
             double logarithmicTime =

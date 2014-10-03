@@ -9,5 +9,5 @@ def setup(command, results_dir):
         '-da', 'SuperSeederChunkedSwarm',
         '-rs',
         '-u', 1000,
-        '-su', 1000
+        '-su', 2000
     ]

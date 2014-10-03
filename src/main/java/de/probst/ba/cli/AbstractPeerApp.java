@@ -30,8 +30,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.nio.channels.Channels;
-import java.nio.channels.ReadableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -174,6 +172,7 @@ public abstract class AbstractPeerApp {
     protected RecordPeerHandler recordPeerHandler;
 
     // Statistics
+    protected final Queue<Peer> superSeederUploadBandwidthStatisticPeers = new ConcurrentLinkedQueue<>();
     protected final Queue<Peer> uploadBandwidthStatisticPeers = new ConcurrentLinkedQueue<>();
     protected final Queue<Peer> downloadBandwidthStatisticPeers = new ConcurrentLinkedQueue<>();
     protected final Queue<Peer> chunkCompletionStatisticPeers = new ConcurrentLinkedQueue<>();
@@ -199,7 +198,7 @@ public abstract class AbstractPeerApp {
                                                                                   .mapToDouble(x -> x != null ?
                                                                                                     x.getPercentage() :
                                                                                                     0.0)
-                                                                                  .sum() / dataInfo.length;
+                                                                                  .sum();
 
     protected SeederDistributionAlgorithm getSuperSeederDistributionAlgorithm() {
         return Algorithms.getSuperSeederOnlyDistributionAlgorithm(algorithmType);
@@ -309,6 +308,22 @@ public abstract class AbstractPeerApp {
                 statistics.add(chunkCompletionStatistic);
             }
 
+            copy = new ArrayList<>(superSeederUploadBandwidthStatisticPeers);
+            if (!copy.isEmpty()) {
+
+                Statistic<Peer> currentStatistic = new Statistic<>("CurrentSuperSeederUploadBandwidth",
+                                                                   copy,
+                                                                   socketAddressMapper,
+                                                                   uploadRateMapper);
+                Statistic<Peer> totalStatistic = new Statistic<>("TotalSuperSeederUploadedBandwidth",
+                                                                 copy,
+                                                                 socketAddressMapper,
+                                                                 totalUploadedMapper);
+
+                statistics.add(currentStatistic);
+                statistics.add(totalStatistic);
+            }
+
             copy = new ArrayList<>(uploadBandwidthStatisticPeers);
             if (!copy.isEmpty()) {
 
@@ -337,12 +352,17 @@ public abstract class AbstractPeerApp {
 
             // Setup task
             if (!statisticRunnables.isEmpty()) {
+                // Write start statistic
+                statisticRunnables.forEach(Runnable::run);
+
+                // Setup task
                 statisticTask = new Task(task -> {
                     statisticRunnables.forEach(Runnable::run);
                     task.run();
                 }, runnable -> scheduledExecutorService.schedule(runnable,
                                                                  AppConfig.getStatisticInterval(),
                                                                  TimeUnit.MILLISECONDS));
+
                 statisticTask.run();
             }
         }
@@ -420,9 +440,7 @@ public abstract class AbstractPeerApp {
     protected void updatePeerDataBases() throws IOException {
         for (Peer peer : dataBaseUpdatePeers) {
             for (DataInfo dataInfo : this.dataInfo) {
-                ReadableByteChannel readableByteChannel =
-                        Channels.newChannel(new ByteArrayInputStream(new byte[(int) dataInfo.getSize()]));
-                peer.getDataBase().insert(dataInfo, readableByteChannel);
+                peer.getDataBase().insert(dataInfo, new ByteArrayInputStream(new byte[(int) dataInfo.getSize()]));
             }
         }
     }

@@ -87,12 +87,14 @@ def main():
     # Create sorted chunk completion
     for run, subresults in chunk_completion_matrices.items():
         for inputpath, matrix in subresults.items():
+            max_completion = float(matrix[-1][1])
+
             column_data = []
             done = set()
             for i in range(1, len(matrix)):
                 for j in range(1, len(matrix[i])):
                     if j not in done:
-                        if float(matrix[i][j]) == 1.0:
+                        if float(matrix[i][j]) == max_completion:
                             done.add(j)
                             column_data.append(int(round(float(matrix[i][0]))))
 

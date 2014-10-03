@@ -220,7 +220,7 @@ public class DataInfoTest {
         assertEquals(9, dataInfo.getChunkSize(0));
         assertEquals(9, dataInfo.getChunkSize(4));
         assertEquals(9, dataInfo.getChunkSize(9));
-        assertEquals(1, dataInfo.getChunkSize(10));
+        assertEquals(10, dataInfo.getChunkSize(10));
     }
 
     @Test

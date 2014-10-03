@@ -107,12 +107,9 @@ public final class DataInfo implements Serializable {
         this.chunkHashes = Collections.unmodifiableList(new ArrayList<>(chunkHashes));
         chunks = new BitSet(chunkHashes.size());
 
-        // Calculate the usual chunk size
+        // Calculate the chunk sizes
         chunkSize = size / chunkHashes.size();
-
-        // Calculate the last chunk size
-        long remaining = size % chunkHashes.size();
-        lastChunkSize = remaining > 0 ? remaining : chunkSize;
+        lastChunkSize = size - chunkSize * (chunkHashes.size() - 1);
     }
 
     /**

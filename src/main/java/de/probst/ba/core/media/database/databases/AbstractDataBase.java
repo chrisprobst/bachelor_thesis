@@ -7,7 +7,9 @@ import io.netty.buffer.Unpooled;
 
 import java.io.EOFException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.util.Collections;
 import java.util.HashMap;
@@ -63,7 +65,6 @@ public abstract class AbstractDataBase implements DataBase {
                                            ByteBuf byteBuf,
                                            int length,
                                            boolean download) throws IOException {
-
         Objects.requireNonNull(dataInfo);
         Objects.requireNonNull(byteBuf);
         DataInfo existingDataInfo = this.dataInfo.get(dataInfo.getHash());
@@ -142,6 +143,11 @@ public abstract class AbstractDataBase implements DataBase {
                                      byteBuffer.remaining(),
                                      true);
         }
+    }
+
+    @Override
+    public synchronized void insert(DataInfo dataInfo, InputStream inputStream) throws IOException {
+        insert(dataInfo, Channels.newChannel(inputStream));
     }
 
     @Override

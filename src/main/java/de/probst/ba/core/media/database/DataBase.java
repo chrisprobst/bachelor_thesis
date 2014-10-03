@@ -6,6 +6,7 @@ import io.netty.buffer.ByteBuf;
 
 import java.io.Flushable;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.channels.ReadableByteChannel;
 import java.util.Map;
 import java.util.Objects;
@@ -85,6 +86,8 @@ public interface DataBase extends Flushable {
                        boolean download) throws IOException;
 
     void insert(DataInfo dataInfo, ReadableByteChannel readableByteChannel) throws IOException;
+
+    void insert(DataInfo dataInfo, InputStream inputStream) throws IOException;
 
     default TransferManager createTransferManager(Transfer transfer) {
 

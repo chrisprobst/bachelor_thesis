@@ -71,12 +71,12 @@ public class StreamLeecherApp extends AbstractSocketAddressApp {
 
                             if (di.isCompleted()) {
                                 System.out.println(" ********  FAST ENOUGH, CONTINUE STREAMING ********");
-                                eventLoopGroup.schedule(this, 10000, TimeUnit.MILLISECONDS);
+                                eventLoopGroup.schedule(this, 4000, TimeUnit.MILLISECONDS);
                             } else {
                                 System.out.println(" ******** BUG BUG BUG BUG ********");
                             }
                         }
-                    }, 20000, TimeUnit.MILLISECONDS);
+                    }, 4000, TimeUnit.MILLISECONDS);
                 }
             }
         };
@@ -117,7 +117,7 @@ public class StreamLeecherApp extends AbstractSocketAddressApp {
     protected void start() throws Exception {
         setup();
 
-        StreamerGUI gui = new StreamerGUI(leecher.getDataBase(), 10000);
+        StreamerGUI gui = new StreamerGUI(leecher.getDataBase(), 5000);
         Scanner scanner = new Scanner(System.in);
 
         // Connect to external seeder and wait
