@@ -14,4 +14,8 @@ public final class DataBases {
     public static DataBase fakeDataBase() {
         return new FakeDataBase();
     }
+
+    public static DataBase inMemoryDataBase() {
+        return new InMemoryDataBase();
+    }
 }
