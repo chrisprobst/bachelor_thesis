@@ -11,7 +11,7 @@ import javafx.util.Duration;
 
 public class MediaPlayerGUI extends Application {
 
-    private static final String MEDIA_URL = "http://localhost:8000/neuseeland.mp4";
+    private static final String MEDIA_URL = "http://localhost:17000/black.mp4";
 
     /**
      * @param args the command line arguments
@@ -22,7 +22,7 @@ public class MediaPlayerGUI extends Application {
 
     @Override
     public void start(Stage primaryStage) {
-        primaryStage.setTitle("java-buddy.blogspot.com/");
+        primaryStage.setTitle("Video streamer");
 
         Group root = new Group();
         Scene scene = new Scene(root, 540, 210);
@@ -35,7 +35,6 @@ public class MediaPlayerGUI extends Application {
         mediaPlayer.setOnPlaying(() -> {
             System.out.println(mediaPlayer.getTotalDuration());
             System.out.println(mediaPlayer.getMedia().getMetadata());
-            mediaPlayer.seek(Duration.seconds(500));
         });
 
 

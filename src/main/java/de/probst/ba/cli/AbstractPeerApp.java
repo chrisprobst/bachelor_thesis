@@ -440,7 +440,8 @@ public abstract class AbstractPeerApp {
     protected void updatePeerDataBases() throws IOException {
         for (Peer peer : dataBaseUpdatePeers) {
             for (DataInfo dataInfo : this.dataInfo) {
-                peer.getDataBase().insert(dataInfo, new ByteArrayInputStream(new byte[(int) dataInfo.getSize()]));
+                byte[] buf = new byte[(int) dataInfo.getSize()];
+                peer.getDataBase().insert(dataInfo, new ByteArrayInputStream(buf));
             }
         }
     }

@@ -7,10 +7,10 @@ import io.netty.buffer.Unpooled;
 
 import java.io.EOFException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.ByteBuffer;
-import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.SeekableByteChannel;
+import java.nio.channels.WritableByteChannel;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -146,8 +146,44 @@ public abstract class AbstractDataBase implements DataBase {
     }
 
     @Override
-    public synchronized void insert(DataInfo dataInfo, InputStream inputStream) throws IOException {
-        insert(dataInfo, Channels.newChannel(inputStream));
+    public synchronized void query(DataInfo dataInfo, WritableByteChannel writableByteChannel) throws IOException {
+        Objects.requireNonNull(dataInfo);
+        Objects.requireNonNull(writableByteChannel);
+        DataInfo existingDataInfo = this.dataInfo.get(dataInfo.getHash());
+
+        if (!existingDataInfo.contains(dataInfo)) {
+            throw new IllegalArgumentException("!existingDataInfo.contains(dataInfo)");
+        }
+
+        for (int chunkIndex : dataInfo.getCompletedChunks().toArray()) {
+            // Create a buffer for the next chunk
+            ByteBuf byteBuf =
+                    Unpooled.buffer((int) dataInfo.getChunkSize(chunkIndex), (int) dataInfo.getChunkSize(chunkIndex));
+
+            // Query buffer from data base
+            processBufferAndComplete(dataInfo,
+                                     chunkIndex,
+                                     0,
+                                     byteBuf,
+                                     byteBuf.capacity(),
+                                     false);
+
+            // Write chunk buffer to channel
+            ByteBuffer chunkBuffer = byteBuf.nioBuffer();
+            while (chunkBuffer.hasRemaining()) {
+                writableByteChannel.write(chunkBuffer);
+            }
+        }
+    }
+
+    @Override
+    public SeekableByteChannel[] unsafeQueryRawWithName(String name) throws IOException {
+        throw new UnsupportedOperationException("Not implemented yet");
+    }
+
+    @Override
+    public SeekableByteChannel unsafeQueryRaw(String hash) throws IOException {
+        throw new UnsupportedOperationException("Not implemented yet");
     }
 
     @Override
