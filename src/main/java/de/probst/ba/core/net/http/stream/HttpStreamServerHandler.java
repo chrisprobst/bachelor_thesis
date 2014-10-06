@@ -1,6 +1,8 @@
 package de.probst.ba.core.net.http.stream;
 
 import de.probst.ba.core.media.database.DataBase;
+import de.probst.ba.core.media.database.DataInfo;
+import de.probst.ba.core.util.collections.Tuple2;
 import de.probst.ba.core.util.io.LimitedReadableByteChannel;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
@@ -18,7 +20,10 @@ import io.netty.util.CharsetUtil;
 import javax.activation.MimetypesFileTypeMap;
 import java.io.IOException;
 import java.nio.channels.SeekableByteChannel;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
+import java.util.OptionalLong;
 
 import static io.netty.handler.codec.http.HttpHeaders.Names.ACCEPT_RANGES;
 import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_LENGTH;
@@ -49,7 +54,7 @@ public class HttpStreamServerHandler extends SimpleChannelInboundHandler<FullHtt
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, FullHttpRequest request) throws Exception {
-        if (!request.decoderResult().isSuccess()) {
+       /* if (!request.decoderResult().isSuccess()) {
             sendError(ctx, BAD_REQUEST);
             return;
         }
@@ -61,20 +66,34 @@ public class HttpStreamServerHandler extends SimpleChannelInboundHandler<FullHtt
 
         final String path = request.uri().substring(1);
 
-        SeekableByteChannel[] channels = null;
-
+        List<Tuple2<DataInfo, SeekableByteChannel>> tuples = null;
         try {
-            channels = dataBase.unsafeQueryRawWithName(path);
+            tuples = dataBase.unsafeQueryRawWithName(path);
         } catch (IOException ignored) {
+            ignored.printStackTrace();
+            sendError(ctx, BAD_REQUEST);
+            return;
         }
 
-        if (channels == null || channels.length == 0) {
-            System.out.println("Invalid request: " + path);
+        if (tuples.isEmpty()) {
+            System.err.println("Invalid request: " + path);
             sendError(ctx, NOT_FOUND);
             return;
         }
 
-        SeekableByteChannel channel = channels[0];
+        // Collect all in-order tuples
+        OptionalLong id = OptionalLong.empty();
+        List<Tuple2<DataInfo, SeekableByteChannel>> inOrderTuples = new ArrayList<>(tuples.size());
+        for (Tuple2<DataInfo, SeekableByteChannel> tuple : tuples) {
+            if (!id.isPresent() || id.getAsLong() + 1 == tuple.first().getId()) {
+                id = OptionalLong.of(tuple.first().getId());
+                inOrderTuples.add(tuple);
+            } else {
+                break;
+            }
+        }
+
+        SeekableByteChannel channel = tuples[0];
 
         // Read ranges
         long lower = -1, upper = -1, length = channel.size();
@@ -114,7 +133,7 @@ public class HttpStreamServerHandler extends SimpleChannelInboundHandler<FullHtt
 
         // Write the content
         ctx.writeAndFlush(new ChunkedNioStream(new LimitedReadableByteChannel(channel, length), 8192)).addListener(
-                ChannelFutureListener.CLOSE);
+                ChannelFutureListener.CLOSE);*/
     }
 
     @Override

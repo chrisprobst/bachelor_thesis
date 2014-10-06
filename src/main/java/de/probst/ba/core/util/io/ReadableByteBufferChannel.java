@@ -9,7 +9,7 @@ import java.util.Objects;
 /**
  * Created by chrisprobst on 05.10.14.
  */
-public final class SeekableByteBufferChannel implements SeekableByteChannel {
+public final class ReadableByteBufferChannel implements SeekableByteChannel {
 
     private final ByteBuffer byteBuffer;
     private boolean closed = false;
@@ -20,7 +20,7 @@ public final class SeekableByteBufferChannel implements SeekableByteChannel {
         }
     }
 
-    public SeekableByteBufferChannel(ByteBuffer byteBuffer) {
+    public ReadableByteBufferChannel(ByteBuffer byteBuffer) {
         Objects.requireNonNull(byteBuffer);
         this.byteBuffer = byteBuffer;
     }

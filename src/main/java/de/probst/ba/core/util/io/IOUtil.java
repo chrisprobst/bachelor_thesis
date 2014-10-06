@@ -8,6 +8,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.nio.ByteBuffer;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -16,8 +19,24 @@ import java.util.zip.GZIPOutputStream;
  */
 public final class IOUtil {
 
+    public static final int DEFAULT_TRANSFER_BUFFER_SIZE = 65535;
+
     private IOUtil() {
 
+    }
+
+    public static void transfer(ReadableByteChannel readableByteChannel, WritableByteChannel writableByteChannel)
+            throws IOException {
+        try (ReadableByteChannel ref1 = readableByteChannel; WritableByteChannel ref2 = writableByteChannel) {
+            ByteBuffer byteBuffer = ByteBuffer.allocateDirect(DEFAULT_TRANSFER_BUFFER_SIZE);
+            while (ref1.read(byteBuffer) >= 0) {
+                byteBuffer.flip();
+                while (byteBuffer.hasRemaining()) {
+                    ref2.write(byteBuffer);
+                }
+                byteBuffer.clear();
+            }
+        }
     }
 
     public static byte[] serialize(Object object) throws IOException {

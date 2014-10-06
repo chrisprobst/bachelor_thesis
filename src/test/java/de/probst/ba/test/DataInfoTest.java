@@ -32,11 +32,8 @@ public class DataInfoTest {
 
     @Test
     public void randomChunk() {
-        DataInfo a = dataInfo
-                .randomize();
-
+        DataInfo a = dataInfo.randomize();
         DataInfo b = a.withOneCompletedChunk();
-
         assertTrue(a.contains(b));
         assertTrue(b.getCompletedChunkCount() == 1);
     }
@@ -156,9 +153,9 @@ public class DataInfoTest {
 
     @Test
     public void contain() {
-        // empty set does not contain empty set
+        // Empty set contains empty set
         DataInfo duplicate = dataInfo.duplicate();
-        assertFalse(dataInfo.contains(duplicate));
+        assertTrue(dataInfo.contains(duplicate));
 
         // Same number of chunks
         dataInfo = dataInfo.whereChunk(4, true);
@@ -184,6 +181,37 @@ public class DataInfoTest {
         duplicate = duplicate.whereChunk(3, true);
         duplicate = duplicate.whereChunk(4, true);
         assertTrue(duplicate.contains(dataInfo));
+    }
+
+    @Test
+    public void overlaps() {
+        // Empty set does not overlap with empty set
+        DataInfo duplicate = dataInfo.duplicate();
+        assertFalse(dataInfo.overlaps(duplicate));
+
+        // Same number of chunks
+        dataInfo = dataInfo.whereChunk(4, true);
+        duplicate = dataInfo.duplicate();
+        assertTrue(dataInfo.overlaps(duplicate));
+
+        // Less chunks
+        dataInfo = dataInfo.whereChunk(2, true);
+        dataInfo = dataInfo.whereChunk(3, true);
+
+        duplicate = dataInfo.duplicate();
+        duplicate = duplicate.whereChunk(3, false);
+        duplicate = duplicate.whereChunk(4, false);
+
+        assertTrue(dataInfo.overlaps(duplicate));
+
+        // More chunks
+        duplicate = duplicate.whereChunk(5, true);
+        duplicate = duplicate.whereChunk(6, true);
+
+        assertTrue(dataInfo.overlaps(duplicate));
+
+        duplicate = duplicate.empty().withChunk(8).withChunk(9);
+        assertFalse(duplicate.overlaps(dataInfo));
     }
 
     @Test

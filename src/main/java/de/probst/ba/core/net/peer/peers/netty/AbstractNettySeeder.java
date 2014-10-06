@@ -13,7 +13,7 @@ import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.MessageQueueHandl
 import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.TrafficShapers;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.UploadHandler;
 import de.probst.ba.core.net.peer.state.BandwidthStatisticState;
-import de.probst.ba.core.net.peer.transfer.Transfer;
+import de.probst.ba.core.net.peer.Transfer;
 import de.probst.ba.core.util.concurrent.CancelableRunnable;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;

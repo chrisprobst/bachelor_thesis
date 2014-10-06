@@ -74,7 +74,7 @@ public class Benchmark extends AbstractPeerApp {
         logger.info(">>> Seeders:                   " + seeders);
         logger.info(">>> Leechers:                  " + leechers);
 
-        Supplier<DataBase> dataBaseSupplier = DataBases::inMemoryDataBase;
+        Supplier<DataBase> dataBaseSupplier = DataBases::fakeDataBase;
 
         // Setup all seeders
         for (int i = 0; i < seeders; i++) {

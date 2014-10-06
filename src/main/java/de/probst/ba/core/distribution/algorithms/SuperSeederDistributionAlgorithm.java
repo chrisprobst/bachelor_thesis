@@ -4,7 +4,7 @@ import de.probst.ba.core.distribution.SeederDistributionAlgorithm;
 import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.Seeder;
-import de.probst.ba.core.net.peer.transfer.TransferManager;
+import de.probst.ba.core.net.peer.Transfer;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -39,7 +39,7 @@ public final class SuperSeederDistributionAlgorithm implements SeederDistributio
     private final Set<DataInfo> alreadyUploaded = new HashSet<>();
 
     @Override
-    public synchronized boolean isUploadAllowed(Seeder seeder, TransferManager transferManager) {
-        return alreadyUploaded.add(transferManager.getTransfer().getDataInfo());
+    public synchronized boolean isUploadAllowed(Seeder seeder, Transfer transfer) {
+        return alreadyUploaded.add(transfer.getDataInfo());
     }
 }

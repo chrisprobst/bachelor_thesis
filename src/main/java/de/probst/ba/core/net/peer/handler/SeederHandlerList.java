@@ -1,9 +1,9 @@
 package de.probst.ba.core.net.peer.handler;
 
 import de.probst.ba.core.media.database.DataInfo;
-import de.probst.ba.core.net.peer.transfer.TransferManager;
 import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.Seeder;
+import de.probst.ba.core.net.peer.Transfer;
 
 import java.net.SocketAddress;
 import java.util.Map;
@@ -42,23 +42,23 @@ public class SeederHandlerList extends PeerHandlerList implements SeederPeerHand
     }
 
     @Override
-    public void uploadRejected(Seeder seeder, TransferManager transferManager, Throwable cause) {
+    public void uploadRejected(Seeder seeder, Transfer transfer, Throwable cause) {
         peerHandlers.stream()
                     .filter(ph -> ph instanceof SeederPeerHandler)
-                    .forEach(ph -> ((SeederPeerHandler) ph).uploadRejected(seeder, transferManager, cause));
+                    .forEach(ph -> ((SeederPeerHandler) ph).uploadRejected(seeder, transfer, cause));
     }
 
     @Override
-    public void uploadStarted(Seeder seeder, TransferManager transferManager) {
+    public void uploadStarted(Seeder seeder, Transfer transfer) {
         peerHandlers.stream()
                     .filter(ph -> ph instanceof SeederPeerHandler)
-                    .forEach(ph -> ((SeederPeerHandler) ph).uploadStarted(seeder, transferManager));
+                    .forEach(ph -> ((SeederPeerHandler) ph).uploadStarted(seeder, transfer));
     }
 
     @Override
-    public void uploadSucceeded(Seeder seeder, TransferManager transferManager) {
+    public void uploadSucceeded(Seeder seeder, Transfer transfer) {
         peerHandlers.stream()
                     .filter(ph -> ph instanceof SeederPeerHandler)
-                    .forEach(ph -> ((SeederPeerHandler) ph).uploadSucceeded(seeder, transferManager));
+                    .forEach(ph -> ((SeederPeerHandler) ph).uploadSucceeded(seeder, transfer));
     }
 }

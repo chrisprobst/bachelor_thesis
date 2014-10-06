@@ -1,19 +1,11 @@
 package de.probst.ba.core.media.database;
 
-import de.probst.ba.core.net.peer.transfer.Transfer;
-import de.probst.ba.core.net.peer.transfer.TransferManager;
-import io.netty.buffer.ByteBuf;
-
 import java.io.Flushable;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.channels.Channels;
-import java.nio.channels.ReadableByteChannel;
-import java.nio.channels.SeekableByteChannel;
-import java.nio.channels.WritableByteChannel;
+import java.nio.channels.GatheringByteChannel;
+import java.nio.channels.ScatteringByteChannel;
 import java.util.Map;
-import java.util.Objects;
+import java.util.Optional;
 
 /**
  * A data base manages data info and the content.
@@ -21,13 +13,6 @@ import java.util.Objects;
  * Created by chrisprobst on 13.08.14.
  */
 public interface DataBase extends Flushable {
-
-    /**
-     * Flushes all changes to the data base.
-     *
-     * @throws IOException
-     */
-    void flush() throws IOException;
 
     /**
      * @return A snapshot of all existing
@@ -42,82 +27,41 @@ public interface DataBase extends Flushable {
     DataInfo get(String hash);
 
     /**
-     * Depending on the download flag this method fills the given
-     * buffer or reads from it.
+     * Queries the data base for the given data.
      * <p>
-     * Additionally this method marks the chunk as complete.
+     * The returned channel is a cumulative channel
+     * of all chunks specified in the given data info.
      * <p>
-     * If download is false than this simply means that the data base
-     * could close the underlying resources used for reading the data.
+     * Only existing data and completed chunks are allowed
+     * to be part of the query.
      * <p>
-     * If download is true than this means that the chunk is complete.
-     * This will be reflected by the according data info.
-     * This method also verify any hash sum checks. If a check fails
-     * this chunk will not be marked as completed.
+     * The chunks affected by this query are locked for inserting,
+     * while querying still works.
      *
      * @param dataInfo
-     * @param chunkIndex
-     * @param offset
-     * @param byteBuf
-     * @param length
-     * @param download
-     * @throws IOException
+     * @return The channel or empty, if one of the specified chunks
+     * is locked for querying.
+     * @throws IOException If an exception occurs or one of the specified
+     *                     chunks does not exist.
      */
-    void processBufferAndComplete(DataInfo dataInfo,
-                                  int chunkIndex,
-                                  long offset,
-                                  ByteBuf byteBuf,
-                                  int length,
-                                  boolean download) throws IOException;
+    Optional<ScatteringByteChannel> tryQuery(DataInfo dataInfo) throws IOException;
 
     /**
-     * Depending on the download flag this method fills the given
-     * buffer or reads from it.
+     * Inserts the data into the data base.
+     * <p>
+     * The returned channel is a cumulative channel
+     * of all chunks specified in the given data info.
+     * <p>
+     * Only uncompleted chunks are allowed to be part of the query.
+     * <p>
+     * The chunks affected by this query are locked for inserting
+     * and querying.
      *
      * @param dataInfo
-     * @param chunkIndex
-     * @param offset
-     * @param byteBuf
-     * @param length
-     * @param download
-     * @throws IOException
+     * @return The channel or empty, if one of the specified chunks
+     * is locked for inserting.
+     * @throws IOException If an exception occurs or one of the specified
+     *                     chunks already exists.
      */
-    void processBuffer(DataInfo dataInfo,
-                       int chunkIndex,
-                       long offset,
-                       ByteBuf byteBuf,
-                       int length,
-                       boolean download) throws IOException;
-
-    void insert(DataInfo dataInfo, ReadableByteChannel readableByteChannel) throws IOException;
-
-    default void insert(DataInfo dataInfo, InputStream inputStream) throws IOException {
-        insert(dataInfo, Channels.newChannel(inputStream));
-    }
-
-    void query(DataInfo dataInfo, WritableByteChannel writableByteChannel) throws IOException;
-
-    default void query(DataInfo dataInfo, OutputStream outputStream) throws IOException {
-        query(dataInfo, Channels.newChannel(outputStream));
-    }
-
-    SeekableByteChannel[] unsafeQueryRawWithName(String name) throws IOException;
-
-    SeekableByteChannel unsafeQueryRaw(String hash) throws IOException;
-
-    default TransferManager createTransferManager(Transfer transfer) {
-
-        Objects.requireNonNull(transfer);
-
-        DataInfo existingDataInfo = get(transfer.getDataInfo().getHash());
-        if (transfer.isUpload() && existingDataInfo == null) {
-            throw new IllegalArgumentException("transfer.isUpload() && existingDataInfo == null");
-        }
-
-        if (transfer.isUpload() && !existingDataInfo.contains(transfer.getDataInfo())) {
-            throw new IllegalArgumentException("!download && !existingDataInfo.contains(transfer.getDataInfo())");
-        }
-
-        return new TransferManager(this, transfer);
-    }
+    Optional<GatheringByteChannel> tryInsert(DataInfo dataInfo) throws IOException;
 }

@@ -508,22 +508,23 @@ public final class DataInfo implements Serializable {
     /**
      * Checks whether or not this data info
      * contains the other data info.
-     * <p>
-     * Two empty data info does not contain
-     * each other.
      *
      * @param other
      * @return
      */
     public boolean contains(DataInfo other) {
-        ensureCompatibility(other);
+        return other.subtract(this).getCompletedChunkCount() == 0;
+    }
 
-        // Clone and do a logical and operation
-        BitSet clone = (BitSet) other.chunks.clone();
-        clone.and(chunks);
-
-        // If equal we contain the other completely
-        return !clone.isEmpty() && clone.equals(other.chunks);
+    /**
+     * Checks whether or not this data info
+     * overlaps with the other data info.
+     *
+     * @param other
+     * @return
+     */
+    public boolean overlaps(DataInfo other) {
+        return intersection(other).getCompletedChunkCount() > 0;
     }
 
     /**

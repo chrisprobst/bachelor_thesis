@@ -6,19 +6,20 @@ import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.net.peer.handler.LeecherPeerHandler;
 import de.probst.ba.core.net.peer.handler.LeecherPeerHandlerAdapter;
 import de.probst.ba.core.net.peer.state.LeecherDataInfoState;
-import de.probst.ba.core.net.peer.transfer.Transfer;
+import de.probst.ba.core.util.concurrent.CancelableRunnable;
+import de.probst.ba.core.util.concurrent.Task;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
@@ -27,8 +28,50 @@ import java.util.stream.Collectors;
 public abstract class AbstractLeecher extends AbstractPeer implements Leecher {
 
     private final Logger logger = LoggerFactory.getLogger(AbstractLeecher.class);
-    private final LeecherDistributionAlgorithmWorker leecherDistributionAlgorithmWorker;
+    private final Task leecherDistributionAlgorithmWorkerTask;
     private final boolean autoConnect;
+    private final Consumer<CancelableRunnable> leecherDistributionAlgorithmWorker = cancelableRunnable -> {
+        try {
+            // Let the algorithm generate transfers
+            List<Transfer> transfers = getDistributionAlgorithm().requestDownloads(AbstractLeecher.this);
+
+            // This is most likely a bug
+            if (transfers == null) {
+                logger.warn("Leecher " + getPeerId() +
+                            " got null for the optional list of transfers from the algorithm");
+                return;
+            }
+
+            // The algorithm do not want to
+            // download anything
+            if (transfers.isEmpty()) {
+                return;
+            }
+
+            // Get downloads
+            Map<PeerId, Transfer> downloads = getDownloads();
+
+            // Here we check that we do not load the same
+            // data info twice
+            Set<DataInfo> requestedDataInfo = new HashSet<>();
+
+            // Create a list of transfers with distinct remote peer ids
+            // and request them to download
+            transfers.stream()
+                     .filter(t -> !downloads.containsKey(t.getRemotePeerId()))
+                     .filter(t -> requestedDataInfo.add(t.getDataInfo()))
+                     .collect(Collectors.groupingBy(Transfer::getRemotePeerId))
+                     .entrySet()
+                     .stream()
+                     .filter(p -> p.getValue().size() == 1)
+                     .map(p -> p.getValue().get(0))
+                     .forEach(AbstractLeecher.this::requestDownload);
+
+        } catch (Exception e) {
+            logger.error("Leecher " + getPeerId() + " has a dead algorithm, shutting leecher down", e);
+            silentClose();
+        }
+    };
 
     protected abstract void requestDownload(Transfer transfer);
 
@@ -37,7 +80,7 @@ public abstract class AbstractLeecher extends AbstractPeer implements Leecher {
     protected abstract Map<PeerId, Map<String, DataInfo>> getRemoteDataInfo();
 
     protected Runnable getLeechRunnable() {
-        return leecherDistributionAlgorithmWorker::execute;
+        return leecherDistributionAlgorithmWorkerTask;
     }
 
     public AbstractLeecher(long maxUploadRate,
@@ -48,7 +91,7 @@ public abstract class AbstractLeecher extends AbstractPeer implements Leecher {
                            Optional<LeecherPeerHandler> leecherHandler,
                            ScheduledExecutorService leakyBucketRefillTaskScheduler,
                            boolean autoConnect,
-                           Executor algorithmExecutor) {
+                           ExecutorService algorithmExecutor) {
         super(maxUploadRate,
               maxDownloadRate,
               Optional.of(peerId.orElseGet(PeerId::new)),
@@ -58,7 +101,8 @@ public abstract class AbstractLeecher extends AbstractPeer implements Leecher {
               leakyBucketRefillTaskScheduler);
 
         // Save args
-        leecherDistributionAlgorithmWorker = new LeecherDistributionAlgorithmWorker(algorithmExecutor);
+        leecherDistributionAlgorithmWorkerTask =
+                new Task(leecherDistributionAlgorithmWorker, algorithmExecutor::submit);
         this.autoConnect = autoConnect;
     }
 
@@ -105,63 +149,5 @@ public abstract class AbstractLeecher extends AbstractPeer implements Leecher {
         Map<PeerId, Transfer> downloads = getDownloads();
 
         return new LeecherDataInfoState(this, getDataBase().getDataInfo(), getRemoteDataInfo(), downloads);
-    }
-
-    private final class LeecherDistributionAlgorithmWorker implements Runnable {
-
-        private final Executor executor;
-
-        public LeecherDistributionAlgorithmWorker(Executor executor) {
-            Objects.requireNonNull(executor);
-            this.executor = executor;
-        }
-
-        public void execute() {
-            executor.execute(this);
-        }
-
-        @Override
-        public synchronized void run() {
-            try {
-                // Let the algorithm generate transfers
-                List<Transfer> transfers = getDistributionAlgorithm().requestDownloads(AbstractLeecher.this);
-
-                // This is most likely a bug
-                if (transfers == null) {
-                    logger.warn("Leecher " + getPeerId() +
-                                " got null for the optional list of transfers from the algorithm");
-                    return;
-                }
-
-                // The algorithm do not want to
-                // download anything
-                if (transfers.isEmpty()) {
-                    return;
-                }
-
-                // Get downloads
-                Map<PeerId, Transfer> downloads = getDownloads();
-
-                // Here we check that we do not load the same
-                // data info twice
-                Set<DataInfo> requestedDataInfo = new HashSet<>();
-
-                // Create a list of transfers with distinct remote peer ids
-                // and request them to download
-                transfers.stream()
-                         .filter(t -> !downloads.containsKey(t.getRemotePeerId()))
-                         .filter(t -> requestedDataInfo.add(t.getDataInfo()))
-                         .collect(Collectors.groupingBy(Transfer::getRemotePeerId))
-                         .entrySet()
-                         .stream()
-                         .filter(p -> p.getValue().size() == 1)
-                         .map(p -> p.getValue().get(0))
-                         .forEach(AbstractLeecher.this::requestDownload);
-
-            } catch (Exception e) {
-                logger.error("Leecher " + getPeerId() + " has a dead algorithm, shutting leecher down", e);
-                silentClose();
-            }
-        }
     }
 }

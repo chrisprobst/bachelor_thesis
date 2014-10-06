@@ -30,6 +30,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.nio.channels.Channels;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -441,7 +442,8 @@ public abstract class AbstractPeerApp {
         for (Peer peer : dataBaseUpdatePeers) {
             for (DataInfo dataInfo : this.dataInfo) {
                 byte[] buf = new byte[(int) dataInfo.getSize()];
-                peer.getDataBase().insert(dataInfo, new ByteArrayInputStream(buf));
+                IOUtil.transfer(Channels.newChannel(new ByteArrayInputStream(buf)),
+                                peer.getDataBase().tryInsert(dataInfo).get());
             }
         }
     }

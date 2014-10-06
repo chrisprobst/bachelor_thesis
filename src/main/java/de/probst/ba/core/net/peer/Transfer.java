@@ -1,7 +1,6 @@
-package de.probst.ba.core.net.peer.transfer;
+package de.probst.ba.core.net.peer;
 
 import de.probst.ba.core.media.database.DataInfo;
-import de.probst.ba.core.net.peer.PeerId;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -97,19 +96,19 @@ public final class Transfer implements Serializable {
      * Creates a new transfer which has a greater
      * completed size.
      *
-     * @param size
+     * @param completedSize
      * @return
      */
-    public Transfer advance(long size) {
-        if (size > getRemainingSize()) {
-            throw new IllegalArgumentException("size > getRemainingSize()");
+    public Transfer update(long completedSize) {
+        if (completedSize < getCompletedSize()) {
+            throw new IllegalArgumentException("completedSize < getCompletedSize()");
         }
 
-        if (size <= 0) {
-            throw new IllegalArgumentException("size <= 0");
+        if (completedSize > getSize()) {
+            throw new IllegalArgumentException("completedSize > getSize()");
         }
 
-        return new Transfer(getRemotePeerId(), getDataInfo(), isDownload(), getSize(), getCompletedSize() + size);
+        return new Transfer(getRemotePeerId(), getDataInfo(), isDownload(), getSize(), completedSize);
     }
 
     /**

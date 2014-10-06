@@ -3,11 +3,10 @@ package de.probst.ba.core.net.peer.peers.netty.handlers.transfer;
 import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.net.peer.Leecher;
 import de.probst.ba.core.net.peer.PeerId;
+import de.probst.ba.core.net.peer.Transfer;
 import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.CollectDataInfoHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.messages.UploadRejectedMessage;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.messages.UploadRequestMessage;
-import de.probst.ba.core.net.peer.transfer.Transfer;
-import de.probst.ba.core.net.peer.transfer.TransferManager;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerAdapter;
@@ -17,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.nio.channels.GatheringByteChannel;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
@@ -59,7 +59,7 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
         // Mark as downloading
         get(remoteChannel).download(transfer);
 
-        // Request the transfer
+        // Trigger event
         remoteChannel.pipeline().fireUserEventTriggered(transfer);
     }
 
@@ -67,7 +67,7 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
     private final Leecher leecher;
     private final Runnable leech;
     private final AtomicReference<Transfer> transfer = new AtomicReference<>();
-    private TransferManager transferManager;
+    private GatheringByteChannel gatheringByteChannel;
     private boolean receivedBuffer;
 
     public DownloadHandler(Leecher leecher, Runnable leech) {
@@ -85,21 +85,32 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
         }
     }
 
-    private void setup() {
-        transferManager = leecher.getDataBase().createTransferManager(transfer.get());
+    private void setup() throws IOException {
         receivedBuffer = false;
+        Transfer transfer = this.transfer.get();
+        gatheringByteChannel = leecher.getDataBase()
+                                      .tryInsert(transfer.getDataInfo())
+                                      .orElseThrow(() -> new IllegalStateException(
+                                              "Database insert channel locked for: " + transfer));
     }
 
     private boolean update(ByteBuf buffer) throws IOException {
-        boolean completed = !transferManager.process(buffer);
-        transfer.set(transferManager.getTransfer());
-        return completed;
+        int total = buffer.readableBytes();
+        while (buffer.readableBytes() > 0) {
+            buffer.readBytes(gatheringByteChannel, buffer.readableBytes());
+        }
+
+        return transfer.updateAndGet(t -> t.update(t.getCompletedSize() + total)).isCompleted();
     }
 
-    private void reset() {
-        transferManager = null;
-        transfer.set(null);
-        leech.run();
+    private void reset() throws IOException {
+        try {
+            gatheringByteChannel.close();
+            leech.run();
+        } finally {
+            gatheringByteChannel = null;
+            transfer.set(null);
+        }
     }
 
     private Optional<Transfer> getTransfer() {
@@ -108,18 +119,20 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
 
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-        if (transfer.get().equals(evt)) {
+
+        Transfer transfer = this.transfer.get();
+        if (transfer.equals(evt)) {
 
             // Setup vars
             setup();
 
             // Write the download request
-            ctx.writeAndFlush(new UploadRequestMessage(transferManager.getTransfer().getDataInfo()));
+            ctx.writeAndFlush(new UploadRequestMessage(transfer.getDataInfo()));
 
-            logger.debug("Leecher " + leecher.getPeerId() + " requested download " + transferManager);
+            logger.debug("Leecher " + leecher.getPeerId() + " requested download " + transfer);
 
             // HANDLER
-            leecher.getPeerHandler().downloadRequested(leecher, transferManager);
+            leecher.getPeerHandler().downloadRequested(leecher, transfer);
         }
 
         super.userEventTriggered(ctx, evt);
@@ -127,70 +140,60 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        Transfer transfer = this.transfer.get();
         if (msg instanceof UploadRejectedMessage) {
             UploadRejectedMessage uploadRejectedMessage = (UploadRejectedMessage) msg;
 
-            logger.debug("Leecher " + leecher.getPeerId() + " requested the download " + transferManager +
+            logger.debug("Leecher " + leecher.getPeerId() + " requested the download " + transfer +
                          ", but was rejected");
 
             // HANDLER
-            leecher.getPeerHandler().downloadRejected(leecher, transferManager, uploadRejectedMessage.getCause());
+            leecher.getPeerHandler().downloadRejected(leecher, transfer, uploadRejectedMessage.getCause());
 
             // Very important:
             // Remove the rejected data info from the remote data info
-            CollectDataInfoHandler.get(ctx.channel()).removeDataInfo(transferManager.getTransfer().getDataInfo());
+            CollectDataInfoHandler.get(ctx.channel()).removeDataInfo(transfer.getDataInfo());
 
             reset();
         } else if (msg instanceof ByteBuf) {
             ByteBuf buffer = (ByteBuf) msg;
 
-            // Consume the whole buffer
-            while (buffer.readableBytes() > 0) {
-
-                // First buffer ? -> Download started!
-                if (!receivedBuffer) {
-                    receivedBuffer = true;
-                    logger.debug("Leecher " + leecher.getPeerId() + " started download " + transferManager);
-
-                    // HANDLER
-                    leecher.getPeerHandler().downloadStarted(leecher, transferManager);
-                }
-
-                // Process the buffer and check for completion
-                boolean completed = update(buffer);
-
-                logger.debug("Leecher " + leecher.getPeerId() + " progressed download " + transferManager);
+            // First buffer ? -> Download started!
+            if (!receivedBuffer) {
+                receivedBuffer = true;
+                logger.debug("Leecher " + leecher.getPeerId() + " started download " + transfer);
 
                 // HANDLER
-                leecher.getPeerHandler().downloadProgressed(leecher, transferManager);
+                leecher.getPeerHandler().downloadStarted(leecher, transfer);
+            }
 
-                if (completed) {
-                    logger.debug("Leecher " + leecher.getPeerId() + " succeeded download " + transferManager);
+            // Process the buffer and check for completion
+            boolean completed = update(buffer);
+            transfer = this.transfer.get();
 
-                    // HANDLER
-                    leecher.getPeerHandler().downloadSucceeded(leecher, transferManager);
-                }
+            logger.debug("Leecher " + leecher.getPeerId() + " progressed download " + transfer);
+
+            // HANDLER
+            leecher.getPeerHandler().downloadProgressed(leecher, transfer);
+
+            if (completed) {
+                // Reset and prepare for next transfer
+                reset();
+
+                logger.debug("Leecher " + leecher.getPeerId() + " succeeded download " + transfer);
+
+                // HANDLER
+                leecher.getPeerHandler().downloadSucceeded(leecher, transfer);
 
                 // Query data base
-                DataInfo dataInfo = leecher.getDataBase().get(transferManager.getTransfer().getDataInfo().getHash());
+                DataInfo dataInfo = leecher.getDataBase().get(transfer.getDataInfo().getHash());
 
                 if (dataInfo != null && dataInfo.isCompleted()) {
                     logger.info("Leecher " + leecher.getPeerId() + " completed the data " + dataInfo + " with " +
-                                transferManager);
+                                transfer);
 
                     // HANDLER
-                    leecher.getPeerHandler().dataCompleted(leecher, dataInfo, transferManager);
-                }
-
-                // Ready for next download
-                if (completed) {
-                    reset();
-
-                    // Stop consuming here
-                    if (buffer.readableBytes() > 0) {
-                        logger.warn("Leecher " + leecher.getPeerId() + " received too much data " + buffer);
-                        break;
-                    }
+                    leecher.getPeerHandler().dataCompleted(leecher, dataInfo, transfer);
                 }
             }
 

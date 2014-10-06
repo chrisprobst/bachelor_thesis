@@ -1,11 +1,10 @@
 package de.probst.ba.core.net.peer.handler.handlers;
 
 import de.probst.ba.core.media.database.DataInfo;
-import de.probst.ba.core.net.peer.transfer.Transfer;
-import de.probst.ba.core.net.peer.transfer.TransferManager;
 import de.probst.ba.core.net.peer.Leecher;
 import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.Seeder;
+import de.probst.ba.core.net.peer.Transfer;
 import de.probst.ba.core.net.peer.handler.LeecherPeerHandler;
 import de.probst.ba.core.net.peer.handler.SeederPeerHandler;
 
@@ -81,18 +80,18 @@ public class RecordPeerHandler implements LeecherPeerHandler, SeederPeerHandler 
     }
 
     @Override
-    public void uploadRejected(Seeder seeder, TransferManager transferManager, Throwable cause) {
-        records.add(Record.uploadRejected(seeder.getPeerId(), transferManager.getTransfer(), cause));
+    public void uploadRejected(Seeder seeder, Transfer transfer, Throwable cause) {
+        records.add(Record.uploadRejected(seeder.getPeerId(), transfer, cause));
     }
 
     @Override
-    public void uploadStarted(Seeder seeder, TransferManager transferManager) {
-        records.add(Record.uploadStarted(seeder.getPeerId(), transferManager.getTransfer()));
+    public void uploadStarted(Seeder seeder, Transfer transfer) {
+        records.add(Record.uploadStarted(seeder.getPeerId(), transfer));
     }
 
     @Override
-    public void uploadSucceeded(Seeder seeder, TransferManager transferManager) {
-        records.add(Record.uploadSucceeded(seeder.getPeerId(), transferManager.getTransfer()));
+    public void uploadSucceeded(Seeder seeder, Transfer transfer) {
+        records.add(Record.uploadSucceeded(seeder.getPeerId(), transfer));
     }
 
     @Override
@@ -106,33 +105,33 @@ public class RecordPeerHandler implements LeecherPeerHandler, SeederPeerHandler 
     }
 
     @Override
-    public void downloadRequested(Leecher leecher, TransferManager transferManager) {
-        records.add(Record.downloadRequested(leecher.getPeerId(), transferManager.getTransfer()));
+    public void downloadRequested(Leecher leecher, Transfer transfer) {
+        records.add(Record.downloadRequested(leecher.getPeerId(), transfer));
     }
 
     @Override
-    public void downloadRejected(Leecher leecher, TransferManager transferManager, Throwable cause) {
-        records.add(Record.downloadRejected(leecher.getPeerId(), transferManager.getTransfer(), cause));
+    public void downloadRejected(Leecher leecher, Transfer transfer, Throwable cause) {
+        records.add(Record.downloadRejected(leecher.getPeerId(), transfer, cause));
     }
 
     @Override
-    public void downloadStarted(Leecher leecher, TransferManager transferManager) {
-        records.add(Record.downloadStarted(leecher.getPeerId(), transferManager.getTransfer()));
+    public void downloadStarted(Leecher leecher, Transfer transfer) {
+        records.add(Record.downloadStarted(leecher.getPeerId(), transfer));
     }
 
     @Override
-    public void downloadProgressed(Leecher leecher, TransferManager transferManager) {
-        records.add(Record.downloadProgressed(leecher.getPeerId(), transferManager.getTransfer()));
+    public void downloadProgressed(Leecher leecher, Transfer transfer) {
+        records.add(Record.downloadProgressed(leecher.getPeerId(), transfer));
     }
 
     @Override
-    public void downloadSucceeded(Leecher leecher, TransferManager transferManager) {
-        records.add(Record.downloadSucceeded(leecher.getPeerId(), transferManager.getTransfer()));
+    public void downloadSucceeded(Leecher leecher, Transfer transfer) {
+        records.add(Record.downloadSucceeded(leecher.getPeerId(), transfer));
     }
 
     @Override
-    public void dataCompleted(Leecher leecher, DataInfo dataInfo, TransferManager lastTransferManager) {
-        records.add(Record.dataCompleted(leecher.getPeerId(), dataInfo, lastTransferManager.getTransfer()));
+    public void dataCompleted(Leecher leecher, DataInfo dataInfo, Transfer transfer) {
+        records.add(Record.dataCompleted(leecher.getPeerId(), dataInfo, transfer));
     }
 
     public enum RecordType {

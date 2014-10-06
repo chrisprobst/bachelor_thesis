@@ -1,8 +1,8 @@
 package de.probst.ba.core.net.peer.handler.handlers;
 
 import de.probst.ba.core.media.database.DataInfo;
-import de.probst.ba.core.net.peer.transfer.TransferManager;
 import de.probst.ba.core.net.peer.Leecher;
+import de.probst.ba.core.net.peer.Transfer;
 import de.probst.ba.core.net.peer.handler.LeecherPeerHandlerAdapter;
 
 import java.util.concurrent.CountDownLatch;
@@ -23,7 +23,7 @@ public final class DataInfoCompletionHandler extends LeecherPeerHandlerAdapter {
     }
 
     @Override
-    public void dataCompleted(Leecher leecher, DataInfo dataInfo, TransferManager lastTransferManager) {
+    public void dataCompleted(Leecher leecher, DataInfo dataInfo, Transfer transfer) {
         countDownLatch.countDown();
     }
 }

@@ -1,20 +1,12 @@
-package de.probst.ba.core.media.database.databases;
+package de.probst.ba.core.media.database.databases.memory;
 
-import de.probst.ba.core.media.database.DataInfo;
-import de.probst.ba.core.util.io.SeekableByteBufferChannel;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-
-import java.io.IOException;
-import java.nio.channels.SeekableByteChannel;
-import java.util.HashMap;
-import java.util.Map;
+import de.probst.ba.core.media.database.databases.AbstractDataBase;
 
 /**
  * Created by chrisprobst on 05.10.14.
  */
-public final class InMemoryDataBase extends AbstractDataBase {
-
+public final class MemoryDataBase extends AbstractDataBase {
+/*
     private final Map<DataInfo, ByteBuf> data = new HashMap<>();
 
     @Override
@@ -45,36 +37,33 @@ public final class InMemoryDataBase extends AbstractDataBase {
     }
 
     @Override
-    public synchronized SeekableByteChannel[] unsafeQueryRawWithName(String name) throws IOException {
-        return getDataInfo().values()
-                            .stream()
-                            .filter(dataInfo -> dataInfo.getName().isPresent())
-                            .filter(dataInfo -> dataInfo.getName().get().equals(name))
-                            .map(DataInfo::getHash)
-                            .map(s -> {
-                                try {
-                                    return unsafeQueryRaw(s);
-                                } catch (IOException e) {
-                                    e.printStackTrace();
-                                    return null;
-                                }
-                            })
-                            .filter(c -> c != null)
-                            .toArray(SeekableByteChannel[]::new);
+    public synchronized List<Tuple2<DataInfo, SeekableByteChannel>> unsafeQueryRawWithName(String name)
+            throws IOException {
+
+        List<Tuple2<DataInfo, SeekableByteChannel>> results = new LinkedList<>();
+        for (DataInfo dataInfo : getDataInfo().values()) {
+            if (dataInfo.getName().isPresent() && dataInfo.getName().get().equals(name)) {
+                results.add(unsafeQueryRaw(dataInfo.getHash()));
+            }
+        }
+        return results;
     }
 
     @Override
-    public synchronized SeekableByteChannel unsafeQueryRaw(String hash) throws IOException {
+    public synchronized Tuple2<DataInfo, SeekableByteChannel> unsafeQueryRaw(String hash) throws IOException {
         DataInfo dataInfo = get(hash);
         if (!dataInfo.isCompleted()) {
             throw new IOException("!dataInfo.isCompleted()");
         }
         ByteBuf byteBuf = data.get(dataInfo).duplicate();
-        return new SeekableByteBufferChannel(byteBuf.readerIndex(0).writerIndex(byteBuf.capacity()).nioBuffer());
+        return Tuple.of(dataInfo,
+                        new ReadableByteBufferChannel(byteBuf.readerIndex(0)
+                                                             .writerIndex(byteBuf.capacity())
+                                                             .nioBuffer()));
     }
 
     @Override
     public void flush() throws IOException {
 
-    }
+    }*/
 }

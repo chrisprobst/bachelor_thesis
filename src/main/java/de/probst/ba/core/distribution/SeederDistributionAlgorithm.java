@@ -1,9 +1,9 @@
 package de.probst.ba.core.distribution;
 
 import de.probst.ba.core.media.database.DataInfo;
-import de.probst.ba.core.net.peer.transfer.TransferManager;
 import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.Seeder;
+import de.probst.ba.core.net.peer.Transfer;
 
 import java.util.Map;
 
@@ -41,7 +41,8 @@ public interface SeederDistributionAlgorithm extends DistributionAlgorithm {
      * two downloads in parallel because it would not make much sense.
      *
      * @param seeder
+     * @param transfer
      * @return
      */
-    boolean isUploadAllowed(Seeder seeder, TransferManager transferManager);
+    boolean isUploadAllowed(Seeder seeder, Transfer transfer);
 }

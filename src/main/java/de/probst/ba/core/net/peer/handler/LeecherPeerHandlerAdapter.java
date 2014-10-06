@@ -1,9 +1,9 @@
 package de.probst.ba.core.net.peer.handler;
 
 import de.probst.ba.core.media.database.DataInfo;
-import de.probst.ba.core.net.peer.transfer.TransferManager;
 import de.probst.ba.core.net.peer.Leecher;
 import de.probst.ba.core.net.peer.PeerId;
+import de.probst.ba.core.net.peer.Transfer;
 
 import java.net.SocketAddress;
 import java.util.Map;
@@ -25,32 +25,32 @@ public class LeecherPeerHandlerAdapter implements LeecherPeerHandler {
     }
 
     @Override
-    public void downloadRequested(Leecher leecher, TransferManager transferManager) {
+    public void downloadRequested(Leecher leecher, Transfer transfer) {
 
     }
 
     @Override
-    public void downloadRejected(Leecher leecher, TransferManager transferManager, Throwable cause) {
+    public void downloadRejected(Leecher leecher, Transfer transfer, Throwable cause) {
 
     }
 
     @Override
-    public void downloadStarted(Leecher leecher, TransferManager transferManager) {
+    public void downloadStarted(Leecher leecher, Transfer transfer) {
 
     }
 
     @Override
-    public void downloadProgressed(Leecher leecher, TransferManager transferManager) {
+    public void downloadProgressed(Leecher leecher, Transfer transfer) {
 
     }
 
     @Override
-    public void downloadSucceeded(Leecher leecher, TransferManager transferManager) {
+    public void downloadSucceeded(Leecher leecher, Transfer transfer) {
 
     }
 
     @Override
-    public void dataCompleted(Leecher leecher, DataInfo dataInfo, TransferManager lastTransferManager) {
+    public void dataCompleted(Leecher leecher, DataInfo dataInfo, Transfer transfer) {
 
     }
 }

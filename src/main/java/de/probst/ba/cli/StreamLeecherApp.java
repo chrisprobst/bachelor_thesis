@@ -5,12 +5,12 @@ import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.media.database.databases.DataBases;
 import de.probst.ba.core.net.peer.Leecher;
 import de.probst.ba.core.net.peer.Seeder;
+import de.probst.ba.core.net.peer.Transfer;
 import de.probst.ba.core.net.peer.handler.LeecherHandlerList;
 import de.probst.ba.core.net.peer.handler.LeecherPeerHandler;
 import de.probst.ba.core.net.peer.handler.LeecherPeerHandlerAdapter;
 import de.probst.ba.core.net.peer.handler.handlers.DataInfoCompletionHandler;
 import de.probst.ba.core.net.peer.peers.Peers;
-import de.probst.ba.core.net.peer.transfer.TransferManager;
 import de.probst.ba.core.util.collections.Tuple2;
 import de.probst.ba.gui.StreamerGUI;
 
@@ -54,7 +54,7 @@ public class StreamLeecherApp extends AbstractSocketAddressApp {
             volatile int i = 0;
 
             @Override
-            public void dataCompleted(Leecher leecher, DataInfo dataInfo, TransferManager lastTransferManager) {
+            public void dataCompleted(Leecher leecher, DataInfo dataInfo, Transfer transfer) {
                 if (dataInfo.getId() == i) {
                     System.out.println(" ********  START STREAMING ********");
                     eventLoopGroup.schedule(new Runnable() {
