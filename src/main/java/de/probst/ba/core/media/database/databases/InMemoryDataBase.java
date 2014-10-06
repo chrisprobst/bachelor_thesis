@@ -1,11 +1,11 @@
 package de.probst.ba.core.media.database.databases;
 
 import de.probst.ba.core.media.database.DataInfo;
+import de.probst.ba.core.util.io.SeekableByteBufferChannel;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.channels.SeekableByteChannel;
 import java.util.HashMap;
 import java.util.Map;
@@ -70,50 +70,7 @@ public final class InMemoryDataBase extends AbstractDataBase {
             throw new IOException("!dataInfo.isCompleted()");
         }
         ByteBuf byteBuf = data.get(dataInfo).duplicate();
-        byteBuf.writerIndex(byteBuf.capacity());
-        return new SeekableByteChannel() {
-            @Override
-            public synchronized int read(ByteBuffer dst) throws IOException {
-                int reader = byteBuf.readerIndex();
-                byteBuf.readBytes(dst);
-                return byteBuf.readerIndex() - reader;
-            }
-
-            @Override
-            public synchronized int write(ByteBuffer src) throws IOException {
-                throw new UnsupportedOperationException("Read-only");
-            }
-
-            @Override
-            public synchronized long position() throws IOException {
-                return byteBuf.readerIndex();
-            }
-
-            @Override
-            public synchronized SeekableByteChannel position(long newPosition) throws IOException {
-                byteBuf.readerIndex((int) newPosition);
-                return this;
-            }
-
-            @Override
-            public synchronized long size() throws IOException {
-                return byteBuf.capacity();
-            }
-
-            @Override
-            public synchronized SeekableByteChannel truncate(long size) throws IOException {
-                throw new UnsupportedOperationException("Read-only");
-            }
-
-            @Override
-            public synchronized boolean isOpen() {
-                return true;
-            }
-
-            @Override
-            public void close() throws IOException {
-            }
-        };
+        return new SeekableByteBufferChannel(byteBuf.readerIndex(0).writerIndex(byteBuf.capacity()).nioBuffer());
     }
 
     @Override

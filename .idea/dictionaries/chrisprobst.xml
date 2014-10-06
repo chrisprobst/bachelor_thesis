@@ -6,6 +6,7 @@
       <w>connectable</w>
       <w>csvfile</w>
       <w>guid</w>
+      <w>hexify</w>
       <w>inputdir</w>
       <w>inputdirs</w>
       <w>inputpath</w>

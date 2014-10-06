@@ -1,12 +1,26 @@
 package de.probst.ba.core.media.database;
 
+import de.probst.ba.core.util.collections.Tuple;
+import de.probst.ba.core.util.collections.Tuple2;
+
+import java.io.EOFException;
+import java.io.IOException;
 import java.io.Serializable;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.SeekableByteChannel;
+import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collections;
+import java.util.Formatter;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.function.IntFunction;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -18,6 +32,115 @@ import java.util.stream.IntStream;
  * Created by chrisprobst on 03.08.14.
  */
 public final class DataInfo implements Serializable {
+
+    public static final String DEFAULT_HASH_ALGORITHM = "SHA1";
+    public static final int DEFAULT_HASH_BUFFER_SIZE = 65535;
+
+    public static Tuple2<DataInfo, FileChannel> fromFile(int id,
+                                                         Optional<String> name,
+                                                         Optional<String> description,
+                                                         int chunkCount,
+                                                         Path path)
+            throws NoSuchAlgorithmException, IOException {
+        FileChannel fileChannel = FileChannel.open(path);
+        Tuple2<DataInfo, FileChannel> tuple = Tuple.of(fromSeekableChannel(id,
+                                                                           name,
+                                                                           description,
+                                                                           chunkCount,
+                                                                           fileChannel), fileChannel);
+        fileChannel.position(0);
+        return tuple;
+    }
+
+    public static DataInfo fromSeekableChannel(int id,
+                                               Optional<String> name,
+                                               Optional<String> description,
+                                               int chunkCount,
+                                               SeekableByteChannel seekableByteChannel)
+            throws NoSuchAlgorithmException, IOException {
+        return fromChannel(id, seekableByteChannel.size(), name, description, chunkCount, seekableByteChannel);
+    }
+
+    public static DataInfo fromChannel(int id,
+                                       long size,
+                                       Optional<String> name,
+                                       Optional<String> description,
+                                       int chunkCount,
+                                       ReadableByteChannel readableByteChannel)
+            throws NoSuchAlgorithmException, IOException {
+
+        // A little helper function
+        Function<byte[], String> hexify = byteArray -> {
+            Formatter formatter = new Formatter();
+            for (byte b : byteArray) {
+                formatter.format("%02x", b);
+            }
+            return formatter.toString();
+        };
+
+        // All chunk hashes are stored here
+        List<String> chunkHashes = new ArrayList<>(chunkCount);
+
+        // Init hash
+        MessageDigest hashDigest = MessageDigest.getInstance(DEFAULT_HASH_ALGORITHM);
+
+        // Setup vars
+        ByteBuffer byteBuffer = ByteBuffer.allocate(DEFAULT_HASH_BUFFER_SIZE);
+        long chunkSize = size / chunkCount;
+
+        for (int i = 0; i < chunkCount; i++) {
+            // Init chunk hash
+            MessageDigest chunkHashDigest = MessageDigest.getInstance(DEFAULT_HASH_ALGORITHM);
+
+            // Calc the actual chunk size
+            long actualChunkSize = i >= chunkCount - 1 ? size - chunkCount * chunkSize : chunkCount;
+
+            // Read in the actual chunk
+            long completed = 0;
+            while (completed < actualChunkSize) {
+                // Set buffer size
+                byteBuffer.clear().limit((int) Math.min(byteBuffer.capacity(), actualChunkSize - completed));
+
+                // Read the data into memory
+                int read = readableByteChannel.read(byteBuffer);
+                if (read < 0) {
+                    throw new EOFException();
+                }
+                byteBuffer.flip();
+
+                // Update the hashes
+                hashDigest.update(byteBuffer);
+                byteBuffer.rewind();
+                chunkHashDigest.update(byteBuffer);
+
+                completed += read;
+            }
+
+            // Hexify chunk hash
+            chunkHashes.add(hexify.apply(chunkHashDigest.digest()));
+        }
+
+        // Hexify hash
+        String hash = hexify.apply(hashDigest.digest());
+
+        // Create a new data info
+        return new DataInfo(id, size, name, description, hash, chunkHashes).full();
+    }
+
+    public static DataInfo generate(long id,
+                                    long size,
+                                    Optional<String> name,
+                                    Optional<String> description,
+                                    String hash,
+                                    int chunkCount,
+                                    IntFunction<String> chunkCreator) {
+        return new DataInfo(id,
+                            size,
+                            name,
+                            description,
+                            hash,
+                            IntStream.range(0, chunkCount).mapToObj(chunkCreator).collect(Collectors.toList()));
+    }
 
     // The id of this data info
     private final long id;
@@ -48,32 +171,6 @@ public final class DataInfo implements Serializable {
     // Here we store whether or not
     // a chunk is completed
     private final BitSet chunks;
-
-    /**
-     * Initialize a data info with a chunk creator.
-     *
-     * @param id
-     * @param size
-     * @param name
-     * @param description
-     * @param hash
-     * @param chunkCount
-     * @param chunkCreator
-     */
-    public DataInfo(long id,
-                    long size,
-                    Optional<String> name,
-                    Optional<String> description,
-                    String hash,
-                    int chunkCount,
-                    IntFunction<String> chunkCreator) {
-        this(id,
-             size,
-             name,
-             description,
-             hash,
-             IntStream.range(0, chunkCount).mapToObj(chunkCreator).collect(Collectors.toList()));
-    }
 
     public DataInfo(long id,
                     long size,

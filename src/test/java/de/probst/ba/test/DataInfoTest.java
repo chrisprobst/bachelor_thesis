@@ -21,14 +21,13 @@ public class DataInfoTest {
     public void setUp() {
 
         // 11 parts are needed for this tests
-        dataInfo = new DataInfo(
-                0,
-                100,
-                Optional.empty(),
-                Optional.empty(),
-                "123Hash123",
-                11,
-                String::valueOf);
+        dataInfo = DataInfo.generate(0,
+                                     100,
+                                     Optional.empty(),
+                                     Optional.empty(),
+                                     "123Hash123",
+                                     11,
+                                     String::valueOf);
     }
 
     @Test

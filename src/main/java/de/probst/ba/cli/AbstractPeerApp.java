@@ -262,13 +262,13 @@ public abstract class AbstractPeerApp {
 
     protected void setupDataInfo() {
         dataInfo = IntStream.range(0, parts)
-                            .mapToObj(i -> new DataInfo(i,
-                                                        totalSize,
-                                                        Optional.empty(),
-                                                        Optional.empty(),
-                                                        getClass().getSimpleName() + " pseudo hash for part " + i,
-                                                        chunkCount,
-                                                        String::valueOf).full())
+                            .mapToObj(i -> DataInfo.generate(i,
+                                                             totalSize,
+                                                             Optional.empty(),
+                                                             Optional.empty(),
+                                                             getClass().getSimpleName() + " pseudo hash for part " + i,
+                                                             chunkCount,
+                                                             String::valueOf).full())
                             .toArray(DataInfo[]::new);
     }
 
@@ -423,7 +423,7 @@ public abstract class AbstractPeerApp {
             logger.info(">>> [ Writing events now ]");
             Instant timeStamp = Instant.now();
 
-            File file = new File(recordsDirectory, "events.dat");
+            File file = new File(recordsDirectory, "Events.dat");
             logger.info(">>> [ Writing " + file + " ]");
             IOUtil.serialize(file, recordPeerHandler.sortAndGetRecords());
 

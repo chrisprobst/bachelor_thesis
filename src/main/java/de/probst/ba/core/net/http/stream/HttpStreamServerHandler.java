@@ -1,6 +1,7 @@
 package de.probst.ba.core.net.http.stream;
 
 import de.probst.ba.core.media.database.DataBase;
+import de.probst.ba.core.util.io.LimitedReadableByteChannel;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -9,15 +10,13 @@ import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpHeaderUtil;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.stream.ChunkedNioStream;
 import io.netty.util.CharsetUtil;
 
+import javax.activation.MimetypesFileTypeMap;
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.SeekableByteChannel;
 import java.util.Objects;
 
@@ -37,59 +36,19 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 public class HttpStreamServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
 
-    public static class LimitedReadableByteChannel implements ReadableByteChannel {
-
-        private final ReadableByteChannel peer;
-        private long current = 0;
-        private final long max;
-
-        private LimitedReadableByteChannel(ReadableByteChannel peer, long max) {
-            Objects.requireNonNull(peer);
-            this.peer = peer;
-            this.max = max;
-        }
-
-        @Override
-        public int read(ByteBuffer dst) throws IOException {
-            if (current < max) {
-                if (current + dst.remaining() <= max) {
-                    int read = peer.read(dst);
-                    current += read;
-                    return read;
-                } else {
-                    int rem = (int) (max - current);
-                    dst.limit(dst.position() + rem);
-                    int read = peer.read(dst);
-                    current += read;
-                    return read;
-                }
-            } else {
-                return -1;
-            }
-        }
-
-        @Override
-        public boolean isOpen() {
-            return true;
-        }
-
-        @Override
-        public void close() throws IOException {
-
-        }
-    }
-
     private final DataBase dataBase;
+    private final MimetypesFileTypeMap mimetypesFileTypeMap = new MimetypesFileTypeMap();
 
     public HttpStreamServerHandler(DataBase dataBase) {
         Objects.requireNonNull(dataBase);
         this.dataBase = dataBase;
+
+        mimetypesFileTypeMap.addMimeTypes("video/mp4 mp4");
     }
 
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, FullHttpRequest request) throws Exception {
-
         if (!request.decoderResult().isSuccess()) {
             sendError(ctx, BAD_REQUEST);
             return;
@@ -109,7 +68,7 @@ public class HttpStreamServerHandler extends SimpleChannelInboundHandler<FullHtt
         } catch (IOException ignored) {
         }
 
-        if (channels == null) {
+        if (channels == null || channels.length == 0) {
             System.out.println("Invalid request: " + path);
             sendError(ctx, NOT_FOUND);
             return;
@@ -142,12 +101,10 @@ public class HttpStreamServerHandler extends SimpleChannelInboundHandler<FullHtt
         // Prepare response
         HttpResponse response = new DefaultHttpResponse(HTTP_1_1, lower != -1 && upper != -1 ? PARTIAL_CONTENT : OK);
         response.headers().set(CONTENT_LENGTH, length);
-        response.headers().set(CONTENT_TYPE, "video/mp4");
+
+
+        response.headers().set(CONTENT_TYPE, mimetypesFileTypeMap.getContentType(path));
         response.headers().set(ACCEPT_RANGES, "bytes");
-        if (HttpHeaderUtil.isKeepAlive(request)) {
-            System.out.println("KEEP ALIVE");
-            //response.headers().set(CONNECTION, HttpHeaders.Values.KEEP_ALIVE);
-        }
         if (lower != -1 && upper != -1) {
             response.headers()
                     .set(CONTENT_RANGE, "bytes " + lower + "-" + (upper - 1) + "/" + channel.size());
@@ -156,7 +113,6 @@ public class HttpStreamServerHandler extends SimpleChannelInboundHandler<FullHtt
         ctx.write(response);
 
         // Write the content
-        System.out.println(channel.size());
         ctx.writeAndFlush(new ChunkedNioStream(new LimitedReadableByteChannel(channel, length), 8192)).addListener(
                 ChannelFutureListener.CLOSE);
     }
