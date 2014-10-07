@@ -52,7 +52,6 @@ public final class GatheringDataBaseChannel implements GatheringByteChannel {
         completed += amount;
         if (completed >= total) {
             completedCallback.run();
-            close();
         }
         return amount;
     }

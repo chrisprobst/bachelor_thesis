@@ -34,14 +34,22 @@ public abstract class AbstractDataBase implements DataBase {
                                                                                              Map.Entry::getValue)));
     }
 
+    private synchronized void closeWriteChannel(DataInfo writeDataInfo) {
+        dataInfoRegionLock.unlockWriteResource(writeDataInfo);
+    }
+
+    private synchronized void closeReadChannel(DataInfo readDataInfo) {
+        dataInfoRegionLock.unlockReadResource(readDataInfo);
+    }
+
     protected GatheringByteChannel openWriteChannel(DataInfo writeDataInfo) throws IOException {
-        return new GatheringDataBaseChannel(() -> dataInfoRegionLock.unlockWriteResource(writeDataInfo),
+        return new GatheringDataBaseChannel(() -> closeWriteChannel(writeDataInfo),
                                             () -> unsafeUpdate(writeDataInfo),
                                             writeDataInfo.getCompletedSize());
     }
 
     protected ScatteringByteChannel openReadChannel(DataInfo readDataInfo) throws IOException {
-        return new ScatteringDataBaseChannel(readDataInfo.getCompletedSize());
+        return new ScatteringDataBaseChannel(() -> closeReadChannel(readDataInfo), readDataInfo.getCompletedSize());
     }
 
     @Override

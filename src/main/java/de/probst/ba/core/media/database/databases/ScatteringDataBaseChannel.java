@@ -4,12 +4,14 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ScatteringByteChannel;
+import java.util.Objects;
 
 /**
  * Created by chrisprobst on 06.10.14.
  */
 public final class ScatteringDataBaseChannel implements ScatteringByteChannel {
 
+    private final Runnable closeCallback;
     private final long total;
     private long completed;
     private boolean closed;
@@ -20,7 +22,9 @@ public final class ScatteringDataBaseChannel implements ScatteringByteChannel {
         }
     }
 
-    public ScatteringDataBaseChannel(long total) {
+    public ScatteringDataBaseChannel(Runnable closeCallback, long total) {
+        Objects.requireNonNull(closeCallback);
+        this.closeCallback = closeCallback;
         this.total = total;
     }
 
@@ -54,6 +58,9 @@ public final class ScatteringDataBaseChannel implements ScatteringByteChannel {
 
     @Override
     public synchronized void close() throws IOException {
-        closed = true;
+        if (!closed) {
+            closed = true;
+            closeCallback.run();
+        }
     }
 }
