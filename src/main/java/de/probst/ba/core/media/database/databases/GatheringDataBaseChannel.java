@@ -11,7 +11,8 @@ import java.util.Objects;
  */
 public final class GatheringDataBaseChannel implements GatheringByteChannel {
 
-    private final Runnable callback;
+    private final Runnable abortCallback;
+    private final Runnable completedCallback;
     private final long total;
     private long completed;
     private boolean closed;
@@ -22,9 +23,11 @@ public final class GatheringDataBaseChannel implements GatheringByteChannel {
         }
     }
 
-    public GatheringDataBaseChannel(Runnable callback, long total) {
-        Objects.requireNonNull(callback);
-        this.callback = callback;
+    public GatheringDataBaseChannel(Runnable abortCallback, Runnable completedCallback, long total) {
+        Objects.requireNonNull(abortCallback);
+        Objects.requireNonNull(completedCallback);
+        this.abortCallback = abortCallback;
+        this.completedCallback = completedCallback;
         this.total = total;
     }
 
@@ -48,7 +51,8 @@ public final class GatheringDataBaseChannel implements GatheringByteChannel {
         src.position(src.position() + amount);
         completed += amount;
         if (completed >= total) {
-            callback.run();
+            completedCallback.run();
+            close();
         }
         return amount;
     }
@@ -60,6 +64,9 @@ public final class GatheringDataBaseChannel implements GatheringByteChannel {
 
     @Override
     public synchronized void close() throws IOException {
-        closed = true;
+        if (!closed) {
+            closed = true;
+            abortCallback.run();
+        }
     }
 }

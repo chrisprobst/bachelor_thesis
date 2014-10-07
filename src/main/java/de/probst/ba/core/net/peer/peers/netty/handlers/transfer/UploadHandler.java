@@ -64,6 +64,10 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
     private boolean setup(Transfer transfer) {
         boolean allowed;
         synchronized (allowLock) {
+            if (this.transfer != null) {
+                throw new IllegalStateException("this.transfer != null");
+            }
+
             if ((allowed = seeder.getDistributionAlgorithm().isUploadAllowed(seeder, transfer))) {
                 this.transfer = transfer;
             }
@@ -95,7 +99,8 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
             // If the upload is not allowed, reject it!
             if (!setup(transfer)) {
                 reject("Upload denied", transfer, logger::debug);
-            } else if (!(scatteringByteChannel = seeder.getDataBase().tryQuery(transfer.getDataInfo())).isPresent()) {
+            } else if (!(scatteringByteChannel =
+                    seeder.getDataBase().tryOpenReadChannel(transfer.getDataInfo())).isPresent()) {
                 reject("Failed to open database channel", transfer, logger::warn);
             } else {
                 // Upload chunked input

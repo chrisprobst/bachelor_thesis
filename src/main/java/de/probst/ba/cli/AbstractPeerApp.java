@@ -443,7 +443,7 @@ public abstract class AbstractPeerApp {
             for (DataInfo dataInfo : this.dataInfo) {
                 byte[] buf = new byte[(int) dataInfo.getSize()];
                 IOUtil.transfer(Channels.newChannel(new ByteArrayInputStream(buf)),
-                                peer.getDataBase().tryInsert(dataInfo).get());
+                                peer.getDataBase().tryOpenWriteChannel(dataInfo).get());
             }
         }
     }

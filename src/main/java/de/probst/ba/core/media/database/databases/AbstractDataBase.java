@@ -2,6 +2,7 @@ package de.probst.ba.core.media.database.databases;
 
 import de.probst.ba.core.media.database.DataBase;
 import de.probst.ba.core.media.database.DataInfo;
+import de.probst.ba.core.media.database.DataInfoRegionLock;
 
 import java.io.IOException;
 import java.nio.channels.GatheringByteChannel;
@@ -20,17 +21,27 @@ public abstract class AbstractDataBase implements DataBase {
     private final Map<String, DataInfo> dataInfo = new HashMap<>();
     private volatile Map<String, DataInfo> nonEmptyDataInfoView = Collections.emptyMap();
 
-    private synchronized void unsafePut(DataInfo dataInfo) {
-        this.dataInfo.merge(dataInfo.getHash(), dataInfo, DataInfo::union);
-        createNonEmptyDataInfoView();
-    }
+    private final DataInfoRegionLock dataInfoRegionLock = new DataInfoRegionLock();
+    private final Map<DataInfo, GatheringByteChannel> insertChannels = new HashMap<>();
+    private final Map<DataInfo, ScatteringByteChannel> queryChannels = new HashMap<>();
 
-    private void createNonEmptyDataInfoView() {
+    private synchronized void unsafeUpdate(DataInfo updateDataInfo) {
+        dataInfo.merge(updateDataInfo.getHash(), updateDataInfo, DataInfo::union);
         nonEmptyDataInfoView = Collections.unmodifiableMap(dataInfo.entrySet()
                                                                    .stream()
                                                                    .filter(p -> !p.getValue().isEmpty())
                                                                    .collect(Collectors.toMap(Map.Entry::getKey,
                                                                                              Map.Entry::getValue)));
+    }
+
+    protected GatheringByteChannel openWriteChannel(DataInfo writeDataInfo) throws IOException {
+        return new GatheringDataBaseChannel(() -> dataInfoRegionLock.unlockWriteResource(writeDataInfo),
+                                            () -> unsafeUpdate(writeDataInfo),
+                                            writeDataInfo.getCompletedSize());
+    }
+
+    protected ScatteringByteChannel openReadChannel(DataInfo readDataInfo) throws IOException {
+        return new ScatteringDataBaseChannel(readDataInfo.getCompletedSize());
     }
 
     @Override
@@ -44,27 +55,44 @@ public abstract class AbstractDataBase implements DataBase {
     }
 
     @Override
-    public synchronized Optional<GatheringByteChannel> tryInsert(DataInfo dataInfo) throws IOException {
-        DataInfo existingDataInfo = this.dataInfo.get(dataInfo.getHash());
+    public synchronized Optional<GatheringByteChannel> tryOpenWriteChannel(DataInfo writeDataInfo) throws IOException {
+        DataInfo existingDataInfo = dataInfo.get(writeDataInfo.getHash());
         if (existingDataInfo == null) {
-            this.dataInfo.put(dataInfo.getHash(), dataInfo.empty());
-            return Optional.of(new GatheringDataBaseChannel(() -> unsafePut(dataInfo), dataInfo.getCompletedSize()));
-        } else if (existingDataInfo.overlaps(dataInfo)) {
-            throw new IllegalArgumentException("existingDataInfo.overlaps(dataInfo)");
-        } else {
-            return Optional.of(new GatheringDataBaseChannel(() -> unsafePut(dataInfo), dataInfo.getCompletedSize()));
+            // The write data info does not exist, lets add it!
+            dataInfo.put(writeDataInfo.getHash(), writeDataInfo.empty());
+            dataInfoRegionLock.lockWriteResource(writeDataInfo);
+
+        } else if (existingDataInfo.overlaps(writeDataInfo)) {
+            throw new IllegalArgumentException("existingDataInfo.overlaps(writeDataInfo)");
+        } else if (!dataInfoRegionLock.tryLockWriteResource(writeDataInfo)) {
+            return Optional.empty();
+        }
+
+        // Return a channel for writing
+        try {
+            return Optional.of(openWriteChannel(writeDataInfo));
+        } catch (IOException e) {
+            dataInfoRegionLock.unlockWriteResource(writeDataInfo);
+            throw e;
         }
     }
 
     @Override
-    public synchronized Optional<ScatteringByteChannel> tryQuery(DataInfo dataInfo) throws IOException {
-        DataInfo existingDataInfo = this.dataInfo.get(dataInfo.getHash());
+    public synchronized Optional<ScatteringByteChannel> tryOpenReadChannel(DataInfo readDataInfo) throws IOException {
+        DataInfo existingDataInfo = dataInfo.get(readDataInfo.getHash());
         if (existingDataInfo == null) {
             throw new IllegalArgumentException("existingDataInfo == null");
-        } else if (!existingDataInfo.contains(dataInfo)) {
-            throw new IllegalArgumentException("!existingDataInfo.contains(dataInfo)");
+        } else if (!existingDataInfo.contains(readDataInfo)) {
+            throw new IllegalArgumentException("!existingDataInfo.contains(readDataInfo)");
+        } else if (!dataInfoRegionLock.tryLockReadResource(readDataInfo)) {
+            return Optional.empty();
         } else {
-            return Optional.of(new ScatteringDataBaseChannel(dataInfo.getCompletedSize()));
+            try {
+                return Optional.of(openReadChannel(readDataInfo));
+            } catch (IOException e) {
+                dataInfoRegionLock.unlockReadResource(readDataInfo);
+                throw e;
+            }
         }
     }
 

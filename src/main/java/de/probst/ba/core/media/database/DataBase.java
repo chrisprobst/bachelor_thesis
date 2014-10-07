@@ -27,7 +27,7 @@ public interface DataBase extends Flushable {
     DataInfo get(String hash);
 
     /**
-     * Queries the data base for the given data.
+     * Tries to open a database channel for reading.
      * <p>
      * The returned channel is a cumulative channel
      * of all chunks specified in the given data info.
@@ -35,33 +35,34 @@ public interface DataBase extends Flushable {
      * Only existing data and completed chunks are allowed
      * to be part of the query.
      * <p>
-     * The chunks affected by this query are locked for inserting,
-     * while querying still works.
+     * The chunks affected by this query are locked for reading,
+     * so that no modifications can happen, while reading
+     * in parallel is allowed.
      *
      * @param dataInfo
      * @return The channel or empty, if one of the specified chunks
-     * is locked for querying.
+     * is locked for writing.
      * @throws IOException If an exception occurs or one of the specified
      *                     chunks does not exist.
      */
-    Optional<ScatteringByteChannel> tryQuery(DataInfo dataInfo) throws IOException;
+    Optional<ScatteringByteChannel> tryOpenReadChannel(DataInfo dataInfo) throws IOException;
 
     /**
-     * Inserts the data into the data base.
+     * Tries to open a database channel for writing.
      * <p>
      * The returned channel is a cumulative channel
      * of all chunks specified in the given data info.
      * <p>
      * Only uncompleted chunks are allowed to be part of the query.
      * <p>
-     * The chunks affected by this query are locked for inserting
-     * and querying.
+     * The chunks affected by this query are exclusively locked for writing,
+     * so no reads or writes can occur in parallel.
      *
      * @param dataInfo
      * @return The channel or empty, if one of the specified chunks
-     * is locked for inserting.
+     * cannot be locked for writing.
      * @throws IOException If an exception occurs or one of the specified
      *                     chunks already exists.
      */
-    Optional<GatheringByteChannel> tryInsert(DataInfo dataInfo) throws IOException;
+    Optional<GatheringByteChannel> tryOpenWriteChannel(DataInfo dataInfo) throws IOException;
 }

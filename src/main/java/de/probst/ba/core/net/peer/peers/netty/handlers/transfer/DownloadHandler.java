@@ -89,28 +89,25 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
         receivedBuffer = false;
         Transfer transfer = this.transfer.get();
         gatheringByteChannel = leecher.getDataBase()
-                                      .tryInsert(transfer.getDataInfo())
+                                      .tryOpenWriteChannel(transfer.getDataInfo())
                                       .orElseThrow(() -> new IllegalStateException(
-                                              "Database insert channel locked for: " + transfer));
+                                              "Database write channel locked for: " + transfer));
     }
 
-    private boolean update(ByteBuf buffer) throws IOException {
+    private Transfer update(ByteBuf buffer) throws IOException {
         int total = buffer.readableBytes();
         while (buffer.readableBytes() > 0) {
             buffer.readBytes(gatheringByteChannel, buffer.readableBytes());
         }
 
-        return transfer.updateAndGet(t -> t.update(t.getCompletedSize() + total)).isCompleted();
+        return transfer.updateAndGet(t -> t.update(t.getCompletedSize() + total));
     }
 
     private void reset() throws IOException {
-        try {
-            gatheringByteChannel.close();
-            leech.run();
-        } finally {
-            gatheringByteChannel = null;
-            transfer.set(null);
-        }
+        gatheringByteChannel.close();
+        gatheringByteChannel = null;
+        transfer.set(null);
+        leech.run();
     }
 
     private Optional<Transfer> getTransfer() {
@@ -118,7 +115,21 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
     }
 
     @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        // Make sure the channel is definitely closed
+        if (gatheringByteChannel != null) {
+            gatheringByteChannel.close();
+            gatheringByteChannel = null;
+        }
+
+        super.exceptionCaught(ctx, cause);
+    }
+
+    @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        if (gatheringByteChannel != null) {
+            throw new IllegalStateException("gatheringByteChannel != null");
+        }
 
         Transfer transfer = this.transfer.get();
         if (transfer.equals(evt)) {
@@ -168,8 +179,7 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
             }
 
             // Process the buffer and check for completion
-            boolean completed = update(buffer);
-            transfer = this.transfer.get();
+            boolean completed = (transfer = update(buffer)).isCompleted();
 
             logger.debug("Leecher " + leecher.getPeerId() + " progressed download " + transfer);
 

@@ -1,6 +1,7 @@
 package de.probst.ba.test;
 
 import de.probst.ba.core.media.database.DataInfo;
+import de.probst.ba.core.media.database.DataInfoRegionLock;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -262,5 +263,40 @@ public class DataInfoTest {
         assertFalse(dataInfo.isChunkCompleted(1));
         assertFalse(dataInfo.isChunkCompleted(4));
         assertFalse(dataInfo.isChunkCompleted(10));
+    }
+
+    @Test
+    public void regionLock() {
+        DataInfoRegionLock dataInfoRegionLock = new DataInfoRegionLock();
+        DataInfo lockA = dataInfo.withChunk(3).withChunk(5);
+        DataInfo lockB = dataInfo.withChunk(4).withChunk(6);
+        DataInfo lockC = dataInfo.withChunk(2).withChunk(7);
+        DataInfo lockD = dataInfo.full();
+
+        dataInfoRegionLock.lockWriteResource(lockA);
+        dataInfoRegionLock.lockWriteResource(lockB);
+        dataInfoRegionLock.lockWriteResource(lockC);
+        assertTrue(dataInfoRegionLock.tryUnlockWriteResource(lockA));
+        assertTrue(dataInfoRegionLock.tryUnlockWriteResource(lockB));
+        assertTrue(dataInfoRegionLock.tryUnlockWriteResource(lockC));
+        dataInfoRegionLock.lockWriteResource(lockA);
+        dataInfoRegionLock.lockWriteResource(lockB);
+        dataInfoRegionLock.lockWriteResource(lockC);
+        assertTrue(dataInfoRegionLock.tryUnlockWriteResource(lockA));
+        assertTrue(dataInfoRegionLock.tryUnlockWriteResource(lockB));
+        assertTrue(dataInfoRegionLock.tryUnlockWriteResource(lockC));
+        dataInfoRegionLock.lockWriteResource(lockA);
+
+        dataInfoRegionLock.lockReadResource(lockB);
+        dataInfoRegionLock.lockReadResource(lockB);
+        dataInfoRegionLock.lockReadResource(lockC);
+        dataInfoRegionLock.lockReadResource(lockC);
+
+        assertFalse(dataInfoRegionLock.tryLockReadResource(lockD));
+
+        assertTrue(dataInfoRegionLock.tryUnlockWriteResource(lockA));
+
+        assertTrue(dataInfoRegionLock.tryLockReadResource(lockD));
+        assertTrue(dataInfoRegionLock.tryUnlockReadResource(lockD));
     }
 }
