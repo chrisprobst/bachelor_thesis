@@ -1,6 +1,7 @@
 package de.probst.ba.core.net.http.stream;
 
 import de.probst.ba.core.media.database.DataBase;
+import de.probst.ba.core.media.database.DataBaseReadChannel;
 import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.util.collections.Tuple2;
 import de.probst.ba.core.util.io.LimitedReadableByteChannel;
@@ -18,12 +19,7 @@ import io.netty.handler.stream.ChunkedNioStream;
 import io.netty.util.CharsetUtil;
 
 import javax.activation.MimetypesFileTypeMap;
-import java.io.IOException;
-import java.nio.channels.SeekableByteChannel;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
-import java.util.OptionalLong;
 
 import static io.netty.handler.codec.http.HttpHeaders.Names.ACCEPT_RANGES;
 import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_LENGTH;
@@ -34,7 +30,6 @@ import static io.netty.handler.codec.http.HttpMethod.GET;
 import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
 import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
 import static io.netty.handler.codec.http.HttpResponseStatus.METHOD_NOT_ALLOWED;
-import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpResponseStatus.PARTIAL_CONTENT;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
@@ -54,7 +49,7 @@ public class HttpStreamServerHandler extends SimpleChannelInboundHandler<FullHtt
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, FullHttpRequest request) throws Exception {
-       /* if (!request.decoderResult().isSuccess()) {
+        if (!request.decoderResult().isSuccess()) {
             sendError(ctx, BAD_REQUEST);
             return;
         }
@@ -66,21 +61,16 @@ public class HttpStreamServerHandler extends SimpleChannelInboundHandler<FullHtt
 
         final String path = request.uri().substring(1);
 
-        List<Tuple2<DataInfo, SeekableByteChannel>> tuples = null;
+        Tuple2<DataInfo, DataBaseReadChannel> tuple;
         try {
-            tuples = dataBase.unsafeQueryRawWithName(path);
-        } catch (IOException ignored) {
-            ignored.printStackTrace();
+            tuple = dataBase.findAny(dataInfo -> dataInfo.getName().get().equals(path)).get();
+        } catch (Exception e) {
+            System.out.println("Not found: " + path + ", Reason: " + e);
             sendError(ctx, BAD_REQUEST);
             return;
         }
 
-        if (tuples.isEmpty()) {
-            System.err.println("Invalid request: " + path);
-            sendError(ctx, NOT_FOUND);
-            return;
-        }
-
+        /*
         // Collect all in-order tuples
         OptionalLong id = OptionalLong.empty();
         List<Tuple2<DataInfo, SeekableByteChannel>> inOrderTuples = new ArrayList<>(tuples.size());
@@ -91,9 +81,9 @@ public class HttpStreamServerHandler extends SimpleChannelInboundHandler<FullHtt
             } else {
                 break;
             }
-        }
+        }*/
 
-        SeekableByteChannel channel = tuples[0];
+        DataBaseReadChannel channel = tuple.second();
 
         // Read ranges
         long lower = -1, upper = -1, length = channel.size();
@@ -132,8 +122,8 @@ public class HttpStreamServerHandler extends SimpleChannelInboundHandler<FullHtt
         ctx.write(response);
 
         // Write the content
-        ctx.writeAndFlush(new ChunkedNioStream(new LimitedReadableByteChannel(channel, length), 8192)).addListener(
-                ChannelFutureListener.CLOSE);*/
+        ctx.writeAndFlush(new ChunkedNioStream(new LimitedReadableByteChannel(channel, length, true))).addListener(
+                ChannelFutureListener.CLOSE);
     }
 
     @Override

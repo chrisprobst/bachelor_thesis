@@ -1,5 +1,6 @@
 package de.probst.ba.core.net.peer.peers.netty.handlers.transfer;
 
+import de.probst.ba.core.media.database.DataBaseWriteChannel;
 import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.net.peer.Leecher;
 import de.probst.ba.core.net.peer.PeerId;
@@ -16,7 +17,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.nio.channels.GatheringByteChannel;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
@@ -67,7 +67,7 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
     private final Leecher leecher;
     private final Runnable leech;
     private final AtomicReference<Transfer> transfer = new AtomicReference<>();
-    private GatheringByteChannel gatheringByteChannel;
+    private DataBaseWriteChannel dataBaseWriteChannel;
     private boolean receivedBuffer;
 
     public DownloadHandler(Leecher leecher, Runnable leech) {
@@ -88,8 +88,8 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
     private void setup() throws IOException {
         receivedBuffer = false;
         Transfer transfer = this.transfer.get();
-        gatheringByteChannel = leecher.getDataBase()
-                                      .tryOpenWriteChannel(transfer.getDataInfo())
+        dataBaseWriteChannel = leecher.getDataBase()
+                                      .insert(transfer.getDataInfo())
                                       .orElseThrow(() -> new IllegalStateException(
                                               "Database write channel locked for: " + transfer));
     }
@@ -97,15 +97,15 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
     private Transfer update(ByteBuf buffer) throws IOException {
         int total = buffer.readableBytes();
         while (buffer.readableBytes() > 0) {
-            buffer.readBytes(gatheringByteChannel, buffer.readableBytes());
+            buffer.readBytes(dataBaseWriteChannel, buffer.readableBytes());
         }
 
         return transfer.updateAndGet(t -> t.update(t.getCompletedSize() + total));
     }
 
     private void reset() throws IOException {
-        gatheringByteChannel.close();
-        gatheringByteChannel = null;
+        dataBaseWriteChannel.close();
+        dataBaseWriteChannel = null;
         transfer.set(null);
         leech.run();
     }
@@ -117,9 +117,9 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         // Make sure the channel is definitely closed
-        if (gatheringByteChannel != null) {
-            gatheringByteChannel.close();
-            gatheringByteChannel = null;
+        if (dataBaseWriteChannel != null) {
+            dataBaseWriteChannel.close();
+            dataBaseWriteChannel = null;
         }
 
         super.exceptionCaught(ctx, cause);
@@ -127,8 +127,8 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
 
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-        if (gatheringByteChannel != null) {
-            throw new IllegalStateException("gatheringByteChannel != null");
+        if (dataBaseWriteChannel != null) {
+            throw new IllegalStateException("dataBaseWriteChannel != null");
         }
 
         Transfer transfer = this.transfer.get();

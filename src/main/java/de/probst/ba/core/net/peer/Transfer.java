@@ -3,8 +3,6 @@ package de.probst.ba.core.net.peer;
 import de.probst.ba.core.media.database.DataInfo;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 import java.util.stream.IntStream;
 
@@ -116,14 +114,7 @@ public final class Transfer implements Serializable {
      * according to the completed size.
      */
     public IntStream getCompletedChunks() {
-        List<Integer> completedChunks = new ArrayList<>();
-        long cnt = getCompletedSize();
-        for (int chunk : getDataInfo().getCompletedChunks().toArray()) {
-            if ((cnt -= getDataInfo().getChunkSize(chunk)) >= 0) {
-                completedChunks.add(chunk);
-            }
-        }
-        return completedChunks.stream().mapToInt(Integer::intValue);
+        return getDataInfo().calculateCompletedChunksForSize(getCompletedSize());
     }
 
     /**

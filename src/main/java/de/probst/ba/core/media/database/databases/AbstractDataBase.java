@@ -1,16 +1,20 @@
 package de.probst.ba.core.media.database.databases;
 
 import de.probst.ba.core.media.database.DataBase;
+import de.probst.ba.core.media.database.DataBaseReadChannel;
+import de.probst.ba.core.media.database.DataBaseWriteChannel;
 import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.media.database.DataInfoRegionLock;
+import de.probst.ba.core.util.collections.Tuple;
+import de.probst.ba.core.util.collections.Tuple2;
 
 import java.io.IOException;
-import java.nio.channels.GatheringByteChannel;
-import java.nio.channels.ScatteringByteChannel;
+import java.nio.channels.Channel;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
@@ -19,51 +23,78 @@ import java.util.stream.Collectors;
 public abstract class AbstractDataBase implements DataBase {
 
     private final Map<String, DataInfo> dataInfo = new HashMap<>();
-    private volatile Map<String, DataInfo> nonEmptyDataInfoView = Collections.emptyMap();
-
     private final DataInfoRegionLock dataInfoRegionLock = new DataInfoRegionLock();
-    private final Map<DataInfo, GatheringByteChannel> insertChannels = new HashMap<>();
-    private final Map<DataInfo, ScatteringByteChannel> queryChannels = new HashMap<>();
+    private final Map<DataInfo, AbstractDataBaseWriteChannel> writeChannels = new HashMap<>();
+    private final Map<DataInfo, AbstractDataBaseReadChannel> readChannels = new HashMap<>();
 
-    private synchronized void unsafeUpdate(DataInfo updateDataInfo) {
+    final synchronized void update(DataInfo updateDataInfo) {
         dataInfo.merge(updateDataInfo.getHash(), updateDataInfo, DataInfo::union);
-        nonEmptyDataInfoView = Collections.unmodifiableMap(dataInfo.entrySet()
-                                                                   .stream()
-                                                                   .filter(p -> !p.getValue().isEmpty())
-                                                                   .collect(Collectors.toMap(Map.Entry::getKey,
-                                                                                             Map.Entry::getValue)));
     }
 
-    private synchronized void closeWriteChannel(DataInfo writeDataInfo) {
-        dataInfoRegionLock.unlockWriteResource(writeDataInfo);
+    final synchronized void unregisterChannel(Channel channel, DataInfo channelDataInfo) {
+        if (channel instanceof AbstractDataBaseWriteChannel) {
+            writeChannels.remove(channelDataInfo);
+            dataInfoRegionLock.unlockWriteResource(channelDataInfo);
+        } else if (channel instanceof AbstractDataBaseReadChannel) {
+            readChannels.remove(channelDataInfo);
+            dataInfoRegionLock.unlockReadResource(channelDataInfo);
+        } else {
+            throw new IllegalArgumentException("Unknown channel type: " + channel);
+        }
     }
 
-    private synchronized void closeReadChannel(DataInfo readDataInfo) {
-        dataInfoRegionLock.unlockReadResource(readDataInfo);
+    protected final synchronized Map<DataInfo, AbstractDataBaseWriteChannel> unsafeGetWriteChannels() {
+        return new HashMap<>(writeChannels);
     }
 
-    protected GatheringByteChannel openWriteChannel(DataInfo writeDataInfo) throws IOException {
-        return new GatheringDataBaseChannel(() -> closeWriteChannel(writeDataInfo),
-                                            () -> unsafeUpdate(writeDataInfo),
-                                            writeDataInfo.getCompletedSize());
+    protected final synchronized Map<DataInfo, AbstractDataBaseReadChannel> unsafeGetReadChannels() {
+        return new HashMap<>(readChannels);
     }
 
-    protected ScatteringByteChannel openReadChannel(DataInfo readDataInfo) throws IOException {
-        return new ScatteringDataBaseChannel(() -> closeReadChannel(readDataInfo), readDataInfo.getCompletedSize());
+    protected abstract AbstractDataBaseWriteChannel openWriteChannel(DataInfo writeDataInfo) throws IOException;
+
+    protected abstract AbstractDataBaseReadChannel openReadChannel(DataInfo readDataInfo) throws IOException;
+
+    @Override
+    public final synchronized Map<String, DataInfo> getDataInfo() {
+        return Collections.unmodifiableMap(dataInfo.entrySet()
+                                                   .stream()
+                                                   .filter(p -> !p.getValue().isEmpty())
+                                                   .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
     }
 
     @Override
-    public Map<String, DataInfo> getDataInfo() {
-        return nonEmptyDataInfoView;
+    public final synchronized Map<String, DataInfo> getEstimatedDataInfo() {
+        // Create a map of all locked write regions
+        Map<String, DataInfo> lockedWriteRegions = dataInfoRegionLock.getLockedWriteRegions()
+                                                                     .stream()
+                                                                     .collect(Collectors.groupingBy(DataInfo::getHash))
+                                                                     .entrySet()
+                                                                     .stream()
+                                                                     .map(p -> Tuple.of(p.getKey(),
+                                                                                        p.getValue()
+                                                                                         .stream()
+                                                                                         .reduce(DataInfo::union)
+                                                                                         .get()))
+                                                                     .collect(Collectors.toMap(Tuple::first,
+                                                                                               Tuple::second));
+
+        // Get all non-empty data info and
+        // merge with locked file regions
+        for (DataInfo dataInfo : getDataInfo().values()) {
+            lockedWriteRegions.merge(dataInfo.getHash(), dataInfo, DataInfo::union);
+        }
+
+        return lockedWriteRegions;
     }
 
     @Override
-    public synchronized DataInfo get(String hash) {
+    public final synchronized DataInfo get(String hash) {
         return dataInfo.get(hash);
     }
 
     @Override
-    public synchronized Optional<GatheringByteChannel> tryOpenWriteChannel(DataInfo writeDataInfo) throws IOException {
+    public final synchronized Optional<DataBaseWriteChannel> insert(DataInfo writeDataInfo) throws IOException {
         DataInfo existingDataInfo = dataInfo.get(writeDataInfo.getHash());
         if (existingDataInfo == null) {
             // The write data info does not exist, lets add it!
@@ -78,7 +109,10 @@ public abstract class AbstractDataBase implements DataBase {
 
         // Return a channel for writing
         try {
-            return Optional.of(openWriteChannel(writeDataInfo));
+            // Open write channel and store into map
+            AbstractDataBaseWriteChannel writeChannel = openWriteChannel(writeDataInfo);
+            writeChannels.put(writeDataInfo, writeChannel);
+            return Optional.of(writeChannel);
         } catch (IOException e) {
             dataInfoRegionLock.unlockWriteResource(writeDataInfo);
             throw e;
@@ -86,7 +120,7 @@ public abstract class AbstractDataBase implements DataBase {
     }
 
     @Override
-    public synchronized Optional<ScatteringByteChannel> tryOpenReadChannel(DataInfo readDataInfo) throws IOException {
+    public final synchronized Optional<DataBaseReadChannel> lookup(DataInfo readDataInfo) throws IOException {
         DataInfo existingDataInfo = dataInfo.get(readDataInfo.getHash());
         if (existingDataInfo == null) {
             throw new IllegalArgumentException("existingDataInfo == null");
@@ -96,7 +130,10 @@ public abstract class AbstractDataBase implements DataBase {
             return Optional.empty();
         } else {
             try {
-                return Optional.of(openReadChannel(readDataInfo));
+                // Open read channel and store into map
+                AbstractDataBaseReadChannel readChannel = openReadChannel(readDataInfo);
+                readChannels.put(readDataInfo, readChannel);
+                return Optional.of(readChannel);
             } catch (IOException e) {
                 dataInfoRegionLock.unlockReadResource(readDataInfo);
                 throw e;
@@ -105,6 +142,14 @@ public abstract class AbstractDataBase implements DataBase {
     }
 
     @Override
-    public void flush() throws IOException {
+    public synchronized final Optional<Tuple2<DataInfo, DataBaseReadChannel>> findAny(Predicate<DataInfo> predicate)
+            throws IOException {
+        Optional<DataInfo> foundDataInfo = dataInfo.values().stream().filter(predicate).findAny();
+        if (foundDataInfo.isPresent()) {
+            Optional<DataBaseReadChannel> foundReadChannel = lookup(foundDataInfo.get());
+            return foundReadChannel.map(channel -> Tuple.of(foundDataInfo.get(), channel));
+        } else {
+            throw new IOException("No data info found, which fulfills the predicate");
+        }
     }
 }

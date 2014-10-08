@@ -61,7 +61,33 @@ public class DataInfoTest {
 
     @Test
     public void offset() {
-        assertEquals(5 * 9, dataInfo.getOffset(5));
+        DataInfo a = dataInfo.withChunk(4).withChunk(5).withChunk(6);
+        DataInfo c = dataInfo.withChunk(2).withChunk(5).withChunk(10);
+
+        assertEquals(0, dataInfo.getTotalOffset(0));
+        assertEquals(9, dataInfo.getTotalOffset(1));
+        assertEquals(90, dataInfo.getTotalOffset(10));
+        assertEquals(5 * 9, dataInfo.getTotalOffset(5));
+
+        assertEquals(0, a.getRelativeOffset(4));
+        assertEquals(9, a.getRelativeOffset(5));
+        assertEquals(18, a.getRelativeOffset(6));
+
+        assertEquals(0, dataInfo.getTotalChunkIndex(4, true));
+        assertEquals(0, dataInfo.getTotalChunkIndex(8, true));
+        assertEquals(1, dataInfo.getTotalChunkIndex(9, true));
+        assertEquals(5, dataInfo.getTotalChunkIndex(5 * 9, true));
+        assertEquals(4, dataInfo.getTotalChunkIndex(5 * 9 - 1, true));
+        assertEquals(3, dataInfo.getTotalChunkIndex(3 * 9, true));
+        assertEquals(2, dataInfo.getTotalChunkIndex(3 * 9 - 1, true));
+
+        assertEquals(a.getTotalChunkIndex(4 * 9, true), a.getTotalChunkIndex(0, false));
+        assertEquals(a.getTotalChunkIndex(5 * 9, true), a.getTotalChunkIndex(9, false));
+        assertEquals(a.getTotalChunkIndex(6 * 9, true), a.getTotalChunkIndex(2 * 9, false));
+
+        assertEquals(c.getTotalChunkIndex(2 * 9, true), c.getTotalChunkIndex(0, false));
+        assertEquals(c.getTotalChunkIndex(5 * 9, true), c.getTotalChunkIndex(9, false));
+        assertEquals(c.getTotalChunkIndex(10 * 9, true), c.getTotalChunkIndex(2 * 9, false));
     }
 
     @Test
@@ -263,6 +289,15 @@ public class DataInfoTest {
         assertFalse(dataInfo.isChunkCompleted(1));
         assertFalse(dataInfo.isChunkCompleted(4));
         assertFalse(dataInfo.isChunkCompleted(10));
+    }
+
+    @Test
+    public void calculateCompletedChunks() {
+        assertEquals(0, dataInfo.calculateCompletedChunksForSize(50).count());
+        dataInfo = dataInfo.withChunk(2).withChunk(4).withChunk(6);
+        assertEquals(2, dataInfo.calculateCompletedChunksForSize(18).count());
+        assertEquals(2, dataInfo.calculateCompletedChunksForSize(26).count());
+        assertEquals(3, dataInfo.calculateCompletedChunksForSize(36).count());
     }
 
     @Test

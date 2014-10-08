@@ -1,5 +1,6 @@
 package de.probst.ba.core.net.peer.peers.netty.handlers.transfer;
 
+import de.probst.ba.core.media.database.DataBaseReadChannel;
 import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.Seeder;
 import de.probst.ba.core.net.peer.Transfer;
@@ -17,7 +18,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.channels.ClosedChannelException;
-import java.nio.channels.ScatteringByteChannel;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
@@ -94,17 +94,16 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
                     Transfer.upload(new PeerId(ctx.channel().remoteAddress(), ctx.channel().id()), msg.getDataInfo());
 
             // The byte channel
-            Optional<ScatteringByteChannel> scatteringByteChannel;
+            Optional<DataBaseReadChannel> dataBaseReadChannel;
 
             // If the upload is not allowed, reject it!
             if (!setup(transfer)) {
                 reject("Upload denied", transfer, logger::debug);
-            } else if (!(scatteringByteChannel =
-                    seeder.getDataBase().tryOpenReadChannel(transfer.getDataInfo())).isPresent()) {
+            } else if (!(dataBaseReadChannel = seeder.getDataBase().lookup(transfer.getDataInfo())).isPresent()) {
                 reject("Failed to open database channel", transfer, logger::warn);
             } else {
                 // Upload chunked input
-                ctx.writeAndFlush(new ChunkedNioStream(scatteringByteChannel.get(), NettyConfig.getUploadBufferSize()),
+                ctx.writeAndFlush(new ChunkedNioStream(dataBaseReadChannel.get(), NettyConfig.getUploadBufferSize()),
                                   ctx.newProgressivePromise()).addListener(this);
 
                 logger.debug("Seeder " + seeder.getPeerId() + " started upload " + transfer);

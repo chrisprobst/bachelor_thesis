@@ -1,16 +1,12 @@
 package de.probst.ba.core.media.database;
 
-import de.probst.ba.core.util.collections.Tuple;
-import de.probst.ba.core.util.collections.Tuple2;
+import de.probst.ba.core.util.io.LimitedReadableByteChannel;
 
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.Serializable;
 import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
-import java.nio.channels.SeekableByteChannel;
-import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -36,32 +32,41 @@ public final class DataInfo implements Serializable {
     public static final String DEFAULT_HASH_ALGORITHM = "SHA1";
     public static final int DEFAULT_HASH_BUFFER_SIZE = 65535;
 
-    public static Tuple2<DataInfo, FileChannel> fromFile(int id,
-                                                         Optional<String> name,
-                                                         Optional<String> description,
-                                                         int chunkCount,
-                                                         Path path)
-            throws NoSuchAlgorithmException, IOException {
-        FileChannel fileChannel = FileChannel.open(path);
-        Tuple2<DataInfo, FileChannel> tuple = Tuple.of(fromSeekableChannel(id,
-                                                                           name,
-                                                                           description,
-                                                                           chunkCount,
-                                                                           fileChannel), fileChannel);
-        fileChannel.position(0);
-        return tuple;
+    public static List<DataInfo> fromPartitionedChannel(int partitions,
+                                                        long totalSize,
+                                                        Optional<String> name,
+                                                        Optional<String> description,
+                                                        int chunkCount,
+                                                        ReadableByteChannel readableByteChannel)
+            throws IOException, NoSuchAlgorithmException {
+
+        if (partitions > totalSize) {
+            throw new IllegalArgumentException("partitions > size");
+        }
+
+        // Calculate the size of a partition
+        long partitionSize = totalSize / partitions;
+        long lastPartitionSize = totalSize - partitionSize * (partitions - 1);
+
+        if (chunkCount > partitionSize) {
+            throw new IllegalArgumentException("chunkCount > partitionSize");
+        }
+
+        // Add data info for each part
+        List<DataInfo> dataInfo = new ArrayList<>(partitions);
+        for (int id = 0; id < partitions; id++) {
+            long size = id < partitions - 1 ? partitionSize : lastPartitionSize;
+            dataInfo.add(fromChannel(id,
+                                     size,
+                                     name,
+                                     description,
+                                     chunkCount,
+                                     new LimitedReadableByteChannel(readableByteChannel, size, false)));
+        }
+        return dataInfo;
     }
 
-    public static DataInfo fromSeekableChannel(int id,
-                                               Optional<String> name,
-                                               Optional<String> description,
-                                               int chunkCount,
-                                               SeekableByteChannel seekableByteChannel)
-            throws NoSuchAlgorithmException, IOException {
-        return fromChannel(id, seekableByteChannel.size(), name, description, chunkCount, seekableByteChannel);
-    }
-
-    public static DataInfo fromChannel(int id,
+    public static DataInfo fromChannel(long id,
                                        long size,
                                        Optional<String> name,
                                        Optional<String> description,
@@ -477,6 +482,23 @@ public final class DataInfo implements Serializable {
     }
 
     /**
+     * Calculate which chunks are completed according to the given
+     * size and return them as a stream.
+     *
+     * @param size
+     * @return
+     */
+    public IntStream calculateCompletedChunksForSize(long size) {
+        List<Integer> completedChunks = new ArrayList<>();
+        for (int chunk : getCompletedChunks().toArray()) {
+            if ((size -= getChunkSize(chunk)) >= 0) {
+                completedChunks.add(chunk);
+            }
+        }
+        return completedChunks.stream().mapToInt(Integer::intValue);
+    }
+
+    /**
      * @return The missing size.
      */
     public long getMissingSize() {
@@ -491,11 +513,64 @@ public final class DataInfo implements Serializable {
     }
 
     /**
-     * @param chunkIndex
-     * @return The offset according to the chunk index.
+     * @param totalChunkIndex
+     * @return The total offset according to the total chunk index.
      */
-    public long getOffset(int chunkIndex) {
-        return IntStream.range(0, chunkIndex).mapToLong(this::getChunkSize).sum();
+    public long getTotalOffset(int totalChunkIndex) {
+        return IntStream.range(0, totalChunkIndex).mapToLong(this::getChunkSize).sum();
+    }
+
+    /**
+     * @param totalChunkIndex
+     * @return The relative offset according to total chunk index.
+     */
+    public long getRelativeOffset(int totalChunkIndex) {
+        if (totalChunkIndex < 0) {
+            throw new IllegalArgumentException("totalChunkIndex < 0");
+        } else if (totalChunkIndex >= getChunkCount()) {
+            throw new IllegalArgumentException("totalChunkIndex >= getChunkCount()");
+        } else if (!getCompletedChunks().filter(chunkIndex -> chunkIndex == totalChunkIndex).findFirst().isPresent()) {
+            throw new IllegalArgumentException("!getCompletedChunks().filter(chunkIndex -> " +
+                                               "chunkIndex == totalChunkIndex).findFirst().isPresent()");
+        }
+        return getCompletedChunks().filter(chunkIndex -> chunkIndex < totalChunkIndex)
+                                   .mapToLong(this::getChunkSize)
+                                   .sum();
+    }
+
+    /**
+     * @param offset
+     * @return The chunk index according to the offset.
+     */
+    public int getTotalChunkIndex(long offset, boolean totalOffset) {
+        if (offset < 0) {
+            throw new IllegalArgumentException("offset < 0");
+        }
+
+        if (totalOffset) {
+            if (offset >= getSize()) {
+                throw new IllegalArgumentException("offset >= getSize()");
+            }
+            int chunkIndex;
+            for (chunkIndex = 0; chunkIndex < getChunkCount(); chunkIndex++) {
+                if ((offset -= getChunkSize(chunkIndex)) < 0) {
+                    break;
+                }
+            }
+            return chunkIndex;
+        } else {
+            if (offset >= getCompletedSize()) {
+                throw new IllegalArgumentException("offset >= getCompletedSize()");
+            }
+            int[] completedChunks = getCompletedChunks().toArray();
+            int chunkIndex = completedChunks[0];
+            for (int i = 0; i < completedChunks.length; i++, chunkIndex = completedChunks[i]) {
+                if ((offset -= getChunkSize(chunkIndex)) < 0) {
+                    break;
+                }
+            }
+            return chunkIndex;
+        }
     }
 
     /**

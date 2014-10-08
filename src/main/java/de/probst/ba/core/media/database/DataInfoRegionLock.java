@@ -1,6 +1,8 @@
 package de.probst.ba.core.media.database;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -14,6 +16,14 @@ public final class DataInfoRegionLock {
 
     private boolean overlapsAnyInCollection(Collection<DataInfo> dataInfoCollection, DataInfo dataInfo) {
         return dataInfoCollection.stream().filter(dataInfo::isCompatibleWith).anyMatch(dataInfo::overlaps);
+    }
+
+    public synchronized List<DataInfo> getLockedWriteRegions() {
+        return Collections.unmodifiableList(new ArrayList<>(writeResources));
+    }
+
+    public synchronized List<DataInfo> getLockedReadRegions() {
+        return Collections.unmodifiableList(new ArrayList<>(readResources));
     }
 
     public void lockWriteResource(DataInfo dataInfo) {

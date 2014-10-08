@@ -19,7 +19,6 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
@@ -30,7 +29,8 @@ public abstract class AbstractLeecher extends AbstractPeer implements Leecher {
     private final Logger logger = LoggerFactory.getLogger(AbstractLeecher.class);
     private final Task leecherDistributionAlgorithmWorkerTask;
     private final boolean autoConnect;
-    private final Consumer<CancelableRunnable> leecherDistributionAlgorithmWorker = cancelableRunnable -> {
+
+    private void runLeecherDistributionAlgorithm(CancelableRunnable cancelableRunnable) {
         try {
             // Let the algorithm generate transfers
             List<Transfer> transfers = getDistributionAlgorithm().requestDownloads(AbstractLeecher.this);
@@ -71,7 +71,7 @@ public abstract class AbstractLeecher extends AbstractPeer implements Leecher {
             logger.error("Leecher " + getPeerId() + " has a dead algorithm, shutting leecher down", e);
             silentClose();
         }
-    };
+    }
 
     protected abstract void requestDownload(Transfer transfer);
 
@@ -102,7 +102,7 @@ public abstract class AbstractLeecher extends AbstractPeer implements Leecher {
 
         // Save args
         leecherDistributionAlgorithmWorkerTask =
-                new Task(leecherDistributionAlgorithmWorker, algorithmExecutor::submit);
+                new Task(this::runLeecherDistributionAlgorithm, algorithmExecutor::submit);
         this.autoConnect = autoConnect;
     }
 
@@ -148,6 +148,6 @@ public abstract class AbstractLeecher extends AbstractPeer implements Leecher {
         // -> Not in local data info AND not in downloads -> download same chunk twice -> error!
         Map<PeerId, Transfer> downloads = getDownloads();
 
-        return new LeecherDataInfoState(this, getDataBase().getDataInfo(), getRemoteDataInfo(), downloads);
+        return new LeecherDataInfoState(this, getDataBase().getEstimatedDataInfo(), getRemoteDataInfo(), downloads);
     }
 }
