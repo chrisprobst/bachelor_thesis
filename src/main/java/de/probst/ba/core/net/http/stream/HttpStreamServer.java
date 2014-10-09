@@ -12,7 +12,6 @@ import io.netty.handler.logging.LoggingHandler;
 
 import java.nio.channels.FileChannel;
 import java.nio.file.Paths;
-import java.util.List;
 import java.util.Optional;
 
 public final class HttpStreamServer {
@@ -38,35 +37,21 @@ public final class HttpStreamServer {
 
         // Create data info of file
         try (FileChannel fileChannel = FileChannel.open(Paths.get("/Users/chrisprobst/Desktop/black.mp4"))) {
-
-            // Create partitioned data info
-            List<DataInfo> dataInfo = DataInfo.fromPartitionedChannel(10,
-                                                                      fileChannel.size(),
-                                                                      Optional.of("black.mp4"),
-                                                                      Optional.empty(),
-                                                                      40,
-                                                                      fileChannel);
-
-            // Insert all partitions into database
-            fileChannel.position(0);
-
-            db.insertManyFromPartitionedChannel(dataInfo, fileChannel);
+            db.insertManyFromChannel(DataInfo.fromPartitionedChannel(10,
+                                                                     fileChannel.size(),
+                                                                     Optional.of("black.mp4"),
+                                                                     Optional.empty(),
+                                                                     40,
+                                                                     fileChannel),
+                                     fileChannel.position(0), false);
         }
 
         for (DataInfo di : db.getDataInfo().values()) {
             System.out.println(di);
+
+
+            System.out.println("Loaded movie into database, running http streaming now...");
+            run(db);
         }
-
-
-
-/*
-        // Create database
-        DataBase db = DataBases.memoryDataBase();
-
-        // Insert tuple
-        IOUtil.transfer(tuple.second(), db.insert(tuple.first()).get());
-
-        System.out.println("Loaded movie into database, running http streaming now...");
-        run(db);*/
     }
 }

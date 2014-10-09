@@ -44,16 +44,19 @@ public abstract class AbstractDataBaseChannel implements DataBaseChannel {
 
     @Override
     public final long size() throws IOException {
+        checkClosed();
         return total;
     }
 
     @Override
     public final synchronized long position() throws IOException {
+        checkClosed();
         return position;
     }
 
     @Override
     public synchronized DataBaseChannel position(long position) throws IOException {
+        checkClosed();
         if (position < 0) {
             throw new IllegalArgumentException("position < 0");
         } else if (position > total) {

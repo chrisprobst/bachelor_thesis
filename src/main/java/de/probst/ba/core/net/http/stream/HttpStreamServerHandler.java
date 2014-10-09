@@ -2,8 +2,6 @@ package de.probst.ba.core.net.http.stream;
 
 import de.probst.ba.core.media.database.DataBase;
 import de.probst.ba.core.media.database.DataBaseReadChannel;
-import de.probst.ba.core.media.database.DataInfo;
-import de.probst.ba.core.util.collections.Tuple2;
 import de.probst.ba.core.util.io.LimitedReadableByteChannel;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
@@ -61,29 +59,14 @@ public class HttpStreamServerHandler extends SimpleChannelInboundHandler<FullHtt
 
         final String path = request.uri().substring(1);
 
-        Tuple2<DataInfo, DataBaseReadChannel> tuple;
+        DataBaseReadChannel channel;
         try {
-            tuple = dataBase.findAny(dataInfo -> dataInfo.getName().get().equals(path)).get();
+            channel = dataBase.findIncremental(dataInfo -> dataInfo.getName().get().equals(path)).get();
         } catch (Exception e) {
             System.out.println("Not found: " + path + ", Reason: " + e);
             sendError(ctx, BAD_REQUEST);
             return;
         }
-
-        /*
-        // Collect all in-order tuples
-        OptionalLong id = OptionalLong.empty();
-        List<Tuple2<DataInfo, SeekableByteChannel>> inOrderTuples = new ArrayList<>(tuples.size());
-        for (Tuple2<DataInfo, SeekableByteChannel> tuple : tuples) {
-            if (!id.isPresent() || id.getAsLong() + 1 == tuple.first().getId()) {
-                id = OptionalLong.of(tuple.first().getId());
-                inOrderTuples.add(tuple);
-            } else {
-                break;
-            }
-        }*/
-
-        DataBaseReadChannel channel = tuple.second();
 
         // Read ranges
         long lower = -1, upper = -1, length = channel.size();

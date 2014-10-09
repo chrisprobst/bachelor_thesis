@@ -68,6 +68,10 @@ public abstract class AbstractDataBaseReadChannel extends AbstractDataBaseChanne
 
         // Setup byte buffer limit
         int newLimit = (int) Math.min(dst.remaining(), size - completed);
+        if (newLimit <= 0) {
+            return 0;
+        }
+
         ByteBuffer copy = (ByteBuffer) dst.duplicate().limit(dst.position() + newLimit);
 
         // Calculate state
@@ -82,12 +86,7 @@ public abstract class AbstractDataBaseReadChannel extends AbstractDataBaseChanne
             throw new EOFException("Unexpected EOF detected");
         }
         dst.position(dst.position() + read);
-        position(completed += read);
-
-        // If we are completed, notify the database
-        if (completed >= size) {
-            getDataBase().update(getDataInfo());
-        }
+        position(completed + read);
 
         return read;
     }

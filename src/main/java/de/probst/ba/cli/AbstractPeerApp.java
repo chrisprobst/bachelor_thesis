@@ -442,7 +442,8 @@ public abstract class AbstractPeerApp {
         for (Peer peer : dataBaseUpdatePeers) {
             for (DataInfo dataInfo : this.dataInfo) {
                 byte[] buf = new byte[(int) dataInfo.getSize()];
-                peer.getDataBase().insertFromChannel(dataInfo, Channels.newChannel(new ByteArrayInputStream(buf)));
+                peer.getDataBase()
+                    .insertFromChannel(dataInfo, Channels.newChannel(new ByteArrayInputStream(buf)), true);
             }
         }
     }

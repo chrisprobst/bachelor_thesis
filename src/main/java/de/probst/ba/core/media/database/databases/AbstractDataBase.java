@@ -10,10 +10,15 @@ import de.probst.ba.core.util.collections.Tuple2;
 
 import java.io.IOException;
 import java.nio.channels.Channel;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -142,6 +147,51 @@ public abstract class AbstractDataBase implements DataBase {
     }
 
     @Override
+    public synchronized Optional<Map<DataInfo, DataBaseReadChannel>> lookupMany(List<DataInfo> lookupDataInfo)
+            throws IOException {
+        Map<DataInfo, DataBaseReadChannel> founds = new LinkedHashMap<>();
+        for (DataInfo dataInfo : lookupDataInfo) {
+            Optional<DataBaseReadChannel> readChannel;
+
+            try {
+                readChannel = lookup(dataInfo);
+            } catch (IOException e) {
+                for (Channel channel : founds.values()) {
+                    try {
+                        channel.close();
+                    } catch (IOException e1) {
+                        e.addSuppressed(e1);
+                    }
+                }
+                throw e;
+            }
+
+            if (readChannel.isPresent()) {
+                founds.put(dataInfo, readChannel.get());
+            } else {
+                IOException any = null;
+                for (Channel channel : founds.values()) {
+                    try {
+                        channel.close();
+                    } catch (IOException e1) {
+                        if (any == null) {
+                            any = e1;
+                        } else {
+                            any.addSuppressed(e1);
+                        }
+                    }
+                }
+                if (any != null) {
+                    throw any;
+                }
+                return Optional.empty();
+            }
+        }
+
+        return Optional.of(founds);
+    }
+
+    @Override
     public synchronized final Optional<Tuple2<DataInfo, DataBaseReadChannel>> findAny(Predicate<DataInfo> predicate)
             throws IOException {
         Optional<DataInfo> foundDataInfo = dataInfo.values().stream().filter(predicate).findAny();
@@ -151,5 +201,41 @@ public abstract class AbstractDataBase implements DataBase {
         } else {
             throw new IOException("No data info found, which fulfills the predicate");
         }
+    }
+
+    @Override
+    public synchronized Optional<Map<DataInfo, DataBaseReadChannel>> findMany(Predicate<DataInfo> predicate)
+            throws IOException {
+        List<DataInfo> foundDataInfo = dataInfo.values().stream().filter(predicate).collect(Collectors.toList());
+        if (foundDataInfo.isEmpty()) {
+            throw new IOException("No data info found, which fulfills the predicate");
+        } else {
+            return lookupMany(foundDataInfo);
+        }
+    }
+
+    @Override
+    public synchronized Optional<DataBaseReadChannel> findIncremental(Predicate<DataInfo> predicate)
+            throws IOException {
+        List<DataInfo> foundDataInfo =
+                dataInfo.values().stream().filter(predicate).sorted(Comparator.comparing(DataInfo::getId)).collect(
+                        Collectors.toList());
+        if (foundDataInfo.isEmpty()) {
+            throw new IOException("No data info found, which fulfills the predicate");
+        }
+
+        // Collect all in-order data info
+        List<DataInfo> inOrderDataInfo = new ArrayList<>();
+        OptionalLong id = OptionalLong.empty();
+        for (DataInfo dataInfo : foundDataInfo) {
+            if (!id.isPresent() || id.getAsLong() + 1 == dataInfo.getId()) {
+                id = OptionalLong.of(dataInfo.getId());
+                inOrderDataInfo.add(dataInfo);
+            } else {
+                break;
+            }
+        }
+
+        return lookupMany(inOrderDataInfo).map(Map::values).map(CumulativeDataBaseReadChannel::new);
     }
 }
