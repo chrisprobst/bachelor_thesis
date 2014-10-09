@@ -8,6 +8,7 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.stream.ChunkedWriteHandler;
 
+import java.io.IOException;
 import java.util.Objects;
 
 public class HttpStreamServerInitializer extends ChannelInitializer<SocketChannel> {
@@ -20,7 +21,7 @@ public class HttpStreamServerInitializer extends ChannelInitializer<SocketChanne
     }
 
     @Override
-    public void initChannel(SocketChannel ch) {
+    public void initChannel(SocketChannel ch) throws IOException {
         ChannelPipeline pipeline = ch.pipeline();
         pipeline.addLast(new HttpServerCodec());
         pipeline.addLast(new HttpObjectAggregator(65536));

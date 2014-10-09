@@ -9,8 +9,11 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.nio.ByteBuffer;
+import java.nio.channels.Channel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
+import java.util.Collection;
+import java.util.Objects;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -23,6 +26,31 @@ public final class IOUtil {
 
     private IOUtil() {
 
+    }
+
+    public static void closeAllAndThrow(Collection<? extends Channel> channels) throws IOException {
+        IOException any = closeAllAndGetException(channels, null);
+        if (any != null) {
+            throw any;
+        }
+    }
+
+    public static IOException closeAllAndGetException(Collection<? extends Channel> channels, IOException suppressed) {
+        Objects.requireNonNull(channels);
+        IOException any = suppressed;
+        for (Channel channel : channels) {
+            try {
+                channel.close();
+            } catch (IOException e) {
+                if (any == null) {
+                    any = e;
+                } else {
+                    e.addSuppressed(any);
+                    any = e;
+                }
+            }
+        }
+        return any;
     }
 
     public static void transfer(ReadableByteChannel readableByteChannel, WritableByteChannel writableByteChannel)

@@ -5,8 +5,11 @@ import de.probst.ba.core.media.database.DataBaseReadChannel;
 import de.probst.ba.core.media.database.DataBaseWriteChannel;
 import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.media.database.DataInfoRegionLock;
+import de.probst.ba.core.media.database.DataInsertException;
+import de.probst.ba.core.media.database.DataLookupException;
 import de.probst.ba.core.util.collections.Tuple;
 import de.probst.ba.core.util.collections.Tuple2;
+import de.probst.ba.core.util.io.IOUtil;
 
 import java.io.IOException;
 import java.nio.channels.Channel;
@@ -32,12 +35,13 @@ public abstract class AbstractDataBase implements DataBase {
     private final DataInfoRegionLock dataInfoRegionLock = new DataInfoRegionLock();
     private final Map<DataInfo, AbstractDataBaseWriteChannel> writeChannels = new HashMap<>();
     private final Map<DataInfo, AbstractDataBaseReadChannel> readChannels = new HashMap<>();
+    private boolean closed = false;
 
-    final synchronized void update(DataInfo updateDataInfo) {
+    synchronized final void update(DataInfo updateDataInfo) {
         dataInfo.merge(updateDataInfo.getHash(), updateDataInfo, DataInfo::union);
     }
 
-    final synchronized void unregisterChannel(Channel channel, DataInfo channelDataInfo) {
+    synchronized final void unregisterChannel(Channel channel, DataInfo channelDataInfo) {
         if (channel instanceof AbstractDataBaseWriteChannel) {
             writeChannels.remove(channelDataInfo);
             dataInfoRegionLock.unlockWriteResource(channelDataInfo);
@@ -49,13 +53,15 @@ public abstract class AbstractDataBase implements DataBase {
         }
     }
 
-    protected final synchronized Map<DataInfo, AbstractDataBaseWriteChannel> getWriteChannels() {
+    protected synchronized final Map<DataInfo, AbstractDataBaseWriteChannel> getWriteChannels() {
         return new HashMap<>(writeChannels);
     }
 
-    protected final synchronized Map<DataInfo, AbstractDataBaseReadChannel> getReadChannels() {
+    protected synchronized final Map<DataInfo, AbstractDataBaseReadChannel> getReadChannels() {
         return new HashMap<>(readChannels);
     }
+
+    protected abstract void doClose() throws IOException;
 
     protected abstract AbstractDataBaseWriteChannel openWriteChannel(DataInfo writeDataInfo) throws IOException;
 
@@ -70,7 +76,7 @@ public abstract class AbstractDataBase implements DataBase {
     }
 
     @Override
-    public final synchronized Map<String, DataInfo> getEstimatedDataInfo() {
+    public synchronized final Map<String, DataInfo> getEstimatedDataInfo() {
         // Create a map of all locked write regions
         Map<String, DataInfo> lockedWriteRegions = dataInfoRegionLock.getLockedWriteRegions()
                                                                      .stream()
@@ -95,12 +101,13 @@ public abstract class AbstractDataBase implements DataBase {
     }
 
     @Override
-    public final synchronized DataInfo get(String hash) {
+    public synchronized final DataInfo get(String hash) {
+        Objects.requireNonNull(hash);
         return dataInfo.get(hash);
     }
 
     @Override
-    public final synchronized Optional<DataBaseWriteChannel> insert(DataInfo writeDataInfo) throws IOException {
+    public synchronized final Optional<DataBaseWriteChannel> insert(DataInfo writeDataInfo) throws IOException {
         Objects.requireNonNull(writeDataInfo);
 
         DataInfo existingDataInfo = dataInfo.get(writeDataInfo.getHash());
@@ -110,7 +117,7 @@ public abstract class AbstractDataBase implements DataBase {
             dataInfoRegionLock.lockWriteResource(writeDataInfo);
 
         } else if (existingDataInfo.overlaps(writeDataInfo)) {
-            throw new IllegalArgumentException("existingDataInfo.overlaps(writeDataInfo)");
+            throw new DataInsertException("existingDataInfo.overlaps(writeDataInfo)");
         } else if (!dataInfoRegionLock.tryLockWriteResource(writeDataInfo)) {
             return Optional.empty();
         }
@@ -128,14 +135,14 @@ public abstract class AbstractDataBase implements DataBase {
     }
 
     @Override
-    public final synchronized Optional<DataBaseReadChannel> lookup(DataInfo readDataInfo) throws IOException {
+    public synchronized final Optional<DataBaseReadChannel> lookup(DataInfo readDataInfo) throws IOException {
         Objects.requireNonNull(readDataInfo);
 
         DataInfo existingDataInfo = dataInfo.get(readDataInfo.getHash());
         if (existingDataInfo == null) {
-            throw new IllegalArgumentException("existingDataInfo == null");
+            throw new DataLookupException("existingDataInfo == null");
         } else if (!existingDataInfo.contains(readDataInfo)) {
-            throw new IllegalArgumentException("!existingDataInfo.contains(readDataInfo)");
+            throw new DataLookupException("!existingDataInfo.contains(readDataInfo)");
         } else if (!dataInfoRegionLock.tryLockReadResource(readDataInfo)) {
             return Optional.empty();
         } else {
@@ -152,7 +159,7 @@ public abstract class AbstractDataBase implements DataBase {
     }
 
     @Override
-    public synchronized Optional<Map<DataInfo, DataBaseReadChannel>> lookupMany(List<DataInfo> lookupDataInfo)
+    public synchronized final Optional<Map<DataInfo, DataBaseReadChannel>> lookupMany(List<DataInfo> lookupDataInfo)
             throws IOException {
         Objects.requireNonNull(lookupDataInfo);
 
@@ -163,36 +170,13 @@ public abstract class AbstractDataBase implements DataBase {
             try {
                 readChannel = lookup(dataInfo);
             } catch (IOException e) {
-                for (Channel channel : founds.values()) {
-                    try {
-                        channel.close();
-                    } catch (IOException e1) {
-                        e1.addSuppressed(e);
-                        e = e1;
-                    }
-                }
-                throw e;
+                throw IOUtil.closeAllAndGetException(founds.values(), e);
             }
 
             if (readChannel.isPresent()) {
                 founds.put(dataInfo, readChannel.get());
             } else {
-                IOException any = null;
-                for (Channel channel : founds.values()) {
-                    try {
-                        channel.close();
-                    } catch (IOException e1) {
-                        if (any == null) {
-                            any = e1;
-                        } else {
-                            e1.addSuppressed(any);
-                            any = e1;
-                        }
-                    }
-                }
-                if (any != null) {
-                    throw any;
-                }
+                IOUtil.closeAllAndThrow(founds.values());
                 return Optional.empty();
             }
         }
@@ -210,25 +194,25 @@ public abstract class AbstractDataBase implements DataBase {
             Optional<DataBaseReadChannel> foundReadChannel = lookup(foundDataInfo.get());
             return foundReadChannel.map(channel -> Tuple.of(foundDataInfo.get(), channel));
         } else {
-            throw new IOException("No data info found, which fulfills the predicate");
+            throw new DataLookupException();
         }
     }
 
     @Override
-    public synchronized Optional<Map<DataInfo, DataBaseReadChannel>> findMany(Predicate<DataInfo> predicate)
+    public synchronized final Optional<Map<DataInfo, DataBaseReadChannel>> findMany(Predicate<DataInfo> predicate)
             throws IOException {
         Objects.requireNonNull(predicate);
 
         List<DataInfo> foundDataInfo = dataInfo.values().stream().filter(predicate).collect(Collectors.toList());
         if (foundDataInfo.isEmpty()) {
-            throw new IOException("No data info found, which fulfills the predicate");
+            throw new DataLookupException();
         } else {
             return lookupMany(foundDataInfo);
         }
     }
 
     @Override
-    public synchronized Optional<DataBaseReadChannel> findIncremental(Predicate<DataInfo> predicate)
+    public synchronized final Optional<DataBaseReadChannel> findIncremental(Predicate<DataInfo> predicate)
             throws IOException {
         Objects.requireNonNull(predicate);
 
@@ -236,7 +220,7 @@ public abstract class AbstractDataBase implements DataBase {
                 dataInfo.values().stream().filter(predicate).sorted(Comparator.comparing(DataInfo::getId)).collect(
                         Collectors.toList());
         if (foundDataInfo.isEmpty()) {
-            throw new IOException("No data info found, which fulfills the predicate");
+            throw new DataLookupException();
         }
 
         // Collect all in-order data info
@@ -252,5 +236,23 @@ public abstract class AbstractDataBase implements DataBase {
         }
 
         return lookupMany(inOrderDataInfo).map(Map::values).map(CumulativeDataBaseReadChannel::new);
+    }
+
+    @Override
+    public synchronized final void close() throws IOException {
+        if (!closed) {
+            closed = true;
+            try {
+                // Close all channels
+                List<Channel> channels = new ArrayList<>();
+                channels.addAll(getReadChannels().values());
+                channels.addAll(getWriteChannels().values());
+                IOUtil.closeAllAndThrow(channels);
+
+            } finally {
+                // Invoke doClose implementation
+                doClose();
+            }
+        }
     }
 }

@@ -6,9 +6,7 @@ import de.probst.ba.core.util.io.IOUtil;
 import de.probst.ba.core.util.io.LimitedReadableByteChannel;
 
 import java.io.Closeable;
-import java.io.Flushable;
 import java.io.IOException;
-import java.nio.channels.Channel;
 import java.nio.channels.ReadableByteChannel;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -22,7 +20,7 @@ import java.util.function.Predicate;
  * <p>
  * Created by chrisprobst on 13.08.14.
  */
-public interface DataBase extends Flushable, Closeable {
+public interface DataBase extends Closeable {
 
     /**
      * @return A snapshot of all existing
@@ -232,33 +230,11 @@ public interface DataBase extends Flushable, Closeable {
             try {
                 writeChannel = insert(insertDataInfo);
             } catch (IOException e) {
-                for (Channel channel : writeChannels.values()) {
-                    try {
-                        channel.close();
-                    } catch (IOException e1) {
-                        e1.addSuppressed(e);
-                        e = e1;
-                    }
-                }
-                throw e;
+                throw IOUtil.closeAllAndGetException(writeChannels.values(), e);
             }
+
             if (!writeChannel.isPresent()) {
-                IOException any = null;
-                for (Channel channel : writeChannels.values()) {
-                    try {
-                        channel.close();
-                    } catch (IOException e1) {
-                        if (any == null) {
-                            any = e1;
-                        } else {
-                            e1.addSuppressed(any);
-                            any = e1;
-                        }
-                    }
-                }
-                if (any != null) {
-                    throw any;
-                }
+                IOUtil.closeAllAndThrow(writeChannels.values());
                 return Optional.empty();
             }
 
@@ -326,31 +302,20 @@ public interface DataBase extends Flushable, Closeable {
         Objects.requireNonNull(dataInfo);
         Objects.requireNonNull(function);
 
-        Optional<Map<DataInfo, DataBaseWriteChannel>> writeChannels = null;
+        Optional<Map<DataInfo, DataBaseWriteChannel>> writeChannels = insertMany(dataInfo);
+        if (!writeChannels.isPresent()) {
+            return false;
+        }
+
         try {
-            writeChannels = insertMany(dataInfo);
-            if (!writeChannels.isPresent()) {
-                return false;
-            } else {
-                for (Map.Entry<DataInfo, DataBaseWriteChannel> entry : writeChannels.get().entrySet()) {
-                    IOUtil.transfer(new LimitedReadableByteChannel(function.apply(entry.getKey()),
-                                                                   entry.getKey().getSize(),
-                                                                   closeReadableByteChannels), entry.getValue());
-                }
+            for (Map.Entry<DataInfo, DataBaseWriteChannel> entry : writeChannels.get().entrySet()) {
+                IOUtil.transfer(new LimitedReadableByteChannel(function.apply(entry.getKey()),
+                                                               entry.getKey().getSize(),
+                                                               closeReadableByteChannels), entry.getValue());
             }
             return true;
         } catch (IOException e) {
-            if (writeChannels != null) {
-                for (Channel channel : writeChannels.get().values()) {
-                    try {
-                        channel.close();
-                    } catch (IOException e1) {
-                        e1.addSuppressed(e);
-                        e = e1;
-                    }
-                }
-            }
-            throw e;
+            throw IOUtil.closeAllAndGetException(writeChannels.get().values(), e);
         }
     }
 }

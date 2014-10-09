@@ -2,7 +2,6 @@ package de.probst.ba.cli;
 
 import com.beust.jcommander.Parameter;
 import de.probst.ba.core.distribution.algorithms.Algorithms;
-import de.probst.ba.core.media.database.DataBase;
 import de.probst.ba.core.media.database.databases.DataBases;
 import de.probst.ba.core.net.peer.Leecher;
 import de.probst.ba.core.net.peer.Peer;
@@ -19,6 +18,8 @@ import io.netty.channel.nio.NioEventLoopGroup;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
@@ -26,7 +27,6 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.function.Supplier;
 
 /**
  * Created by chrisprobst on 12.08.14.
@@ -74,7 +74,7 @@ public class Benchmark extends AbstractPeerApp {
         logger.info(">>> Seeders:                   " + seeders);
         logger.info(">>> Leechers:                  " + leechers);
 
-        Supplier<DataBase> dataBaseSupplier = DataBases::memoryDataBase;
+        Path dbPath = Paths.get("/Users/chrisprobst/Desktop/databases");
 
         // Setup all seeders
         for (int i = 0; i < seeders; i++) {
@@ -82,7 +82,7 @@ public class Benchmark extends AbstractPeerApp {
                                          superUploadRate,
                                          downloadRate,
                                          getSeederSocketAddress(i),
-                                         dataBaseSupplier.get(),
+                                         DataBases.fileDataBase(dbPath.resolve("db_seeder_" + i)),
                                          getSuperSeederDistributionAlgorithm(),
                                          Optional.ofNullable(recordPeerHandler),
                                          Optional.of(eventLoopGroup)).getInitFuture().get();
@@ -106,7 +106,8 @@ public class Benchmark extends AbstractPeerApp {
                                                                            uploadRate,
                                                                            downloadRate,
                                                                            getLeecherSocketAddress(i),
-                                                                           dataBaseSupplier.get(),
+                                                                           DataBases.fileDataBase(dbPath.resolve(
+                                                                                   "db_leecher_" + i)),
                                                                            getSeederDistributionAlgorithm(),
                                                                            getLeecherDistributionAlgorithm(),
                                                                            Optional.ofNullable(recordPeerHandler),
@@ -134,7 +135,7 @@ public class Benchmark extends AbstractPeerApp {
                                                 uploadRate,
                                                 downloadRate,
                                                 Optional.empty(),
-                                                dataBaseSupplier.get(),
+                                                DataBases.fileDataBase(dbPath.resolve("db_leecher_" + i)),
                                                 getLeecherDistributionAlgorithm(),
                                                 Optional.of(leecherHandlerList),
                                                 true,

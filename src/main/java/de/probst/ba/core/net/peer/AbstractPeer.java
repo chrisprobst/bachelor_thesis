@@ -165,7 +165,7 @@ public abstract class AbstractPeer implements Peer {
         try {
             leakyBucketRefillTask.ifPresent(CancelableRunnable::cancel);
         } finally {
-            getDataBase().flush();
+            getDataBase().close();
         }
     }
 
