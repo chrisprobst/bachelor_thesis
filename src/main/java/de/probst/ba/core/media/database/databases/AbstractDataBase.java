@@ -17,6 +17,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.function.Predicate;
@@ -48,11 +49,11 @@ public abstract class AbstractDataBase implements DataBase {
         }
     }
 
-    protected final synchronized Map<DataInfo, AbstractDataBaseWriteChannel> unsafeGetWriteChannels() {
+    protected final synchronized Map<DataInfo, AbstractDataBaseWriteChannel> getWriteChannels() {
         return new HashMap<>(writeChannels);
     }
 
-    protected final synchronized Map<DataInfo, AbstractDataBaseReadChannel> unsafeGetReadChannels() {
+    protected final synchronized Map<DataInfo, AbstractDataBaseReadChannel> getReadChannels() {
         return new HashMap<>(readChannels);
     }
 
@@ -100,6 +101,8 @@ public abstract class AbstractDataBase implements DataBase {
 
     @Override
     public final synchronized Optional<DataBaseWriteChannel> insert(DataInfo writeDataInfo) throws IOException {
+        Objects.requireNonNull(writeDataInfo);
+
         DataInfo existingDataInfo = dataInfo.get(writeDataInfo.getHash());
         if (existingDataInfo == null) {
             // The write data info does not exist, lets add it!
@@ -126,6 +129,8 @@ public abstract class AbstractDataBase implements DataBase {
 
     @Override
     public final synchronized Optional<DataBaseReadChannel> lookup(DataInfo readDataInfo) throws IOException {
+        Objects.requireNonNull(readDataInfo);
+
         DataInfo existingDataInfo = dataInfo.get(readDataInfo.getHash());
         if (existingDataInfo == null) {
             throw new IllegalArgumentException("existingDataInfo == null");
@@ -149,6 +154,8 @@ public abstract class AbstractDataBase implements DataBase {
     @Override
     public synchronized Optional<Map<DataInfo, DataBaseReadChannel>> lookupMany(List<DataInfo> lookupDataInfo)
             throws IOException {
+        Objects.requireNonNull(lookupDataInfo);
+
         Map<DataInfo, DataBaseReadChannel> founds = new LinkedHashMap<>();
         for (DataInfo dataInfo : lookupDataInfo) {
             Optional<DataBaseReadChannel> readChannel;
@@ -194,6 +201,8 @@ public abstract class AbstractDataBase implements DataBase {
     @Override
     public synchronized final Optional<Tuple2<DataInfo, DataBaseReadChannel>> findAny(Predicate<DataInfo> predicate)
             throws IOException {
+        Objects.requireNonNull(predicate);
+
         Optional<DataInfo> foundDataInfo = dataInfo.values().stream().filter(predicate).findAny();
         if (foundDataInfo.isPresent()) {
             Optional<DataBaseReadChannel> foundReadChannel = lookup(foundDataInfo.get());
@@ -206,6 +215,8 @@ public abstract class AbstractDataBase implements DataBase {
     @Override
     public synchronized Optional<Map<DataInfo, DataBaseReadChannel>> findMany(Predicate<DataInfo> predicate)
             throws IOException {
+        Objects.requireNonNull(predicate);
+
         List<DataInfo> foundDataInfo = dataInfo.values().stream().filter(predicate).collect(Collectors.toList());
         if (foundDataInfo.isEmpty()) {
             throw new IOException("No data info found, which fulfills the predicate");
@@ -217,6 +228,8 @@ public abstract class AbstractDataBase implements DataBase {
     @Override
     public synchronized Optional<DataBaseReadChannel> findIncremental(Predicate<DataInfo> predicate)
             throws IOException {
+        Objects.requireNonNull(predicate);
+
         List<DataInfo> foundDataInfo =
                 dataInfo.values().stream().filter(predicate).sorted(Comparator.comparing(DataInfo::getId)).collect(
                         Collectors.toList());

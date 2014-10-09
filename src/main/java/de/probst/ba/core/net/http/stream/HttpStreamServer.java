@@ -33,7 +33,7 @@ public final class HttpStreamServer {
 
     public static void main(String[] args) throws Exception {
         // Create database
-        DataBase db = DataBases.memoryDataBase();
+        DataBase db = DataBases.fileDataBase(Paths.get("/Users/chrisprobst/Desktop/database1"));
 
         // Create data info of file
         try (FileChannel fileChannel = FileChannel.open(Paths.get("/Users/chrisprobst/Desktop/black.mp4"))) {
@@ -48,10 +48,11 @@ public final class HttpStreamServer {
 
         for (DataInfo di : db.getDataInfo().values()) {
             System.out.println(di);
-
-
-            System.out.println("Loaded movie into database, running http streaming now...");
-            run(db);
         }
+
+        db.flush();
+
+        System.out.println("Loaded movie into database, running http streaming now...");
+        run(db);
     }
 }

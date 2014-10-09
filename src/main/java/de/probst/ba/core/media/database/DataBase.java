@@ -190,6 +190,7 @@ public interface DataBase extends Flushable {
                                       boolean closeReadableByteChannel) throws IOException {
         Objects.requireNonNull(dataInfo);
         Objects.requireNonNull(readableByteChannel);
+
         Optional<DataBaseWriteChannel> writeChannel = insert(dataInfo);
         if (writeChannel.isPresent()) {
             IOUtil.transfer(new LimitedReadableByteChannel(readableByteChannel,
@@ -223,6 +224,7 @@ public interface DataBase extends Flushable {
      */
     default Optional<Map<DataInfo, DataBaseWriteChannel>> insertMany(List<DataInfo> dataInfo) throws IOException {
         Objects.requireNonNull(dataInfo);
+
         Map<DataInfo, DataBaseWriteChannel> writeChannels = new LinkedHashMap<>();
         for (DataInfo insertDataInfo : dataInfo) {
             Optional<DataBaseWriteChannel> writeChannel;
@@ -284,6 +286,9 @@ public interface DataBase extends Flushable {
     default boolean insertManyFromChannel(List<DataInfo> dataInfo,
                                           ReadableByteChannel readableByteChannel,
                                           boolean closeReadableByteChannel) throws IOException {
+        Objects.requireNonNull(dataInfo);
+        Objects.requireNonNull(readableByteChannel);
+
         if (closeReadableByteChannel) {
             try (ReadableByteChannel ref = readableByteChannel) {
                 return insertManyFromChannels(dataInfo, x -> readableByteChannel, false);
@@ -314,8 +319,7 @@ public interface DataBase extends Flushable {
      */
     default boolean insertManyFromChannels(List<DataInfo> dataInfo,
                                            FunctionThatThrows<DataInfo, ReadableByteChannel, IOException> function,
-                                           boolean closeReadableByteChannels)
-            throws IOException {
+                                           boolean closeReadableByteChannels) throws IOException {
         Objects.requireNonNull(dataInfo);
         Objects.requireNonNull(function);
 
