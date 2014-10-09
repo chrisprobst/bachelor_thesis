@@ -167,7 +167,8 @@ public abstract class AbstractDataBase implements DataBase {
                     try {
                         channel.close();
                     } catch (IOException e1) {
-                        e.addSuppressed(e1);
+                        e1.addSuppressed(e);
+                        e = e1;
                     }
                 }
                 throw e;
@@ -184,7 +185,8 @@ public abstract class AbstractDataBase implements DataBase {
                         if (any == null) {
                             any = e1;
                         } else {
-                            any.addSuppressed(e1);
+                            e1.addSuppressed(any);
+                            any = e1;
                         }
                     }
                 }

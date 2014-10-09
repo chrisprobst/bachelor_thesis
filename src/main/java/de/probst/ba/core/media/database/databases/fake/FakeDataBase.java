@@ -57,6 +57,11 @@ public final class FakeDataBase extends AbstractDataBase {
     }
 
     @Override
+    public void close() throws IOException {
+        
+    }
+
+    @Override
     public void flush() throws IOException {
     }
 }

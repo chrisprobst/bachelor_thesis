@@ -5,6 +5,7 @@ import de.probst.ba.core.util.collections.Tuple2;
 import de.probst.ba.core.util.io.IOUtil;
 import de.probst.ba.core.util.io.LimitedReadableByteChannel;
 
+import java.io.Closeable;
 import java.io.Flushable;
 import java.io.IOException;
 import java.nio.channels.Channel;
@@ -21,7 +22,7 @@ import java.util.function.Predicate;
  * <p>
  * Created by chrisprobst on 13.08.14.
  */
-public interface DataBase extends Flushable {
+public interface DataBase extends Flushable, Closeable {
 
     /**
      * @return A snapshot of all existing
@@ -235,7 +236,8 @@ public interface DataBase extends Flushable {
                     try {
                         channel.close();
                     } catch (IOException e1) {
-                        e.addSuppressed(e1);
+                        e1.addSuppressed(e);
+                        e = e1;
                     }
                 }
                 throw e;
@@ -249,7 +251,8 @@ public interface DataBase extends Flushable {
                         if (any == null) {
                             any = e1;
                         } else {
-                            any.addSuppressed(e1);
+                            e1.addSuppressed(any);
+                            any = e1;
                         }
                     }
                 }
@@ -342,7 +345,8 @@ public interface DataBase extends Flushable {
                     try {
                         channel.close();
                     } catch (IOException e1) {
-                        e.addSuppressed(e1);
+                        e1.addSuppressed(e);
+                        e = e1;
                     }
                 }
             }

@@ -102,6 +102,9 @@ public class HttpStreamServerHandler extends SimpleChannelInboundHandler<FullHtt
 
             // Write the content
             ctx.writeAndFlush(new ChunkedNioStream(new LimitedReadableByteChannel(channel, length, true))).addListener(
+                    future -> {
+                        System.out.println(future.cause());
+                    }).addListener(
                     ChannelFutureListener.CLOSE);
         } catch (Exception e) {
             System.out.println("Not found: " + path + ", Reason: " + e);

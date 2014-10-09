@@ -115,9 +115,43 @@ public final class FileDataBase extends AbstractDataBase {
     }
 
     @Override
-    public synchronized void flush() throws IOException {
+    public synchronized void close() throws IOException {
+        IOException any = null;
         for (FileChannel fileChannel : fileChannels.values()) {
-            fileChannel.force(true);
+            try {
+                fileChannel.close();
+            } catch (IOException e) {
+                if (any == null) {
+                    any = e;
+                } else {
+                    e.addSuppressed(any);
+                    any = e;
+                }
+            }
+        }
+        fileChannels.clear();
+        if (any != null) {
+            throw any;
+        }
+    }
+
+    @Override
+    public synchronized void flush() throws IOException {
+        IOException any = null;
+        for (FileChannel fileChannel : fileChannels.values()) {
+            try {
+                fileChannel.force(true);
+            } catch (IOException e) {
+                if (any == null) {
+                    any = e;
+                } else {
+                    e.addSuppressed(any);
+                    any = e;
+                }
+            }
+        }
+        if (any != null) {
+            throw any;
         }
     }
 }
