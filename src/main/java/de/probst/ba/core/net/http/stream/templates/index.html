@@ -5,13 +5,15 @@
     <title>DataBase content</title>
 </head>
 <body>
+
+
 <h1>Count: {{size}}</h1>
 <ul>
     {{#each this}}
     <li>
         <h2>Name : {{getKey}}</h2>
 
-        <h2><a href="/stream?name={{getKey}}">Stream</a></h2>
+        <h2><a href="{{streamUrl}}{{getKey}}">Stream</a></h2>
         <ul>
             {{#each getValue}}
             <li>

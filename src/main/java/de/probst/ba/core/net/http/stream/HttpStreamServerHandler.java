@@ -3,6 +3,8 @@ package de.probst.ba.core.net.http.stream;
 import com.github.jknack.handlebars.Context;
 import com.github.jknack.handlebars.Handlebars;
 import com.github.jknack.handlebars.Template;
+import com.github.jknack.handlebars.context.JavaBeanValueResolver;
+import com.github.jknack.handlebars.context.MapValueResolver;
 import com.github.jknack.handlebars.context.MethodValueResolver;
 import de.probst.ba.core.media.database.DataBase;
 import de.probst.ba.core.media.database.DataBaseReadChannel;
@@ -170,8 +172,10 @@ public final class HttpStreamServerHandler extends SimpleChannelInboundHandler<F
 
         Context context = Context
                 .newBuilder(model.entrySet())
-                .resolver(MethodValueResolver.INSTANCE)
+                .combine("streamUrl", "/stream?name=")
+                .resolver(MethodValueResolver.INSTANCE, MapValueResolver.INSTANCE, JavaBeanValueResolver.INSTANCE)
                 .build();
+
         sendHTML(ctx, OK, template.apply(context));
     }
 
