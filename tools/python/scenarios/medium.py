@@ -1,13 +1,13 @@
 def setup(command, results_dir):
     return command[
         '-rd', results_dir,
-        '-s', 1,
-        '-l', 10,
-        '--total-size', 40000,
-        '-c', 200,
+        '-ss', 1,
+        '-sl', 10,
+        '-s', 40000,
+        '-cc', 200,
         '-pt', 'Local',
-        '-da', 'SuperSeederChunkedSwarm',
+        '-at', 'SuperSeederChunkedSwarm',
         '-rs',
         '-u', 1000,
-        '-su', 2000
+        '-su', 1000
     ]
