@@ -19,57 +19,43 @@ public final class FakeDataBase extends AbstractDataBase {
 
     @Override
     protected AbstractDataBaseWriteChannel openWriteChannel(DataInfo writeDataInfo) throws IOException {
-        return new FakeDataBaseWriteChannel(writeDataInfo);
+        return new AbstractDataBaseWriteChannel(this, writeDataInfo) {
+            @Override
+            protected int doWrite(ByteBuffer src,
+                                  int chunkIndex,
+                                  long totalChunkOffset,
+                                  long relativeChunkOffset,
+                                  long chunkSize) throws IOException {
+                int amount = src.remaining();
+                src.position(src.position() + amount);
+                return amount;
+            }
+
+            @Override
+            protected void doClose() throws IOException {
+
+            }
+        };
     }
 
     @Override
     protected AbstractDataBaseReadChannel openReadChannel(DataInfo readDataInfo) throws IOException {
-        return new FakeDataBaseReadChannel(readDataInfo);
-    }
+        return new AbstractDataBaseReadChannel(this, readDataInfo) {
+            @Override
+            protected int doRead(ByteBuffer dst,
+                                 int chunkIndex,
+                                 long totalChunkOffset,
+                                 long relativeChunkOffset,
+                                 long chunkSize) throws IOException {
+                int amount = dst.remaining();
+                dst.position(dst.position() + amount);
+                return amount;
+            }
 
-    private final class FakeDataBaseReadChannel extends AbstractDataBaseReadChannel {
+            @Override
+            protected void doClose() throws IOException {
 
-        public FakeDataBaseReadChannel(DataInfo dataInfo) {
-            super(FakeDataBase.this, dataInfo);
-        }
-
-        @Override
-        protected int doRead(ByteBuffer dst,
-                             int chunkIndex,
-                             long totalChunkOffset,
-                             long relativeChunkOffset,
-                             long chunkSize) throws IOException {
-            int amount = dst.remaining();
-            dst.position(dst.position() + amount);
-            return amount;
-        }
-
-        @Override
-        protected void doClose() throws IOException {
-
-        }
-    }
-
-    private final class FakeDataBaseWriteChannel extends AbstractDataBaseWriteChannel {
-
-        private FakeDataBaseWriteChannel(DataInfo dataInfo) {
-            super(FakeDataBase.this, dataInfo);
-        }
-
-        @Override
-        protected int doWrite(ByteBuffer src,
-                              int chunkIndex,
-                              long totalChunkOffset,
-                              long relativeChunkOffset,
-                              long chunkSize) throws IOException {
-            int amount = src.remaining();
-            src.position(src.position() + amount);
-            return amount;
-        }
-
-        @Override
-        protected void doClose() throws IOException {
-
-        }
+            }
+        };
     }
 }
