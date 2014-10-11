@@ -12,7 +12,9 @@ import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.nio.file.StandardOpenOption;
 import java.security.NoSuchAlgorithmException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -50,10 +52,16 @@ public final class FileDataInfoGeneratorArgs implements Args {
 
     public List<DataInfo> generateDataInfo() throws IOException, NoSuchAlgorithmException {
         try (FileChannel fileChannel = openFileChannel()) {
+
+            // Create the description object
+            Map<String, Object> descriptionObject = new HashMap<>();
+            descriptionObject.put("total-size", fileChannel.size());
+            descriptionObject.put("partitions", partitions);
+
             return DataInfo.fromPartitionedChannel(partitions,
                                                    size,
                                                    Optional.of(dataFile.getName()),
-                                                   Optional.empty(),
+                                                   Optional.of(descriptionObject),
                                                    chunkCount,
                                                    fileChannel);
         }

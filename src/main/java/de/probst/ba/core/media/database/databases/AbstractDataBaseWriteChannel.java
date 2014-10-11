@@ -61,7 +61,7 @@ public abstract class AbstractDataBaseWriteChannel extends AbstractDataBaseChann
         if (newLimit <= 0) {
             return 0;
         }
-        
+
         ByteBuffer copy = (ByteBuffer) src.duplicate().limit(src.position() + newLimit);
 
         // Calculate state

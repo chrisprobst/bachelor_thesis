@@ -1,6 +1,9 @@
 package de.probst.ba.core.media.database.databases;
 
+import de.probst.ba.core.media.database.DataBase;
+import de.probst.ba.core.media.database.DataBaseChannel;
 import de.probst.ba.core.media.database.DataBaseReadChannel;
+import de.probst.ba.core.media.database.DataInfo;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -10,12 +13,14 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * Created by chrisprobst on 09.10.14.
  */
 public final class CumulativeDataBaseReadChannel implements DataBaseReadChannel {
 
+    private final DataBase dataBase;
     private final List<DataBaseReadChannel> readChannels;
     private int index;
 
@@ -25,9 +30,37 @@ public final class CumulativeDataBaseReadChannel implements DataBaseReadChannel 
         }
     }
 
-    public CumulativeDataBaseReadChannel(Collection<DataBaseReadChannel> readChannels) {
+    public CumulativeDataBaseReadChannel(DataBase dataBase, Collection<DataBaseReadChannel> readChannels) {
+        Objects.requireNonNull(dataBase);
         Objects.requireNonNull(readChannels);
+        if (readChannels.isEmpty()) {
+            throw new IllegalArgumentException("readChannels.isEmpty()");
+        }
+        this.dataBase = dataBase;
         this.readChannels = new ArrayList<>(readChannels);
+    }
+
+    @Override
+    public DataBase getDataBase() {
+        return dataBase;
+    }
+
+    @Override
+    public DataInfo getDataInfo() {
+        return readChannels.get(0).getDataInfo();
+    }
+
+    @Override
+    public boolean isCumulative() {
+        return true;
+    }
+
+    @Override
+    public List<DataInfo> getCumulativeDataInfo() {
+        return readChannels.stream()
+                           .map(DataBaseChannel::getCumulativeDataInfo)
+                           .flatMap(List::stream)
+                           .collect(Collectors.toList());
     }
 
     @Override

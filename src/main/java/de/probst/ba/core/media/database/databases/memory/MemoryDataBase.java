@@ -51,8 +51,12 @@ public final class MemoryDataBase extends AbstractDataBase {
 
             int position = dst.position();
 
-            // Cannot be null
-            ByteBuf dataByteBuf = data.get(full);
+            // Sync with database
+            ByteBuf dataByteBuf;
+            synchronized (getDataBase()) {
+                dataByteBuf = data.get(full);
+            }
+
             dataByteBuf.getBytes((int) (totalChunkOffset + relativeChunkOffset), dst);
 
             return dst.position() - position;
@@ -65,7 +69,6 @@ public final class MemoryDataBase extends AbstractDataBase {
     }
 
     private final class MemoryDataBaseWriteChannel extends AbstractDataBaseWriteChannel {
-
 
         private MemoryDataBaseWriteChannel(DataInfo dataInfo) {
             super(MemoryDataBase.this, dataInfo);
@@ -80,11 +83,14 @@ public final class MemoryDataBase extends AbstractDataBase {
             // Get full representation
             DataInfo full = getDataInfo().full();
 
-            // Make sure there is enough space
-            ByteBuf dataByteBuf = data.get(full);
-            if (dataByteBuf == null) {
-                dataByteBuf = Unpooled.buffer((int) full.getSize(), (int) full.getSize());
-                data.put(full, dataByteBuf);
+            // Sync with database
+            ByteBuf dataByteBuf;
+            synchronized (getDataBase()) {
+                dataByteBuf = data.get(full);
+                if (dataByteBuf == null) {
+                    dataByteBuf = Unpooled.buffer((int) full.getSize(), (int) full.getSize());
+                    data.put(full, dataByteBuf);
+                }
             }
 
             int position = src.position();

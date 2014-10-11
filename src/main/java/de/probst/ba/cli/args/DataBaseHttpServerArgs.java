@@ -10,7 +10,6 @@ import org.slf4j.LoggerFactory;
  */
 public final class DataBaseHttpServerArgs implements Args {
 
-
     private final Logger logger = LoggerFactory.getLogger(DataBaseHttpServerArgs.class);
 
     @Parameter(names = {"-ds", "--database-http-server"},

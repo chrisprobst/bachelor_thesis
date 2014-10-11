@@ -5,6 +5,8 @@ import de.probst.ba.core.media.database.DataInfo;
 
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -26,20 +28,32 @@ public abstract class AbstractDataBaseChannel implements DataBaseChannel {
 
     protected abstract void doClose() throws IOException;
 
-    protected final AbstractDataBase getDataBase() {
-        return dataBase;
-    }
-
-    protected final DataInfo getDataInfo() {
-        return dataInfo;
-    }
-
     public AbstractDataBaseChannel(AbstractDataBase dataBase, DataInfo dataInfo) {
         Objects.requireNonNull(dataBase);
         Objects.requireNonNull(dataInfo);
         this.dataBase = dataBase;
         this.dataInfo = dataInfo;
         total = dataInfo.getCompletedSize();
+    }
+
+    @Override
+    public final AbstractDataBase getDataBase() {
+        return dataBase;
+    }
+
+    @Override
+    public final boolean isCumulative() {
+        return false;
+    }
+
+    @Override
+    public final DataInfo getDataInfo() {
+        return dataInfo;
+    }
+
+    @Override
+    public final List<DataInfo> getCumulativeDataInfo() {
+        return Arrays.asList(dataInfo);
     }
 
     @Override

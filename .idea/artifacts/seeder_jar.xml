@@ -1,5 +1,5 @@
 <component name="ArtifactManager">
-  <artifact type="jar" build-on-make="true" name="seeder:jar">
+  <artifact type="jar" name="seeder:jar">
     <output-path>$PROJECT_DIR$/out/artifacts/seeder_jar</output-path>
     <root id="archive" name="seeder.jar">
       <element id="directory" name="META-INF">

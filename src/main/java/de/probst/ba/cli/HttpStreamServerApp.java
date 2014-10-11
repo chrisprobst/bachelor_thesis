@@ -37,7 +37,7 @@ public final class HttpStreamServerApp {
                                                                       fileChannel.size(),
                                                                       Optional.of("black.mp4"),
                                                                       Optional.empty(),
-                                                                      40,
+                                                                      1,
                                                                       fileChannel);
 
             fileChannel.position(0);
@@ -53,7 +53,5 @@ public final class HttpStreamServerApp {
             }
 
         }
-
-        thread.join();
     }
 }

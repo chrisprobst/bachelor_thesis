@@ -235,7 +235,8 @@ public abstract class AbstractDataBase implements DataBase {
             }
         }
 
-        return lookupMany(inOrderDataInfo).map(Map::values).map(CumulativeDataBaseReadChannel::new);
+        return lookupMany(inOrderDataInfo).map(Map::values)
+                                          .map(dataInfo -> new CumulativeDataBaseReadChannel(this, dataInfo));
     }
 
     @Override

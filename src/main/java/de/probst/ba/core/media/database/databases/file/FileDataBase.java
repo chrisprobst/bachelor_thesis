@@ -87,9 +87,13 @@ public final class FileDataBase extends AbstractDataBase {
                              long relativeChunkOffset,
                              long chunkSize) throws IOException {
 
-            // Cannot be null
-            return fileChannels.get(getDataInfo().full())
-                               .read(dst, totalChunkOffset + relativeChunkOffset);
+            // Sync with database
+            FileChannel fileChannel;
+            synchronized (getDataBase()) {
+                fileChannel = fileChannels.get(getDataInfo().full());
+            }
+
+            return fileChannel.read(dst, totalChunkOffset + relativeChunkOffset);
         }
 
         @Override
@@ -113,20 +117,23 @@ public final class FileDataBase extends AbstractDataBase {
                               long relativeChunkOffset,
                               long chunkSize) throws IOException {
 
-            if (fileChannel == null) {
-                // Get full representation
-                DataInfo full = getDataInfo().full();
+            // Sync with database
+            synchronized (getDataBase()) {
+                if (fileChannel == null) {
+                    // Get full representation
+                    DataInfo full = getDataInfo().full();
 
-                // Lookup file channel
-                if ((fileChannel = fileChannels.get(full)) == null) {
-                    // Open a new file channel
-                    fileChannel = FileChannel.open(directory.resolve(full.getHash()),
-                                                   StandardOpenOption.CREATE,
-                                                   StandardOpenOption.WRITE,
-                                                   StandardOpenOption.READ);
+                    // Lookup file channel
+                    if ((fileChannel = fileChannels.get(full)) == null) {
+                        // Open a new file channel
+                        fileChannel = FileChannel.open(directory.resolve(full.getHash()),
+                                                       StandardOpenOption.CREATE,
+                                                       StandardOpenOption.WRITE,
+                                                       StandardOpenOption.READ);
 
-                    // Insert in map
-                    fileChannels.put(full, fileChannel);
+                        // Insert in map
+                        fileChannels.put(full, fileChannel);
+                    }
                 }
             }
 

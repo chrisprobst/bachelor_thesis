@@ -164,6 +164,7 @@ public final class HttpStreamServerHandler extends SimpleChannelInboundHandler<F
         Map<String, List<DataInfo>> model = dataBase.getDataInfo()
                                                     .values()
                                                     .stream()
+                                                    .filter(DataInfo::isCompleted)
                                                     .filter(x -> x.getName().isPresent())
                                                     .collect(Collectors.groupingBy(x -> x.getName().get()));
 

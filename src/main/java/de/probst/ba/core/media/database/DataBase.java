@@ -270,7 +270,7 @@ public interface DataBase extends Closeable {
 
         if (closeReadableByteChannel) {
             try (ReadableByteChannel ref = readableByteChannel) {
-                return insertManyFromChannels(dataInfo, x -> readableByteChannel, false);
+                return insertManyFromChannels(dataInfo, x -> ref, false);
             }
         } else {
             return insertManyFromChannels(dataInfo, x -> readableByteChannel, false);

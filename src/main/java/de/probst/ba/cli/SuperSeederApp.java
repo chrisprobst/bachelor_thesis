@@ -89,8 +89,11 @@ public final class SuperSeederApp extends ArgsApp {
         }
 
         // Insert file into data base, this also might take a while
-        superSeeder.getDataBase()
-                   .insertManyFromChannel(fileDataInfo, fileDataInfoGeneratorArgs.openFileChannel(), true);
+        if (!superSeeder.getDataBase()
+                        .insertManyFromChannel(fileDataInfo, fileDataInfoGeneratorArgs.openFileChannel(), true)) {
+            throw new IllegalStateException("!superSeeder.getDataBase().insertManyFromChannel(fileDataInfo, " +
+                                            "fileDataInfoGeneratorArgs.openFileChannel(), true)");
+        }
 
         // Read for enter
         System.out.println("Press [ENTER] to stop seeding");

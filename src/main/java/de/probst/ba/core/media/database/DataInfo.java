@@ -1,5 +1,7 @@
 package de.probst.ba.core.media.database;
 
+import de.probst.ba.core.util.collections.Tuple;
+import de.probst.ba.core.util.collections.Tuple2;
 import de.probst.ba.core.util.io.LimitedReadableByteChannel;
 
 import java.io.EOFException;
@@ -32,21 +34,35 @@ public final class DataInfo implements Serializable {
     public static final String DEFAULT_HASH_ALGORITHM = "SHA1";
     public static final int DEFAULT_HASH_BUFFER_SIZE = 65535;
 
+    public static Tuple2<Long, Long> calculatePartitionSizes(long size, int partitions) {
+        if (size <= 0) {
+            throw new IllegalArgumentException("size <= 0");
+        }
+
+        if (partitions <= 0) {
+            throw new IllegalArgumentException("partitions <= 0");
+        }
+
+        if (partitions > size) {
+            throw new IllegalArgumentException("partitions > size");
+        }
+
+        long partitionSize = size / partitions;
+        return Tuple.of(partitionSize, size - partitionSize * (partitions - 1));
+    }
+
     public static List<DataInfo> fromPartitionedChannel(int partitions,
-                                                        long totalSize,
+                                                        long size,
                                                         Optional<String> name,
-                                                        Optional<String> description,
+                                                        Optional<Object> description,
                                                         int chunkCount,
                                                         ReadableByteChannel readableByteChannel)
             throws IOException, NoSuchAlgorithmException {
 
-        if (partitions > totalSize) {
-            throw new IllegalArgumentException("partitions > size");
-        }
-
-        // Calculate the size of a partition
-        long partitionSize = totalSize / partitions;
-        long lastPartitionSize = totalSize - partitionSize * (partitions - 1);
+        // Calculate partition sizes
+        Tuple2<Long, Long> partitionSizes = calculatePartitionSizes(size, partitions);
+        long partitionSize = partitionSizes.first();
+        long lastPartitionSize = partitionSizes.second();
 
         if (chunkCount > partitionSize) {
             throw new IllegalArgumentException("chunkCount > partitionSize");
@@ -55,13 +71,13 @@ public final class DataInfo implements Serializable {
         // Add data info for each part
         List<DataInfo> dataInfo = new ArrayList<>(partitions);
         for (int id = 0; id < partitions; id++) {
-            long size = id < partitions - 1 ? partitionSize : lastPartitionSize;
+            long actualPartitionSize = id < partitions - 1 ? partitionSize : lastPartitionSize;
             dataInfo.add(fromChannel(id,
-                                     size,
+                                     actualPartitionSize,
                                      name,
                                      description,
                                      chunkCount,
-                                     new LimitedReadableByteChannel(readableByteChannel, size, false)));
+                                     new LimitedReadableByteChannel(readableByteChannel, actualPartitionSize, false)));
         }
         return dataInfo;
     }
@@ -69,7 +85,7 @@ public final class DataInfo implements Serializable {
     public static DataInfo fromChannel(long id,
                                        long size,
                                        Optional<String> name,
-                                       Optional<String> description,
+                                       Optional<Object> description,
                                        int chunkCount,
                                        ReadableByteChannel readableByteChannel)
             throws NoSuchAlgorithmException, IOException {
@@ -91,14 +107,18 @@ public final class DataInfo implements Serializable {
 
         // Setup vars
         ByteBuffer byteBuffer = ByteBuffer.allocate(DEFAULT_HASH_BUFFER_SIZE);
-        long chunkSize = size / chunkCount;
+
+        // Calculate chunk sizes
+        Tuple2<Long, Long> chunkSizes = calculatePartitionSizes(size, chunkCount);
+        long chunkSize = chunkSizes.first();
+        long lastChunkSize = chunkSizes.second();
 
         for (int i = 0; i < chunkCount; i++) {
             // Init chunk hash
             MessageDigest chunkHashDigest = MessageDigest.getInstance(DEFAULT_HASH_ALGORITHM);
 
             // Calc the actual chunk size
-            long actualChunkSize = i >= chunkCount - 1 ? size - chunkCount * chunkSize : chunkCount;
+            long actualChunkSize = i < chunkCount - 1 ? chunkSize : lastChunkSize;
 
             // Read in the actual chunk
             long completed = 0;
@@ -135,7 +155,7 @@ public final class DataInfo implements Serializable {
     public static DataInfo generate(long id,
                                     long size,
                                     Optional<String> name,
-                                    Optional<String> description,
+                                    Optional<Object> description,
                                     String hash,
                                     int chunkCount,
                                     IntFunction<String> chunkCreator) {
@@ -157,7 +177,7 @@ public final class DataInfo implements Serializable {
     private final String name;
 
     // Human readable description of this data
-    private final String description;
+    private final Object description;
 
     // The unique hash
     private final String hash;
@@ -180,7 +200,7 @@ public final class DataInfo implements Serializable {
     public DataInfo(long id,
                     long size,
                     Optional<String> name,
-                    Optional<String> description,
+                    Optional<Object> description,
                     String hash,
                     List<String> chunkHashes) {
         Objects.requireNonNull(name);
@@ -210,8 +230,10 @@ public final class DataInfo implements Serializable {
         chunks = new BitSet(chunkHashes.size());
 
         // Calculate the chunk sizes
-        chunkSize = size / chunkHashes.size();
-        lastChunkSize = size - chunkSize * (chunkHashes.size() - 1);
+        // Calculate chunk sizes
+        Tuple2<Long, Long> chunkSizes = calculatePartitionSizes(size, chunkHashes.size());
+        chunkSize = chunkSizes.first();
+        lastChunkSize = chunkSizes.second();
     }
 
     /**
@@ -435,7 +457,7 @@ public final class DataInfo implements Serializable {
     /**
      * @return The description.
      */
-    public Optional<String> getDescription() {
+    public Optional<Object> getDescription() {
         return Optional.ofNullable(description);
     }
 
