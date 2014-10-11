@@ -4,7 +4,9 @@ import com.beust.jcommander.JCommander;
 import com.beust.jcommander.ParametersDelegate;
 import de.probst.ba.cli.args.ArgsApp;
 import de.probst.ba.cli.args.BandwidthArgs;
+import de.probst.ba.cli.args.ConnectionArgs;
 import de.probst.ba.cli.args.DataInfoGeneratorArgs;
+import de.probst.ba.cli.args.DistributionArgs;
 import de.probst.ba.cli.args.HelpArgs;
 import de.probst.ba.cli.args.NetworkArgs;
 import de.probst.ba.cli.args.PeerCountArgs;
@@ -36,15 +38,19 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Supplier;
 
 /**
  * Created by chrisprobst on 12.08.14.
  */
-public class Benchmark extends ArgsApp {
+public class BenchmarkApp extends ArgsApp {
+
+    private static final int SUPER_SEEDER_LOW_PORT = 10000;
+    private static final int SEEDER_LEECHER_COUPLE_LOW_PORT = 20000;
 
     // The benchmark logger
-    private final Logger logger = LoggerFactory.getLogger(Benchmark.class);
+    private final Logger logger = LoggerFactory.getLogger(BenchmarkApp.class);
 
     // The event loop group of the benchmark
     private final EventLoopGroup eventLoopGroup = new NioEventLoopGroup();
@@ -52,6 +58,7 @@ public class Benchmark extends ArgsApp {
     // The statistics manager of the benchmark
     private final StatisticsManager statisticsManager = new StatisticsManager(eventLoopGroup);
 
+    // Used for completion detection
     private CountDownLatch completionCountDownLatch;
 
     // The argument delegates
@@ -61,6 +68,10 @@ public class Benchmark extends ArgsApp {
     private final PeerCountArgs peerCountArgs = new PeerCountArgs();
     @ParametersDelegate
     private final NetworkArgs networkArgs = new NetworkArgs();
+    @ParametersDelegate
+    private final DistributionArgs distributionArgs = new DistributionArgs();
+    @ParametersDelegate
+    private final ConnectionArgs connectionArgs = new ConnectionArgs();
     @ParametersDelegate
     private final BandwidthArgs bandwidthArgs = new BandwidthArgs();
     @ParametersDelegate
@@ -100,7 +111,7 @@ public class Benchmark extends ArgsApp {
         }
     }
 
-    private void setupPeers() throws Exception {
+    private void setupPeers() throws ExecutionException, InterruptedException {
         // Create the data info completion handler
         DataInfoCompletionHandler dataInfoCompletionHandler =
                 new DataInfoCompletionHandler(peerCountArgs.seederLeecherCouples * dataInfoGeneratorArgs.partitions);
@@ -117,9 +128,9 @@ public class Benchmark extends ArgsApp {
             Seeder seeder = Peers.seeder(networkArgs.peerType,
                                          superSeederBandwidthArgs.maxSuperSeederUploadRate,
                                          superSeederBandwidthArgs.maxSuperSeederDownloadRate,
-                                         networkArgs.getSuperSeederSocketAddress(i),
+                                         networkArgs.getSuperSeederSocketAddress(SUPER_SEEDER_LOW_PORT + i),
                                          dataBaseSupplier.get(),
-                                         networkArgs.getSuperSeederDistributionAlgorithm(),
+                                         distributionArgs.getSuperSeederDistributionAlgorithm(),
                                          Optional.ofNullable(statisticsManager.getRecordPeerHandler()),
                                          Optional.of(eventLoopGroup)).getInitFuture().get();
 
@@ -139,16 +150,16 @@ public class Benchmark extends ArgsApp {
                 leecherHandlerList.add(statisticsManager.getRecordPeerHandler());
             }
 
-            if (networkArgs.algorithmType != Algorithms.AlgorithmType.Sequential) {
+            if (distributionArgs.algorithmType != Algorithms.AlgorithmType.Sequential) {
                 // Instantiate new seeder-leecher couple
                 Tuple2<Seeder, Leecher> tuple = Peers.initSeederAndLeecher(
                         networkArgs.peerType,
                         bandwidthArgs.maxUploadRate,
                         bandwidthArgs.maxDownloadRate,
-                        networkArgs.getSeederLeecherCoupleSocketAddress(i),
+                        networkArgs.getSeederLeecherCoupleSocketAddress(SEEDER_LEECHER_COUPLE_LOW_PORT + i),
                         dataBaseSupplier.get(),
-                        networkArgs.getSeederDistributionAlgorithm(),
-                        networkArgs.getLeecherDistributionAlgorithm(),
+                        distributionArgs.getSeederDistributionAlgorithm(),
+                        distributionArgs.getLeecherDistributionAlgorithm(),
                         Optional.ofNullable(statisticsManager.getRecordPeerHandler()),
                         Optional.of(leecherHandlerList),
                         true,
@@ -180,7 +191,7 @@ public class Benchmark extends ArgsApp {
                                                 bandwidthArgs.maxDownloadRate,
                                                 Optional.empty(),
                                                 dataBaseSupplier.get(),
-                                                networkArgs.getLeecherDistributionAlgorithm(),
+                                                distributionArgs.getLeecherDistributionAlgorithm(),
                                                 Optional.of(leecherHandlerList),
                                                 true,
                                                 Optional.of(eventLoopGroup),
@@ -209,7 +220,7 @@ public class Benchmark extends ArgsApp {
         // The expected number of connections
         int limit = NettyConfig.getMaxConnectionsPerLeecher();
         limit = limit < 1 ? Integer.MAX_VALUE : limit;
-        int expectedConnections = networkArgs.algorithmType == Algorithms.AlgorithmType.Sequential ?
+        int expectedConnections = distributionArgs.algorithmType == Algorithms.AlgorithmType.Sequential ?
                                   peerCountArgs.seederLeecherCouples * peerCountArgs.superSeeders :
                                   peerCountArgs.seederLeecherCouples *
                                   (Math.min(peerCountArgs.seederLeecherCouples - 1 + peerCountArgs.superSeeders,
@@ -248,7 +259,7 @@ public class Benchmark extends ArgsApp {
         NettyConfig.setupConfig(Math.min(bandwidthArgs.getSmallestBandwidth(),
                                          superSeederBandwidthArgs.getSmallestBandwidth()),
                                 dataInfoGeneratorArgs.chunkSize,
-                                networkArgs.maxConnections,
+                                connectionArgs.maxLeecherConnections,
                                 networkArgs.metaDataSizePercentage,
                                 networkArgs.binaryCodec);
 
@@ -286,6 +297,8 @@ public class Benchmark extends ArgsApp {
         return helpArgs.check(jCommander) &&
                peerCountArgs.check(jCommander) &&
                networkArgs.check(jCommander) &&
+               distributionArgs.check(jCommander) &&
+               connectionArgs.check(jCommander) &&
                bandwidthArgs.check(jCommander) &&
                superSeederBandwidthArgs.check(jCommander) &&
                dataInfoGeneratorArgs.check(jCommander) &&
@@ -293,7 +306,7 @@ public class Benchmark extends ArgsApp {
     }
 
     public static void main(String[] args) throws Exception {
-        new Benchmark().parse(args);
+        new BenchmarkApp().parse(args);
     }
 }
 

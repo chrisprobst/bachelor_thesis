@@ -128,7 +128,7 @@ public final class StatisticsManager {
 
 
         // Log the settings
-        logger.info(">>> [ Statistics config ]");
+        logger.info(">>> [ Statistics setup]");
         logger.info(">>> Record directory:  " + recordsDirectory);
         logger.info(">>> Record events:     " + recordEvents);
         logger.info(">>> Record statistics: " + recordStatistics);

@@ -3,6 +3,8 @@ package de.probst.ba.cli.args;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.converters.FileConverter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 
@@ -10,6 +12,8 @@ import java.io.File;
  * Created by chrisprobst on 10.10.14.
  */
 public final class StatisticArgs implements Args {
+
+    private final Logger logger = LoggerFactory.getLogger(StatisticArgs.class);
 
     @Parameter(names = {"-re", "--record-events"},
                description = "Record the events and serialize them")
@@ -36,6 +40,11 @@ public final class StatisticArgs implements Args {
             System.out.println("The records directory is not a directory");
             return false;
         }
+
+        logger.info(">>> [ Statistics Config ]");
+        logger.info(">>> Record directory:  " + recordsDirectory);
+        logger.info(">>> Record events:     " + recordEvents);
+        logger.info(">>> Record statistics: " + recordStatistics);
 
         return true;
     }

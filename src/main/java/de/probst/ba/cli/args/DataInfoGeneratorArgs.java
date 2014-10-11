@@ -92,7 +92,7 @@ public final class DataInfoGeneratorArgs implements Args {
         }
         chunkSize = partitionSize / chunkCount;
 
-        logger.info(">>> [ Generated DataInfo Config ]");
+        logger.info(">>> [ DataInfo Generator Config ]");
         logger.info(">>> Size:              " + size);
         logger.info(">>> Partitions:        " + partitions);
         logger.info(">>> Partition size:    " + partitionSize);

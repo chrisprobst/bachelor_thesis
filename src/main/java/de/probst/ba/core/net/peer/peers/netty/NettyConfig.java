@@ -20,6 +20,16 @@ public final class NettyConfig {
     private static final Logger logger = LoggerFactory.getLogger(NettyConfig.class);
 
     public static void setupConfig(int smallestBandwidth,
+                                   int maxConnections) {
+        setupConfig(smallestBandwidth, getUploadBufferSize(), maxConnections, 0, true);
+    }
+
+    public static void setupConfig(int smallestBandwidth,
+                                   long chunkSize) {
+        setupConfig(smallestBandwidth, chunkSize, 0, 0, true);
+    }
+
+    public static void setupConfig(int smallestBandwidth,
                                    long chunkSize,
                                    int maxConnections,
                                    double metaDataSizePercentage,
@@ -27,27 +37,30 @@ public final class NettyConfig {
 
         // Calculate a few values
         double refillRateInSeconds = PeerConfig.getLeakyBucketRefillInterval() / 1000.0;
-        int calculatedBufferSize = (int) Math.round(smallestBandwidth * refillRateInSeconds * 0.5);
-        int bufferSize = (int) Math.min(Math.min(chunkSize, calculatedBufferSize), NettyConfig.getUploadBufferSize());
+        int calculatedBufferSize =
+                (int) Math.round(smallestBandwidth * refillRateInSeconds * getLeakyBucketBufferFactor());
+        int bufferSize = (int) Math.min(Math.min(chunkSize, calculatedBufferSize), getUploadBufferSize());
 
         // Set netty config
-        NettyConfig.setUploadBufferSize(bufferSize);
-        NettyConfig.setDefaultMessageSize((long) (chunkSize * metaDataSizePercentage / 100));
-        NettyConfig.setUseCodec(binaryCodec);
-        NettyConfig.setMaxConnectionsPerLeecher(maxConnections);
+        setUploadBufferSize(bufferSize);
+        setDefaultMessageSize((long) (chunkSize * metaDataSizePercentage / 100));
+        setUseCodec(binaryCodec);
+        setMaxConnectionsPerLeecher(maxConnections);
 
         // Log netty values
         logger.info(">>> [ Netty Config ]");
         logger.info(">>> Meta data size:            " + getDefaultMessageSize() + " bytes");
-        logger.info(">>> Upload buffer size:        " + NettyConfig.getUploadBufferSize() + " bytes (" +
+        logger.info(">>> Upload buffer size:        " + getUploadBufferSize() + " bytes (" +
                     "Nearest power of 2 of " + bufferSize + ")");
-        logger.info(">>> Using codec:               " + NettyConfig.isUseCodec());
-        logger.info(">>> Leecher connection limit:  " + NettyConfig.getMaxConnectionsPerLeecher());
+        logger.info(">>> Using codec:               " + isUseCodec());
+        logger.info(">>> Leecher connection limit:  " + getMaxConnectionsPerLeecher());
     }
 
     private NettyConfig() {
     }
 
+
+    private static final double leakyBucketBufferFactor = 0.25;
     private static volatile long defaultMessageSize;
     private static volatile int maxConnectionsPerLeecher = 0;
     private static volatile int uploadBufferSize = 8192;
@@ -55,6 +68,10 @@ public final class NettyConfig {
     private static final long discoveryExchangeDelay = 1000;
     private static final long announceDelay = 200;
     private static volatile boolean useCodec;
+
+    public static double getLeakyBucketBufferFactor() {
+        return leakyBucketBufferFactor;
+    }
 
     public static long getDefaultMessageSize() {
         return defaultMessageSize;
