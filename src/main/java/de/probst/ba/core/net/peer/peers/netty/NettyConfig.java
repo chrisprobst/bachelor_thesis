@@ -60,6 +60,8 @@ public final class NettyConfig {
     }
 
 
+    private static final int httpBufferSize = 8192;
+    private static final long httpRetryDelay = 1000;
     private static final double leakyBucketBufferFactor = 0.25;
     private static volatile long defaultMessageSize;
     private static volatile int maxConnectionsPerLeecher = 0;
@@ -68,6 +70,14 @@ public final class NettyConfig {
     private static final long discoveryExchangeDelay = 1000;
     private static final long announceDelay = 200;
     private static volatile boolean useCodec;
+
+    public static int getHttpBufferSize() {
+        return httpBufferSize;
+    }
+
+    public static long getHttpRetryDelay() {
+        return httpRetryDelay;
+    }
 
     public static double getLeakyBucketBufferFactor() {
         return leakyBucketBufferFactor;

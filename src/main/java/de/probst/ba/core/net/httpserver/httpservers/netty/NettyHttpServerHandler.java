@@ -1,4 +1,4 @@
-package de.probst.ba.core.net.http.stream;
+package de.probst.ba.core.net.httpserver.httpservers.netty;
 
 import com.github.jknack.handlebars.Context;
 import com.github.jknack.handlebars.Handlebars;
@@ -7,12 +7,10 @@ import com.github.jknack.handlebars.context.JavaBeanValueResolver;
 import com.github.jknack.handlebars.context.MapValueResolver;
 import com.github.jknack.handlebars.context.MethodValueResolver;
 import de.probst.ba.core.media.database.DataBase;
-import de.probst.ba.core.media.database.DataBaseReadChannel;
 import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.media.database.DataLookupException;
 import de.probst.ba.core.util.collections.Tuple;
 import de.probst.ba.core.util.collections.Tuple2;
-import de.probst.ba.core.util.io.LimitedReadableByteChannel;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -24,7 +22,6 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.QueryStringDecoder;
-import io.netty.handler.stream.ChunkedNioStream;
 import io.netty.util.CharsetUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,7 +34,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.Scanner;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static io.netty.handler.codec.http.HttpHeaders.Names.ACCEPT_RANGES;
@@ -54,14 +53,23 @@ import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpResponseStatus.PARTIAL_CONTENT;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
-public final class HttpStreamServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
+public final class NettyHttpServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
 
-    private final Logger logger = LoggerFactory.getLogger(HttpStreamServerHandler.class);
+    public static final String TOTAL_SIZE_KEY = "total-size";
+    public static final String PARTITIONS_KEY = "partitions";
+
+    private static Predicate<DataInfo> byName(String name) {
+        Objects.requireNonNull(name);
+        return dataInfo -> dataInfo.isCompleted() && dataInfo.getName().isPresent() &&
+                           dataInfo.getName().get().equals(name);
+    }
+
+    private final Logger logger = LoggerFactory.getLogger(NettyHttpServerHandler.class);
     private final DataBase dataBase;
     private final MimetypesFileTypeMap mimetypesFileTypeMap = new MimetypesFileTypeMap();
     private final Template template;
 
-    public HttpStreamServerHandler(DataBase dataBase) throws IOException {
+    public NettyHttpServerHandler(DataBase dataBase) throws IOException {
         Objects.requireNonNull(dataBase);
         this.dataBase = dataBase;
 
@@ -105,6 +113,7 @@ public final class HttpStreamServerHandler extends SimpleChannelInboundHandler<F
         }
     }
 
+    @SuppressWarnings("unchecked")
     private void sendStream(ChannelHandlerContext ctx, FullHttpRequest request, QueryStringDecoder queryStringDecoder) {
 
         // Check that we have exactly one name parameter
@@ -116,15 +125,32 @@ public final class HttpStreamServerHandler extends SimpleChannelInboundHandler<F
         String name = names.get(0);
 
         try {
+            // Lookup data info
+            Optional<DataInfo> dataInfo = dataBase.getDataInfo().values().stream().filter(byName(name)).findAny();
+            if (!dataInfo.isPresent()) {
+                throw new DataLookupException("Not found");
+            }
+            logger.info("Found data info: " + dataInfo);
 
-            // Try to open read channel
-            DataBaseReadChannel channel =
-                    dataBase.findIncremental(dataInfo -> dataInfo.getName().get().equals(name)).get();
+            // Look for a description object and extract total size
+            OptionalLong optionalTotalSize = OptionalLong.empty();
+            Optional<Object> descriptionObject = dataInfo.get().getDescription();
+            if (descriptionObject.isPresent() && descriptionObject.get() instanceof Map) {
+                Map<String, Object> description = (Map<String, Object>) descriptionObject.get();
+                optionalTotalSize = OptionalLong.of((long) description.get(TOTAL_SIZE_KEY));
+            }
+
+            // Make sure we found it
+            if (!optionalTotalSize.isPresent()) {
+                throw new DataLookupException("First description object did not contain the total size");
+            }
+            long totalSize = optionalTotalSize.getAsLong();
 
             // Calculate the boundaries
-            Optional<Tuple2<Long, Long>> boundaries = getRangeBoundaries(request, channel.size());
+            Optional<Tuple2<Long, Long>> boundaries = getRangeBoundaries(request, totalSize);
             boolean hasRange = boundaries.isPresent();
-            long length = hasRange ? boundaries.get().second() - boundaries.get().first() : channel.size();
+            long offset = hasRange ? boundaries.get().first() : 0;
+            long length = hasRange ? boundaries.get().second() - boundaries.get().first() : totalSize;
 
             // Prepare response
             HttpResponseStatus httpResponseStatus = hasRange ? PARTIAL_CONTENT : OK;
@@ -134,24 +160,21 @@ public final class HttpStreamServerHandler extends SimpleChannelInboundHandler<F
             response.headers().set(ACCEPT_RANGES, "bytes");
             if (hasRange) {
                 String contentRange =
-                        boundaries.get().first() + "-" + (boundaries.get().second() - 1) + "/" + channel.size();
+                        boundaries.get().first() + "-" + (boundaries.get().second() - 1) + "/" + totalSize;
                 response.headers().set(CONTENT_RANGE, "bytes " + contentRange);
-
-                logger.info("Client requested range [" + contentRange + "]");
-
-                // Seek for the lower position
-                channel.position(boundaries.get().first());
             }
 
-            // Open a stream for transfer
-            ChunkedNioStream chunkedNioStream =
-                    new ChunkedNioStream(new LimitedReadableByteChannel(channel, length, true));
+            logger.info(
+                    "Client requested range [ Offset: " + offset + ", Length: " + length + ", TotalSize: " + totalSize +
+                    "]");
 
             // Write the response and the body
             ctx.write(response);
-            ctx.writeAndFlush(chunkedNioStream).addListener(ChannelFutureListener.CLOSE);
 
-
+            // Create chunked database input and write it
+            ctx.writeAndFlush(new ChunkedDataBaseInput(dataBase, byName(name), offset, length))
+               .addListener(fut -> System.out.println(fut.cause()))
+               .addListener(ChannelFutureListener.CLOSE);
         } catch (DataLookupException e) {
             sendError(ctx, NOT_FOUND, e);
         } catch (Exception e) {
@@ -182,7 +205,6 @@ public final class HttpStreamServerHandler extends SimpleChannelInboundHandler<F
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        System.out.println(cause.getClass());
         ctx.close();
     }
 

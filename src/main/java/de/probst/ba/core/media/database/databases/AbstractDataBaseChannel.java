@@ -86,14 +86,15 @@ public abstract class AbstractDataBaseChannel implements DataBaseChannel {
     }
 
     @Override
-    public final synchronized void close() throws IOException {
-        if (!closed) {
-            try {
-                doClose();
-            } finally {
+    public final void close() throws IOException {
+        synchronized (this) {
+            if (!closed) {
                 closed = true;
-                dataBase.unregisterChannel(this, dataInfo);
+                doClose();
+            } else {
+                return;
             }
         }
+        dataBase.unregisterChannel(this, dataInfo);
     }
 }

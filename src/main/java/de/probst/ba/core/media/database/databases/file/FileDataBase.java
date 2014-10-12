@@ -37,7 +37,8 @@ public final class FileDataBase extends AbstractDataBase {
         }
     }
 
-    public FileDataBase(Path directory) throws IOException {
+    public FileDataBase(boolean allowOverwrite, Path directory) throws IOException {
+        super(allowOverwrite);
         Objects.requireNonNull(directory);
 
         // Make sure the directory exists

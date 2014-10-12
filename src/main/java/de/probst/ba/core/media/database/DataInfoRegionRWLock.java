@@ -9,7 +9,7 @@ import java.util.List;
 /**
  * Created by chrisprobst on 07.10.14.
  */
-public final class DataInfoRegionLock {
+public final class DataInfoRegionRWLock {
 
     private final List<DataInfo> writeResources = new LinkedList<>();
     private final List<DataInfo> readResources = new LinkedList<>();

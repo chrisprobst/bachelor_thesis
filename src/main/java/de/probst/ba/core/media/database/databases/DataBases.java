@@ -1,7 +1,6 @@
 package de.probst.ba.core.media.database.databases;
 
 import de.probst.ba.core.media.database.DataBase;
-import de.probst.ba.core.media.database.databases.fake.FakeDataBase;
 import de.probst.ba.core.media.database.databases.file.FileDataBase;
 import de.probst.ba.core.media.database.databases.memory.MemoryDataBase;
 
@@ -18,14 +17,27 @@ public final class DataBases {
     }
 
     public static DataBase fileDataBase(Path directory) throws IOException {
-        return new FileDataBase(directory);
+        return fileDataBase(false, directory);
+    }
+
+    public static DataBase fileDataBase(boolean allowOverwrite, Path directory) throws IOException {
+        return new FileDataBase(allowOverwrite, directory);
     }
 
     public static DataBase memoryDataBase() {
-        return new MemoryDataBase();
+        return memoryDataBase(false);
+    }
+
+    public static DataBase memoryDataBase(boolean allowOverwrite) {
+        return new MemoryDataBase(allowOverwrite);
+    }
+
+
+    public static DataBase fakeDataBase(boolean allowOverwrite) {
+        return fakeDataBase(allowOverwrite);
     }
 
     public static DataBase fakeDataBase() {
-        return new FakeDataBase();
+        return fakeDataBase(false);
     }
 }

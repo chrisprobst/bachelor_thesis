@@ -4,6 +4,7 @@ import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.converters.FileConverter;
 import de.probst.ba.core.media.database.DataInfo;
+import de.probst.ba.core.net.httpserver.httpservers.netty.NettyHttpServerHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,8 +56,8 @@ public final class FileDataInfoGeneratorArgs implements Args {
 
             // Create the description object
             Map<String, Object> descriptionObject = new HashMap<>();
-            descriptionObject.put("total-size", fileChannel.size());
-            descriptionObject.put("partitions", partitions);
+            descriptionObject.put(NettyHttpServerHandler.TOTAL_SIZE_KEY, fileChannel.size());
+            descriptionObject.put(NettyHttpServerHandler.PARTITIONS_KEY, partitions);
 
             return DataInfo.fromPartitionedChannel(partitions,
                                                    size,

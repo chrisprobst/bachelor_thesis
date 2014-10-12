@@ -3,7 +3,7 @@ package de.probst.ba.cli;
 import de.probst.ba.core.media.database.DataBase;
 import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.media.database.databases.DataBases;
-import de.probst.ba.core.net.http.stream.HttpStreamServer;
+import de.probst.ba.core.net.httpserver.httpservers.HttpServers;
 import io.netty.channel.nio.NioEventLoopGroup;
 
 import java.nio.channels.FileChannel;
@@ -22,7 +22,7 @@ public final class HttpStreamServerApp {
         System.out.println("Loaded movie into database, running http streaming now...");
         Thread thread = new Thread(() -> {
             try {
-                new HttpStreamServer(new NioEventLoopGroup(), db, HTTP_STREAM_SERVER_PORT);
+                HttpServers.defaultHttpServer(new NioEventLoopGroup(), db, HTTP_STREAM_SERVER_PORT);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }

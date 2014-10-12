@@ -34,11 +34,12 @@ public final class LimitedReadableByteChannel implements ReadableByteChannel {
             // Limit byte buffer
             dst.limit((int) (dst.position() + Math.min(dst.remaining(), length - current)));
             int read = peer.read(dst);
-            current += read;
-            return read;
-        } else {
-            return -1;
+            if (read >= 0) {
+                current += read;
+                return read;
+            }
         }
+        return -1;
     }
 
     @Override

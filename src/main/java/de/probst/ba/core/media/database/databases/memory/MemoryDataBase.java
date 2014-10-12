@@ -36,4 +36,8 @@ public final class MemoryDataBase extends AbstractDataBase {
     protected AbstractDataBaseReadChannel openReadChannel(DataInfo readDataInfo) throws IOException {
         return new MemoryDataBaseReadChannel(this, readDataInfo, data.get(readDataInfo.full()));
     }
+
+    public MemoryDataBase(boolean allowOverwrite) {
+        super(allowOverwrite);
+    }
 }

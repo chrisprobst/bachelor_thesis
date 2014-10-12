@@ -605,12 +605,15 @@ public final class DataInfo implements Serializable {
     /**
      * Checks whether or not this data info
      * contains the other data info.
+     * <p>
+     * If one of the data info is empty, this method
+     * returns false.
      *
      * @param other
      * @return
      */
     public boolean contains(DataInfo other) {
-        return other.subtract(this).getCompletedChunkCount() == 0;
+        return !isEmpty() && !other.isEmpty() && other.subtract(this).getCompletedChunkCount() == 0;
     }
 
     /**

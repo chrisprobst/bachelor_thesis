@@ -1,7 +1,7 @@
 package de.probst.ba.test;
 
 import de.probst.ba.core.media.database.DataInfo;
-import de.probst.ba.core.media.database.DataInfoRegionLock;
+import de.probst.ba.core.media.database.DataInfoRegionRWLock;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -14,6 +14,7 @@ import static org.junit.Assert.assertTrue;
 /**
  * Created by chrisprobst on 03.08.14.
  */
+
 public class DataInfoTest {
 
     private DataInfo dataInfo;
@@ -180,9 +181,9 @@ public class DataInfoTest {
 
     @Test
     public void contain() {
-        // Empty set contains empty set
+        // Empty sets do not contain empty sets
         DataInfo duplicate = dataInfo.duplicate();
-        assertTrue(dataInfo.contains(duplicate));
+        assertFalse(dataInfo.contains(duplicate));
 
         // Same number of chunks
         dataInfo = dataInfo.whereChunk(4, true);
@@ -302,36 +303,36 @@ public class DataInfoTest {
 
     @Test
     public void regionLock() {
-        DataInfoRegionLock dataInfoRegionLock = new DataInfoRegionLock();
+        DataInfoRegionRWLock dataInfoRegionRWLock = new DataInfoRegionRWLock();
         DataInfo lockA = dataInfo.withChunk(3).withChunk(5);
         DataInfo lockB = dataInfo.withChunk(4).withChunk(6);
         DataInfo lockC = dataInfo.withChunk(2).withChunk(7);
         DataInfo lockD = dataInfo.full();
 
-        dataInfoRegionLock.lockWriteResource(lockA);
-        dataInfoRegionLock.lockWriteResource(lockB);
-        dataInfoRegionLock.lockWriteResource(lockC);
-        assertTrue(dataInfoRegionLock.tryUnlockWriteResource(lockA));
-        assertTrue(dataInfoRegionLock.tryUnlockWriteResource(lockB));
-        assertTrue(dataInfoRegionLock.tryUnlockWriteResource(lockC));
-        dataInfoRegionLock.lockWriteResource(lockA);
-        dataInfoRegionLock.lockWriteResource(lockB);
-        dataInfoRegionLock.lockWriteResource(lockC);
-        assertTrue(dataInfoRegionLock.tryUnlockWriteResource(lockA));
-        assertTrue(dataInfoRegionLock.tryUnlockWriteResource(lockB));
-        assertTrue(dataInfoRegionLock.tryUnlockWriteResource(lockC));
-        dataInfoRegionLock.lockWriteResource(lockA);
+        dataInfoRegionRWLock.lockWriteResource(lockA);
+        dataInfoRegionRWLock.lockWriteResource(lockB);
+        dataInfoRegionRWLock.lockWriteResource(lockC);
+        assertTrue(dataInfoRegionRWLock.tryUnlockWriteResource(lockA));
+        assertTrue(dataInfoRegionRWLock.tryUnlockWriteResource(lockB));
+        assertTrue(dataInfoRegionRWLock.tryUnlockWriteResource(lockC));
+        dataInfoRegionRWLock.lockWriteResource(lockA);
+        dataInfoRegionRWLock.lockWriteResource(lockB);
+        dataInfoRegionRWLock.lockWriteResource(lockC);
+        assertTrue(dataInfoRegionRWLock.tryUnlockWriteResource(lockA));
+        assertTrue(dataInfoRegionRWLock.tryUnlockWriteResource(lockB));
+        assertTrue(dataInfoRegionRWLock.tryUnlockWriteResource(lockC));
+        dataInfoRegionRWLock.lockWriteResource(lockA);
 
-        dataInfoRegionLock.lockReadResource(lockB);
-        dataInfoRegionLock.lockReadResource(lockB);
-        dataInfoRegionLock.lockReadResource(lockC);
-        dataInfoRegionLock.lockReadResource(lockC);
+        dataInfoRegionRWLock.lockReadResource(lockB);
+        dataInfoRegionRWLock.lockReadResource(lockB);
+        dataInfoRegionRWLock.lockReadResource(lockC);
+        dataInfoRegionRWLock.lockReadResource(lockC);
 
-        assertFalse(dataInfoRegionLock.tryLockReadResource(lockD));
+        assertFalse(dataInfoRegionRWLock.tryLockReadResource(lockD));
 
-        assertTrue(dataInfoRegionLock.tryUnlockWriteResource(lockA));
+        assertTrue(dataInfoRegionRWLock.tryUnlockWriteResource(lockA));
 
-        assertTrue(dataInfoRegionLock.tryLockReadResource(lockD));
-        assertTrue(dataInfoRegionLock.tryUnlockReadResource(lockD));
+        assertTrue(dataInfoRegionRWLock.tryLockReadResource(lockD));
+        assertTrue(dataInfoRegionRWLock.tryUnlockReadResource(lockD));
     }
 }

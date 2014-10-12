@@ -1,19 +1,22 @@
 package de.probst.ba.core.media.database;
 
+import de.probst.ba.core.media.database.databases.CumulativeDataBaseReadChannel;
 import de.probst.ba.core.util.FunctionThatThrows;
-import de.probst.ba.core.util.collections.Tuple2;
 import de.probst.ba.core.util.io.IOUtil;
 import de.probst.ba.core.util.io.LimitedReadableByteChannel;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.channels.ReadableByteChannel;
-import java.util.LinkedHashMap;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 /**
  * A data base manages data info and the content.
@@ -55,13 +58,13 @@ public interface DataBase extends Closeable {
      * so that no modifications can happen, while reading
      * in parallel is allowed.
      *
-     * @param dataInfo
+     * @param lookupDataInfo
      * @return The channel or empty, if one of the specified chunks
      * is locked for writing.
      * @throws IOException If an exception occurs or one of the specified
      *                     chunks does not exist.
      */
-    Optional<DataBaseReadChannel> lookup(DataInfo dataInfo) throws IOException;
+    Optional<DataBaseReadChannel> lookup(DataInfo lookupDataInfo) throws IOException;
 
     /**
      * Tries to open database channels for reading by
@@ -76,16 +79,37 @@ public interface DataBase extends Closeable {
      * The chunks affected by this lookup are locked for reading,
      * so that no modifications can happen, while reading
      * in parallel is allowed.
-     * <p>
-     * The returned map is in order.
      *
-     * @param dataInfo
-     * @return The data info mapped to their channels or empty,
+     * @param lookupDataInfo
+     * @return The channels or empty,
      * if one of the specified chunks is locked for writing.
      * @throws IOException If an exception occurs or one of the specified
      *                     chunks does not exist.
      */
-    Optional<Map<DataInfo, DataBaseReadChannel>> lookupMany(List<DataInfo> dataInfo) throws IOException;
+    default Optional<List<DataBaseReadChannel>> lookupMany(List<DataInfo> lookupDataInfo)
+            throws IOException {
+        Objects.requireNonNull(lookupDataInfo);
+
+        List<DataBaseReadChannel> founds = new ArrayList<>(lookupDataInfo.size());
+        for (DataInfo dataInfo : lookupDataInfo) {
+            Optional<DataBaseReadChannel> readChannel;
+
+            try {
+                readChannel = lookup(dataInfo);
+            } catch (Exception e) {
+                throw IOUtil.closeAllAndGetException(founds, e);
+            }
+
+            if (readChannel.isPresent()) {
+                founds.add(readChannel.get());
+            } else {
+                IOUtil.closeAllAndThrow(founds);
+                return Optional.empty();
+            }
+        }
+
+        return Optional.of(founds);
+    }
 
     /**
      * Tries to open a database channel for reading by
@@ -99,12 +123,22 @@ public interface DataBase extends Closeable {
      * in parallel is allowed.
      *
      * @param predicate
-     * @return The data info mapped to its channel or empty,
+     * @return The channel or empty,
      * if one of the specified chunks is locked for writing.
      * @throws IOException If an exception occurs or there is no data info
      *                     which fulfills the predicate.
      */
-    Optional<Tuple2<DataInfo, DataBaseReadChannel>> findAny(Predicate<DataInfo> predicate) throws IOException;
+    default Optional<DataBaseReadChannel> findAny(Predicate<DataInfo> predicate)
+            throws IOException {
+        Objects.requireNonNull(predicate);
+
+        Optional<DataInfo> foundDataInfo = getDataInfo().values().stream().filter(predicate).findAny();
+        if (!foundDataInfo.isPresent()) {
+            throw new DataLookupException();
+        } else {
+            return lookup(foundDataInfo.get());
+        }
+    }
 
     /**
      * Tries to open database channels for reading by
@@ -118,12 +152,23 @@ public interface DataBase extends Closeable {
      * in parallel is allowed.
      *
      * @param predicate
-     * @return The data info mapped to their channels or empty,
+     * @return The channels or empty,
      * if one of the specified chunks is locked for writing.
      * @throws IOException If an exception occurs or there is no data info
      *                     which fulfills the predicate.
      */
-    Optional<Map<DataInfo, DataBaseReadChannel>> findMany(Predicate<DataInfo> predicate) throws IOException;
+    default Optional<List<DataBaseReadChannel>> findMany(Predicate<DataInfo> predicate)
+            throws IOException {
+        Objects.requireNonNull(predicate);
+
+        List<DataInfo> foundDataInfo = getDataInfo().values().stream().filter(predicate).collect(Collectors.toList());
+        if (foundDataInfo.isEmpty()) {
+            throw new DataLookupException();
+        } else {
+            return lookupMany(foundDataInfo);
+        }
+    }
+
 
     /**
      * Tries to open a cumulative database channel for reading by
@@ -144,7 +189,33 @@ public interface DataBase extends Closeable {
      * @throws IOException If an exception occurs or there is no data info
      *                     which fulfills the predicate.
      */
-    Optional<DataBaseReadChannel> findIncremental(Predicate<DataInfo> predicate) throws IOException;
+    default Optional<DataBaseReadChannel> findIncremental(Predicate<DataInfo> predicate)
+            throws IOException {
+        Objects.requireNonNull(predicate);
+
+        List<DataInfo> foundDataInfo = getDataInfo().values()
+                                                    .stream()
+                                                    .filter(predicate)
+                                                    .sorted(Comparator.comparing(DataInfo::getId))
+                                                    .collect(Collectors.toList());
+        if (foundDataInfo.isEmpty()) {
+            throw new DataLookupException();
+        }
+
+        // Collect all in-order data info
+        List<DataInfo> inOrderDataInfo = new ArrayList<>();
+        OptionalLong id = OptionalLong.empty();
+        for (DataInfo dataInfo : foundDataInfo) {
+            if (!id.isPresent() || id.getAsLong() + 1 == dataInfo.getId()) {
+                id = OptionalLong.of(dataInfo.getId());
+                inOrderDataInfo.add(dataInfo);
+            } else {
+                break;
+            }
+        }
+
+        return lookupMany(inOrderDataInfo).map(dataInfo -> new CumulativeDataBaseReadChannel(this, dataInfo));
+    }
 
     /**
      * Tries to open a database channel for writing.
@@ -212,33 +283,31 @@ public interface DataBase extends Closeable {
      * <p>
      * The chunks affected by this query are exclusively locked for writing,
      * so no reads or writes can occur in parallel.
-     * <p>
-     * The returned map is in order.
      *
      * @param dataInfo
-     * @return The data info mapped to their channels or empty,
+     * @return The channels or empty,
      * if one of the specified chunks cannot be locked for writing.
      * @throws IOException If an exception occurs or one of the specified
      *                     chunks already exists.
      */
-    default Optional<Map<DataInfo, DataBaseWriteChannel>> insertMany(List<DataInfo> dataInfo) throws IOException {
+    default Optional<List<DataBaseWriteChannel>> insertMany(List<DataInfo> dataInfo) throws IOException {
         Objects.requireNonNull(dataInfo);
 
-        Map<DataInfo, DataBaseWriteChannel> writeChannels = new LinkedHashMap<>();
+        List<DataBaseWriteChannel> writeChannels = new ArrayList<>(dataInfo.size());
         for (DataInfo insertDataInfo : dataInfo) {
             Optional<DataBaseWriteChannel> writeChannel;
             try {
                 writeChannel = insert(insertDataInfo);
             } catch (IOException e) {
-                throw IOUtil.closeAllAndGetException(writeChannels.values(), e);
+                throw IOUtil.closeAllAndGetException(writeChannels, e);
             }
 
             if (!writeChannel.isPresent()) {
-                IOUtil.closeAllAndThrow(writeChannels.values());
+                IOUtil.closeAllAndThrow(writeChannels);
                 return Optional.empty();
             }
 
-            writeChannels.put(insertDataInfo, writeChannel.get());
+            writeChannels.add(writeChannel.get());
         }
         return Optional.of(writeChannels);
     }
@@ -302,20 +371,21 @@ public interface DataBase extends Closeable {
         Objects.requireNonNull(dataInfo);
         Objects.requireNonNull(function);
 
-        Optional<Map<DataInfo, DataBaseWriteChannel>> writeChannels = insertMany(dataInfo);
+        Optional<List<DataBaseWriteChannel>> writeChannels = insertMany(dataInfo);
         if (!writeChannels.isPresent()) {
             return false;
         }
 
         try {
-            for (Map.Entry<DataInfo, DataBaseWriteChannel> entry : writeChannels.get().entrySet()) {
-                IOUtil.transfer(new LimitedReadableByteChannel(function.apply(entry.getKey()),
-                                                               entry.getKey().getSize(),
-                                                               closeReadableByteChannels), entry.getValue());
+            for (DataBaseWriteChannel writeChannel : writeChannels.get()) {
+                IOUtil.transfer(new LimitedReadableByteChannel(function.apply(writeChannel.getDataInfo()),
+                                                               writeChannel.getDataInfo().getSize(),
+                                                               closeReadableByteChannels),
+                                writeChannel);
             }
             return true;
         } catch (IOException e) {
-            throw IOUtil.closeAllAndGetException(writeChannels.get().values(), e);
+            throw IOUtil.closeAllAndGetException(writeChannels.get(), e);
         }
     }
 }

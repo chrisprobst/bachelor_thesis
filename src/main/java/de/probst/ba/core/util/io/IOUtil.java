@@ -35,9 +35,12 @@ public final class IOUtil {
         }
     }
 
-    public static IOException closeAllAndGetException(Collection<? extends Channel> channels, IOException suppressed) {
+    public static IOException closeAllAndGetException(Collection<? extends Channel> channels, Exception suppressed) {
         Objects.requireNonNull(channels);
-        IOException any = suppressed;
+        IOException any = null;
+        if (suppressed != null) {
+            any = suppressed instanceof IOException ? (IOException) suppressed : new IOException(suppressed);
+        }
         for (Channel channel : channels) {
             try {
                 channel.close();

@@ -58,4 +58,8 @@ public final class FakeDataBase extends AbstractDataBase {
             }
         };
     }
+
+    public FakeDataBase(boolean allowOverwrite) {
+        super(allowOverwrite);
+    }
 }

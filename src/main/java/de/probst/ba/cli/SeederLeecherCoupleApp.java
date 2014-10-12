@@ -11,7 +11,7 @@ import de.probst.ba.cli.args.FileDataBaseArgs;
 import de.probst.ba.cli.args.HelpArgs;
 import de.probst.ba.cli.args.HostArgs;
 import de.probst.ba.cli.args.SeederPortArgs;
-import de.probst.ba.core.net.http.stream.HttpStreamServer;
+import de.probst.ba.core.net.httpserver.httpservers.HttpServers;
 import de.probst.ba.core.net.peer.Leecher;
 import de.probst.ba.core.net.peer.Seeder;
 import de.probst.ba.core.net.peer.peers.Peers;
@@ -97,7 +97,7 @@ public final class SeederLeecherCoupleApp extends ArgsApp {
 
         // Launch a http server for the database
         if (dataBaseHttpServerArgs.runDataBaseHttpServer) {
-            new HttpStreamServer(eventLoopGroup, leecher.getDataBase(), dataBaseHttpServerArgs.httpServerPort);
+            HttpServers.defaultHttpServer(eventLoopGroup, leecher.getDataBase(), dataBaseHttpServerArgs.httpServerPort);
         }
 
         // Read for enter

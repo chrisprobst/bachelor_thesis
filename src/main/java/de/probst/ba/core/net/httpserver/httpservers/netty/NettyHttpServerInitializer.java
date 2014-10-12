@@ -1,4 +1,4 @@
-package de.probst.ba.core.net.http.stream;
+package de.probst.ba.core.net.httpserver.httpservers.netty;
 
 import de.probst.ba.core.media.database.DataBase;
 import io.netty.channel.ChannelInitializer;
@@ -11,11 +11,11 @@ import io.netty.handler.stream.ChunkedWriteHandler;
 import java.io.IOException;
 import java.util.Objects;
 
-public class HttpStreamServerInitializer extends ChannelInitializer<SocketChannel> {
+public class NettyHttpServerInitializer extends ChannelInitializer<SocketChannel> {
 
     private final DataBase dataBase;
 
-    public HttpStreamServerInitializer(DataBase dataBase) {
+    public NettyHttpServerInitializer(DataBase dataBase) {
         Objects.requireNonNull(dataBase);
         this.dataBase = dataBase;
     }
@@ -26,6 +26,6 @@ public class HttpStreamServerInitializer extends ChannelInitializer<SocketChanne
         pipeline.addLast(new HttpServerCodec());
         pipeline.addLast(new HttpObjectAggregator(65536));
         pipeline.addLast(new ChunkedWriteHandler());
-        pipeline.addLast(new HttpStreamServerHandler(dataBase));
+        pipeline.addLast(new NettyHttpServerHandler(dataBase));
     }
 }
