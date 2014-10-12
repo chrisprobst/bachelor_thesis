@@ -106,6 +106,31 @@ public abstract class AbstractDataBase implements DataBase {
         return dataInfo.get(hash);
     }
 
+
+    @Override
+    public synchronized final Optional<DataBaseReadChannel> lookup(DataInfo readDataInfo) throws IOException {
+        Objects.requireNonNull(readDataInfo);
+
+        DataInfo existingDataInfo = dataInfo.get(readDataInfo.getHash());
+        if (existingDataInfo == null) {
+            throw new DataLookupException("existingDataInfo == null");
+        } else if (!existingDataInfo.contains(readDataInfo)) {
+            throw new DataLookupException("!existingDataInfo.contains(readDataInfo)");
+        } else if (!dataInfoRegionRWLock.tryLockReadResource(readDataInfo)) {
+            return Optional.empty();
+        } else {
+            try {
+                // Open read channel and store into map
+                AbstractDataBaseReadChannel readChannel = openReadChannel(readDataInfo);
+                readChannels.put(readDataInfo, readChannel);
+                return Optional.of(readChannel);
+            } catch (IOException e) {
+                dataInfoRegionRWLock.unlockReadResource(readDataInfo);
+                throw e;
+            }
+        }
+    }
+
     @Override
     public synchronized final Optional<DataBaseWriteChannel> insert(DataInfo writeDataInfo) throws IOException {
         Objects.requireNonNull(writeDataInfo);
@@ -133,30 +158,6 @@ public abstract class AbstractDataBase implements DataBase {
         } catch (IOException e) {
             dataInfoRegionRWLock.unlockWriteResource(writeDataInfo);
             throw e;
-        }
-    }
-
-    @Override
-    public synchronized final Optional<DataBaseReadChannel> lookup(DataInfo readDataInfo) throws IOException {
-        Objects.requireNonNull(readDataInfo);
-
-        DataInfo existingDataInfo = dataInfo.get(readDataInfo.getHash());
-        if (existingDataInfo == null) {
-            throw new DataLookupException("existingDataInfo == null");
-        } else if (!existingDataInfo.contains(readDataInfo)) {
-            throw new DataLookupException("!existingDataInfo.contains(readDataInfo)");
-        } else if (!dataInfoRegionRWLock.tryLockReadResource(readDataInfo)) {
-            return Optional.empty();
-        } else {
-            try {
-                // Open read channel and store into map
-                AbstractDataBaseReadChannel readChannel = openReadChannel(readDataInfo);
-                readChannels.put(readDataInfo, readChannel);
-                return Optional.of(readChannel);
-            } catch (IOException e) {
-                dataInfoRegionRWLock.unlockReadResource(readDataInfo);
-                throw e;
-            }
         }
     }
 

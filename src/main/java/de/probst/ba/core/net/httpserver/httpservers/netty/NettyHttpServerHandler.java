@@ -173,7 +173,6 @@ public final class NettyHttpServerHandler extends SimpleChannelInboundHandler<Fu
 
             // Create chunked database input and write it
             ctx.writeAndFlush(new ChunkedDataBaseInput(dataBase, byName(name), offset, length))
-               .addListener(fut -> System.out.println(fut.cause()))
                .addListener(ChannelFutureListener.CLOSE);
         } catch (DataLookupException e) {
             sendError(ctx, NOT_FOUND, e);
@@ -206,6 +205,7 @@ public final class NettyHttpServerHandler extends SimpleChannelInboundHandler<Fu
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         ctx.close();
+        logger.warn("Failed to process http request, reason: " + cause.getMessage());
     }
 
     @Override

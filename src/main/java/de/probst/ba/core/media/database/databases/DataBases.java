@@ -1,6 +1,7 @@
 package de.probst.ba.core.media.database.databases;
 
 import de.probst.ba.core.media.database.DataBase;
+import de.probst.ba.core.media.database.databases.fake.FakeDataBase;
 import de.probst.ba.core.media.database.databases.file.FileDataBase;
 import de.probst.ba.core.media.database.databases.memory.MemoryDataBase;
 
@@ -34,7 +35,7 @@ public final class DataBases {
 
 
     public static DataBase fakeDataBase(boolean allowOverwrite) {
-        return fakeDataBase(allowOverwrite);
+        return new FakeDataBase(allowOverwrite);
     }
 
     public static DataBase fakeDataBase() {

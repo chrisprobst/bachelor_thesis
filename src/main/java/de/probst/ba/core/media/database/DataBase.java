@@ -66,6 +66,26 @@ public interface DataBase extends Closeable {
      */
     Optional<DataBaseReadChannel> lookup(DataInfo lookupDataInfo) throws IOException;
 
+
+    /**
+     * Tries to open a database channel for writing.
+     * <p>
+     * The returned channel is a cumulative channel
+     * of all chunks specified in the given data info.
+     * <p>
+     * Only uncompleted chunks are allowed to be part of the query.
+     * <p>
+     * The chunks affected by this query are exclusively locked for writing,
+     * so no reads or writes can occur in parallel.
+     *
+     * @param dataInfo
+     * @return The channel or empty, if one of the specified chunks
+     * cannot be locked for writing.
+     * @throws IOException If an exception occurs or one of the specified
+     *                     chunks already exists.
+     */
+    Optional<DataBaseWriteChannel> insert(DataInfo dataInfo) throws IOException;
+
     /**
      * Tries to open database channels for reading by
      * searching for the exact same data info.
@@ -86,8 +106,7 @@ public interface DataBase extends Closeable {
      * @throws IOException If an exception occurs or one of the specified
      *                     chunks does not exist.
      */
-    default Optional<List<DataBaseReadChannel>> lookupMany(List<DataInfo> lookupDataInfo)
-            throws IOException {
+    default Optional<List<DataBaseReadChannel>> lookupMany(List<DataInfo> lookupDataInfo) throws IOException {
         Objects.requireNonNull(lookupDataInfo);
 
         List<DataBaseReadChannel> founds = new ArrayList<>(lookupDataInfo.size());
@@ -128,8 +147,7 @@ public interface DataBase extends Closeable {
      * @throws IOException If an exception occurs or there is no data info
      *                     which fulfills the predicate.
      */
-    default Optional<DataBaseReadChannel> findAny(Predicate<DataInfo> predicate)
-            throws IOException {
+    default Optional<DataBaseReadChannel> findAny(Predicate<DataInfo> predicate) throws IOException {
         Objects.requireNonNull(predicate);
 
         Optional<DataInfo> foundDataInfo = getDataInfo().values().stream().filter(predicate).findAny();
@@ -216,25 +234,6 @@ public interface DataBase extends Closeable {
 
         return lookupMany(inOrderDataInfo).map(dataInfo -> new CumulativeDataBaseReadChannel(this, dataInfo));
     }
-
-    /**
-     * Tries to open a database channel for writing.
-     * <p>
-     * The returned channel is a cumulative channel
-     * of all chunks specified in the given data info.
-     * <p>
-     * Only uncompleted chunks are allowed to be part of the query.
-     * <p>
-     * The chunks affected by this query are exclusively locked for writing,
-     * so no reads or writes can occur in parallel.
-     *
-     * @param dataInfo
-     * @return The channel or empty, if one of the specified chunks
-     * cannot be locked for writing.
-     * @throws IOException If an exception occurs or one of the specified
-     *                     chunks already exists.
-     */
-    Optional<DataBaseWriteChannel> insert(DataInfo dataInfo) throws IOException;
 
     /**
      * Tries to open a database channel for writing and
