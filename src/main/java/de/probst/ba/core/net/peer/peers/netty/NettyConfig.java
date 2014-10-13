@@ -43,15 +43,14 @@ public final class NettyConfig {
 
         // Set netty config
         setUploadBufferSize(bufferSize);
-        setDefaultMessageSize((long) (chunkSize * metaDataSizePercentage / 100));
+        setDefaultMessageSize((long) Math.ceil(chunkSize * metaDataSizePercentage / 100));
         setUseCodec(binaryCodec);
         setMaxConnectionsPerLeecher(maxConnections);
 
         // Log netty values
         logger.info(">>> [ Netty Config ]");
         logger.info(">>> Meta data size:            " + getDefaultMessageSize() + " bytes");
-        logger.info(">>> Upload buffer size:        " + getUploadBufferSize() + " bytes (" +
-                    "Nearest power of 2 of " + bufferSize + ")");
+        logger.info(">>> Upload buffer size:        " + getUploadBufferSize() + " bytes");
         logger.info(">>> Using codec:               " + isUseCodec());
         logger.info(">>> Leecher connection limit:  " + getMaxConnectionsPerLeecher());
     }
@@ -64,12 +63,12 @@ public final class NettyConfig {
     private static final long httpRetryDelay = 1000;
     private static final double leakyBucketBufferFactor = 0.25;
     private static volatile long defaultMessageSize;
-    private static volatile int maxConnectionsPerLeecher = 0;
+    private static volatile int maxConnectionsPerLeecher;
     private static volatile int uploadBufferSize = 8192;
+    private static volatile boolean useCodec;
     private static final long messageQueueResetDelay = 2500;
     private static final long discoveryExchangeDelay = 1000;
     private static final long announceDelay = 200;
-    private static volatile boolean useCodec;
 
     public static int getHttpBufferSize() {
         return httpBufferSize;
@@ -110,7 +109,7 @@ public final class NettyConfig {
         if (uploadBufferSize <= 0) {
             throw new IllegalArgumentException("uploadBufferSize <= 0");
         }
-        NettyConfig.uploadBufferSize = Integer.highestOneBit(uploadBufferSize - 1) << 1;
+        NettyConfig.uploadBufferSize = uploadBufferSize;
     }
 
     public static long getMessageQueueResetDelay() {

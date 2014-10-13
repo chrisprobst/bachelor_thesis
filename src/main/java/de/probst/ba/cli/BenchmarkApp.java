@@ -25,7 +25,6 @@ import de.probst.ba.core.net.peer.handler.handlers.DataInfoCompletionHandler;
 import de.probst.ba.core.net.peer.peers.Peers;
 import de.probst.ba.core.net.peer.peers.netty.NettyConfig;
 import de.probst.ba.core.net.peer.statistic.StatisticsManager;
-import de.probst.ba.core.util.collections.Tuple2;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import org.slf4j.Logger;
@@ -123,6 +122,7 @@ public class BenchmarkApp extends ArgsApp {
         Supplier<DataBase> dataBaseSupplier = DataBases::fakeDataBase;
 
         // Setup all seeders
+        logger.info(">>> [ Setup SuperSeeders ]");
         for (int i = 0; i < peerCountArgs.superSeeders; i++) {
             // Instantiate a new super seeder
             Seeder seeder = Peers.seeder(networkArgs.peerType,
@@ -139,9 +139,12 @@ public class BenchmarkApp extends ArgsApp {
             dataInfoGeneratorArgs.getDataBaseUpdatePeers().add(seeder);
             peerCountArgs.getSuperSeederQueue().add(seeder);
             peerCountArgs.getPeerQueue().add(seeder);
+
+            logger.info(">>> [ SuperSeeder " + i + " created ]");
         }
 
         // Setup all leechers
+        logger.info(">>> [ Setup SeederLeecherCouples ]");
         for (int i = 0; i < peerCountArgs.seederLeecherCouples; i++) {
             // Create the seeder-leecher-couple handler list
             LeecherHandlerList leecherHandlerList = new LeecherHandlerList();
@@ -152,7 +155,7 @@ public class BenchmarkApp extends ArgsApp {
 
             if (distributionArgs.algorithmType != Algorithms.AlgorithmType.Sequential) {
                 // Instantiate new seeder-leecher couple
-                Tuple2<Seeder, Leecher> tuple = Peers.initSeederAndLeecher(
+                Peers.initSeederAndLeecher(
                         networkArgs.peerType,
                         bandwidthArgs.maxUploadRate,
                         bandwidthArgs.maxDownloadRate,
@@ -163,27 +166,28 @@ public class BenchmarkApp extends ArgsApp {
                         Optional.ofNullable(statisticsManager.getRecordPeerHandler()),
                         Optional.of(leecherHandlerList),
                         true,
-                        Optional.of(eventLoopGroup)).get();
+                        Optional.of(eventLoopGroup)).thenAccept(tuple -> {
 
-                Seeder seeder = tuple.first();
-                Leecher leecher = tuple.second();
 
-                statisticsManager.getChunkCompletionStatisticPeers().add(leecher);
-                statisticsManager.getDownloadBandwidthStatisticPeers().add(leecher);
-                statisticsManager.getUploadBandwidthStatisticPeers().add(seeder);
+                    Seeder seeder = tuple.first();
+                    Leecher leecher = tuple.second();
 
-                peerCountArgs.getPeerQueue().add(seeder);
-                peerCountArgs.getPeerQueue().add(leecher);
-                peerCountArgs.getLeecherQueue().add(leecher);
+                    statisticsManager.getChunkCompletionStatisticPeers().add(leecher);
+                    statisticsManager.getDownloadBandwidthStatisticPeers().add(leecher);
+                    statisticsManager.getUploadBandwidthStatisticPeers().add(seeder);
 
-                // Connect to all super seeders
-                peerCountArgs.getSuperSeederQueue()
-                             .stream()
-                             .map(Peer::getPeerId)
-                             .map(PeerId::getSocketAddress)
-                             .map(Optional::get)
-                             .map(leecher::connect)
-                             .forEach(CompletableFuture::join);
+                    peerCountArgs.getPeerQueue().add(seeder);
+                    peerCountArgs.getPeerQueue().add(leecher);
+                    peerCountArgs.getLeecherQueue().add(leecher);
+
+                    // Connect to all super seeders
+                    peerCountArgs.getSuperSeederQueue()
+                                 .stream()
+                                 .map(Peer::getPeerId)
+                                 .map(PeerId::getSocketAddress)
+                                 .map(Optional::get)
+                                 .forEach(leecher::connect);
+                });
             } else {
                 // Instantiate new leecher only
                 Leecher leecher = Peers.leecher(networkArgs.peerType,
@@ -212,6 +216,8 @@ public class BenchmarkApp extends ArgsApp {
                              .map(leecher::connect)
                              .forEach(CompletableFuture::join);
             }
+
+            logger.info(">>> [ LeecherSeederCouple " + i + " created ]");
         }
     }
 
@@ -240,7 +246,7 @@ public class BenchmarkApp extends ArgsApp {
             // Wait if there are missing connections
             if (activeConnections != expectedConnections) {
                 logger.info(">>> Found: " + activeConnections);
-                Thread.sleep(500);
+                Thread.sleep(1000);
             } else {
                 break;
             }
@@ -250,6 +256,13 @@ public class BenchmarkApp extends ArgsApp {
 
     @Override
     protected void start() throws Exception {
+        // Log runtime config
+        Runtime runtime = Runtime.getRuntime();
+        logger.info(">>> [ Runtime Config ]");
+        logger.info(">>> [ Total memory : " + runtime.totalMemory() + " ]");
+        logger.info(">>> [ Free memory  : " + runtime.freeMemory() + " ]");
+        logger.info(">>> [ Max. memory  : " + runtime.maxMemory() + " ]");
+
         // Setup the statistics
         statisticsManager.setup(statisticArgs.recordStatistics,
                                 statisticArgs.recordEvents,

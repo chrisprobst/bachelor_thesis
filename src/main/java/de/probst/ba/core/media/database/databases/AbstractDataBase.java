@@ -78,26 +78,26 @@ public abstract class AbstractDataBase implements DataBase {
     @Override
     public synchronized final Map<String, DataInfo> getEstimatedDataInfo() {
         // Create a map of all locked write regions
-        Map<String, DataInfo> lockedWriteRegions = dataInfoRegionRWLock.getLockedWriteRegions()
-                                                                       .stream()
-                                                                       .collect(Collectors.groupingBy(DataInfo::getHash))
-                                                                       .entrySet()
-                                                                       .stream()
-                                                                       .map(p -> Tuple.of(p.getKey(),
-                                                                                          p.getValue()
-                                                                                           .stream()
-                                                                                           .reduce(DataInfo::union)
-                                                                                           .get()))
-                                                                       .collect(Collectors.toMap(Tuple::first,
-                                                                                                 Tuple::second));
+        Map<String, DataInfo> regions = dataInfoRegionRWLock.getLockedWriteRegions()
+                                                            .stream()
+                                                            .collect(Collectors.groupingBy(DataInfo::getHash))
+                                                            .entrySet()
+                                                            .stream()
+                                                            .map(p -> Tuple.of(p.getKey(),
+                                                                               p.getValue()
+                                                                                .stream()
+                                                                                .reduce(DataInfo::union)
+                                                                                .get()))
+                                                            .collect(Collectors.toMap(Tuple::first,
+                                                                                      Tuple::second));
 
         // Get all non-empty data info and
         // merge with locked file regions
         for (DataInfo dataInfo : getDataInfo().values()) {
-            lockedWriteRegions.merge(dataInfo.getHash(), dataInfo, DataInfo::union);
+            regions.merge(dataInfo.getHash(), dataInfo, DataInfo::union);
         }
 
-        return lockedWriteRegions;
+        return regions;
     }
 
     @Override
@@ -149,7 +149,6 @@ public abstract class AbstractDataBase implements DataBase {
             return Optional.empty();
         }
 
-        // Return a channel for writing
         try {
             // Open write channel and store into map
             AbstractDataBaseWriteChannel writeChannel = openWriteChannel(writeDataInfo);

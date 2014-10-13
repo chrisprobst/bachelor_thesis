@@ -30,8 +30,13 @@ def main():
     assert number > 0
 
     mod = importlib.import_module(script)
-    log_level = 'org.slf4j.simpleLogger.defaultLogLevel=warn'
-    command = local['java']['-D' + log_level, '-jar', '../../../out/artifacts/benchmark_jar/benchmark.jar']
+    command = local['java'][
+        '-Dorg.slf4j.simpleLogger.defaultLogLevel=warn',
+        '-XX:+AggressiveHeap',
+        '-XX:+UseParallelGC',
+        '-XX:+AggressiveOpts',
+        '-jar', '../../../out/artifacts/benchmark_jar/benchmark.jar'
+    ]
 
     def path_maker(k):
         return path.join('.', 'results', script, str(k))
@@ -70,13 +75,15 @@ def main():
     # Create sorted total uploaded
     for run, subresults in total_uploaded_matrices.items():
         for inputpath, matrix in subresults.items():
-            column_data = [['SortedPeers', 'TotalUploaded']] + list(enumerate(sorted(map(float, matrix[-1][1:]), reverse=True)))
+            column_data = [['SortedPeers', 'TotalUploaded']] + list(
+                enumerate(sorted(map(float, matrix[-1][1:]), reverse=True)))
             trans.write_matrix(column_data, path.join(run, 'Sorted' + inputpath))
 
     # Create sorted total downloaded
     for run, subresults in total_downloaded_matrices.items():
         for inputpath, matrix in subresults.items():
-            column_data = [['SortedPeers', 'TotalDownloaded']] + list(enumerate(sorted(map(float, matrix[-1][1:]), reverse=True)))
+            column_data = [['SortedPeers', 'TotalDownloaded']] + list(
+                enumerate(sorted(map(float, matrix[-1][1:]), reverse=True)))
             trans.write_matrix(column_data, path.join(run, 'Sorted' + inputpath))
 
 
@@ -93,10 +100,9 @@ def main():
             done = set()
             for i in range(1, len(matrix)):
                 for j in range(1, len(matrix[i])):
-                    if j not in done:
-                        if float(matrix[i][j]) == max_completion:
-                            done.add(j)
-                            column_data.append(int(round(float(matrix[i][0]))))
+                    if j not in done and float(matrix[i][j]) == max_completion:
+                        done.add(j)
+                        column_data.append(int(round(float(matrix[i][0]))))
 
             column_data = [['SortedPeers', 'Time']] + list(zip(range(len(column_data)), reversed(column_data)))
             trans.write_matrix(column_data, path.join(run, 'Sorted' + inputpath))

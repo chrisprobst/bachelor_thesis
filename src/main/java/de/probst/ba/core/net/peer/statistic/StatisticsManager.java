@@ -184,7 +184,8 @@ public final class StatisticsManager {
             throw new IllegalStateException("stopped");
         }
         stopped = true;
-        Duration totalDuration = Duration.between(startTime, now);
+        logger.info(">>> [ Completed statistics in " + (Duration.between(startTime, now).toMillis() / 1000.0) +
+                    " seconds ]");
 
         if (recordPeerHandler != null) {
             recordPeerHandler.end();
@@ -224,8 +225,6 @@ public final class StatisticsManager {
             Duration duration = Duration.between(timeStamp, Instant.now());
             logger.info(">>> [ Done in: " + (duration.toMillis() / 1000.0) + " seconds ]");
         }
-
-        logger.info(">>> [ Completed statistics in " + (totalDuration.toMillis() / 1000.0) + " seconds ]");
     }
 
     public RecordPeerHandler getRecordPeerHandler() {
