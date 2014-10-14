@@ -1,7 +1,7 @@
 def setup(command, results_dir):
     upload_rate = 10000
     time_per_transfer = 60 * 10
-    peers = 50
+    peers = 100
     chunk_count_factor = 2
     meta_size = 1
     parts = 20

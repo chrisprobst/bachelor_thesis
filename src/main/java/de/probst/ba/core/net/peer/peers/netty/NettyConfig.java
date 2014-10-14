@@ -43,13 +43,13 @@ public final class NettyConfig {
 
         // Set netty config
         setUploadBufferSize(bufferSize);
-        setDefaultMessageSize((long) Math.ceil(chunkSize * metaDataSizePercentage / 100));
+        setDefaultEstimatedMessageSize((long) Math.ceil(chunkSize * metaDataSizePercentage / 100));
         setUseCodec(binaryCodec);
         setMaxConnectionsPerLeecher(maxConnections);
 
         // Log netty values
         logger.info(">>> [ Netty Config ]");
-        logger.info(">>> Meta data size:            " + getDefaultMessageSize() + " bytes");
+        logger.info(">>> Meta data size:            " + getDefaultEstimatedMessageSize() + " bytes");
         logger.info(">>> Upload buffer size:        " + getUploadBufferSize() + " bytes");
         logger.info(">>> Using codec:               " + isUseCodec());
         logger.info(">>> Leecher connection limit:  " + getMaxConnectionsPerLeecher());
@@ -62,7 +62,7 @@ public final class NettyConfig {
     private static final int httpBufferSize = 8192;
     private static final long httpRetryDelay = 1000;
     private static final double leakyBucketBufferFactor = 0.25;
-    private static volatile long defaultMessageSize;
+    private static volatile long defaultEstimatedMessageSize;
     private static volatile int maxConnectionsPerLeecher;
     private static volatile int uploadBufferSize = 8192;
     private static volatile boolean useCodec;
@@ -82,12 +82,12 @@ public final class NettyConfig {
         return leakyBucketBufferFactor;
     }
 
-    public static long getDefaultMessageSize() {
-        return defaultMessageSize;
+    public static long getDefaultEstimatedMessageSize() {
+        return defaultEstimatedMessageSize;
     }
 
-    public static void setDefaultMessageSize(long defaultMessageSize) {
-        NettyConfig.defaultMessageSize = defaultMessageSize;
+    public static void setDefaultEstimatedMessageSize(long defaultEstimatedMessageSize) {
+        NettyConfig.defaultEstimatedMessageSize = defaultEstimatedMessageSize;
     }
 
     public static void setMaxConnectionsPerLeecher(int maxConnectionsPerLeecher) {
