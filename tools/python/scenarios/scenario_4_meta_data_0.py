@@ -7,16 +7,16 @@ def setup(command, results_dir):
     parts = 1
 
     return command[
-        '-rd', results_dir,
+        '-rd', str(results_dir),
         '-ss', 1,
-        '-sl', peers,
-        '-s', upload_rate * time_per_transfer,
-        '-cc', peers * chunk_count_factor,
-        '-mp', meta_size,
-        '-p', parts,
+        '-sl', str(peers),
+        '-s', str(upload_rate * time_per_transfer),
+        '-cc', str(peers * chunk_count_factor),
+        '-mp', str(meta_size),
+        '-p', str(parts),
         '-pt', 'Local',
         '-at', 'SuperSeederChunkedSwarm',
         '-rs',
-        '-u', upload_rate,
-        '-su', upload_rate
+        '-u', str(upload_rate),
+        '-su', str(upload_rate),
     ]

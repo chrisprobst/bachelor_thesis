@@ -66,7 +66,7 @@ def get_mean_of_row(row):
 
 
 def get_mean_of_matrix(matrix):
-    results = [[int(round(float(row[0])))] + get_mean_of_row(row[1:]) for row in matrix[1:]]
+    results = [[float(row[0])] + get_mean_of_row(row[1:]) for row in matrix[1:]]
     return header + results
 
 
