@@ -4,17 +4,17 @@ import de.probst.ba.core.distribution.SeederDistributionAlgorithm;
 import de.probst.ba.core.media.database.DataBase;
 import de.probst.ba.core.net.peer.AbstractSeeder;
 import de.probst.ba.core.net.peer.PeerId;
+import de.probst.ba.core.net.peer.Transfer;
 import de.probst.ba.core.net.peer.handler.SeederPeerHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.AnnounceDataInfoHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.discovery.DiscoverSocketAddressHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.group.ChannelGroupHandler;
-import de.probst.ba.core.net.peer.peers.netty.handlers.statistic.BandwidthStatisticHandler;
-import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.MessageQueueHandler;
-import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.TrafficShapers;
+import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.TrafficHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.UploadHandler;
 import de.probst.ba.core.net.peer.state.BandwidthStatisticState;
-import de.probst.ba.core.net.peer.Transfer;
-import de.probst.ba.core.util.concurrent.CancelableRunnable;
+import de.probst.ba.core.util.concurrent.trafficshaper.MessageSink;
+import de.probst.ba.core.util.concurrent.trafficshaper.TrafficShaper;
+import de.probst.ba.core.util.concurrent.trafficshaper.trafficshapers.TrafficShapers;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -40,28 +40,36 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
     private final Object allowLock = new Object();
     private final EventLoopGroup seederEventLoopGroup;
     private final ChannelGroupHandler seederChannelGroupHandler;
-    private final BandwidthStatisticHandler seederBandwidthStatisticHandler;
-    private final Optional<CancelableRunnable> leastWrittenFirstTrafficShaper;
-    private final Optional<CancelableRunnable> leastReadFirstTrafficShaper;
+    private final TrafficShaper<Object> uploadTrafficShaper;
+    private final TrafficShaper<Object> downloadTrafficShaper;
     private final LoggingHandler seederLogHandler = new LoggingHandler(LogLevel.TRACE);
+    private final long maxUploadRate;
+    private final long maxDownloadRate;
     private final Class<? extends Channel> seederChannelClass;
     private final ChannelInitializer<Channel> seederChannelInitializer = new ChannelInitializer<Channel>() {
         @Override
         public void initChannel(Channel ch) {
 
-            // Statistic & Traffic
-            ch.pipeline().addLast(seederBandwidthStatisticHandler,
-                                  new MessageQueueHandler(leastWrittenFirstTrafficShaper, leastReadFirstTrafficShaper));
+            // Create message sinks for channel
+            MessageSink<Object> uploadMessageSink =
+                    uploadTrafficShaper.createMessageSink(Optional.empty(), Optional.empty());
+            MessageSink<Object> downloadMessageSink =
+                    downloadTrafficShaper.createMessageSink(Optional.of(() -> ch.config().setAutoRead(false)),
+                                                            Optional.of(() -> ch.config().setAutoRead(true)));
+
+            // Traffic
+            ch.pipeline().addLast(new TrafficHandler(uploadMessageSink, downloadMessageSink));
 
             // Codec pipeline
             NettyConfig.getCodecPipeline().forEach(ch.pipeline()::addLast);
 
             // Log & Logic
-            ch.pipeline().addLast(seederLogHandler,
-                                  seederChannelGroupHandler,
-                                  new ChunkedWriteHandler(),
-                                  new DiscoverSocketAddressHandler(AbstractNettySeeder.this, getSeederChannelGroup()),
-                                  new UploadHandler(AbstractNettySeeder.this, allowLock),
+            ch.pipeline().addLast(seederLogHandler, seederChannelGroupHandler, new ChunkedWriteHandler());
+            if (NettyConfig.isUseAutoConnect()) {
+                ch.pipeline().addLast(new DiscoverSocketAddressHandler(AbstractNettySeeder.this,
+                                                                       getSeederChannelGroup()));
+            }
+            ch.pipeline().addLast(new UploadHandler(AbstractNettySeeder.this, allowLock),
                                   new AnnounceDataInfoHandler(AbstractNettySeeder.this));
         }
     };
@@ -89,7 +97,15 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
 
     @Override
     protected BandwidthStatisticState createBandwidthStatisticState() {
-        return seederBandwidthStatisticHandler.getBandwidthStatisticState();
+        return new BandwidthStatisticState(this,
+                                           maxUploadRate,
+                                           uploadTrafficShaper.getTotalTrafficRate(),
+                                           uploadTrafficShaper.getCurrentTrafficRate(),
+                                           uploadTrafficShaper.getTotalTraffic(),
+                                           maxDownloadRate,
+                                           downloadTrafficShaper.getTotalTrafficRate(),
+                                           downloadTrafficShaper.getCurrentTrafficRate(),
+                                           downloadTrafficShaper.getTotalTraffic());
     }
 
     protected abstract ChannelFuture initSeederBootstrap(SocketAddress socketAddress);
@@ -114,6 +130,8 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
         Objects.requireNonNull(seederChannelClass);
 
         // Save args
+        this.maxUploadRate = maxUploadRate;
+        this.maxDownloadRate = maxDownloadRate;
         this.seederEventLoopGroup = seederEventLoopGroup;
         this.seederChannelClass = seederChannelClass;
 
@@ -127,19 +145,15 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
         });
 
         // Create internal vars
-        seederBandwidthStatisticHandler = new BandwidthStatisticHandler(this, maxUploadRate, maxDownloadRate);
         seederChannelGroupHandler = new ChannelGroupHandler(seederEventLoopGroup.next());
 
         // Traffic shaping
-        leastWrittenFirstTrafficShaper = getLeakyUploadBucket().map(leakyBucket -> TrafficShapers.leastWrittenFirst(
-                seederEventLoopGroup.next()::submit,
-                leakyBucket,
-                () -> MessageQueueHandler.collect(getSeederChannelGroup())));
-        leastReadFirstTrafficShaper = getLeakyDownloadBucket().map(leakyBucket -> TrafficShapers.leastReadFirst(
-                seederEventLoopGroup.next()::submit,
-                leakyBucket,
-                () -> MessageQueueHandler.collect(getSeederChannelGroup())));
-
+        uploadTrafficShaper = TrafficShapers.leastFirst(getLeakyUploadBucket(),
+                                                        seederEventLoopGroup.next()::submit,
+                                                        NettyConfig.getResetTrafficInterval());
+        downloadTrafficShaper = TrafficShapers.leastFirst(getLeakyDownloadBucket(),
+                                                          seederEventLoopGroup.next()::submit,
+                                                          NettyConfig.getResetTrafficInterval());
 
         // Init bootstrap
         initSeederBootstrap(socketAddress).addListener((ChannelFutureListener) fut -> {
@@ -156,8 +170,8 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
     public void close() throws IOException {
         try {
             seederEventLoopGroup.shutdownGracefully();
-            leastWrittenFirstTrafficShaper.ifPresent(CancelableRunnable::cancel);
-            leastReadFirstTrafficShaper.ifPresent(CancelableRunnable::cancel);
+            uploadTrafficShaper.cancel();
+            downloadTrafficShaper.cancel();
         } finally {
             super.close();
         }

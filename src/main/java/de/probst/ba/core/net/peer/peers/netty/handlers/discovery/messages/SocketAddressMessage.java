@@ -1,6 +1,6 @@
 package de.probst.ba.core.net.peer.peers.netty.handlers.discovery.messages;
 
-import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.EstimatedMessageSize;
+import de.probst.ba.core.util.concurrent.trafficshaper.EstimatedMessageSize;
 
 import java.io.Serializable;
 import java.net.SocketAddress;

@@ -70,6 +70,7 @@ public final class SuperSeederApp extends ArgsApp {
     @Override
     protected void start() throws Exception {
         // Setup the netty implementation
+        NettyConfig.setUseAutoConnect(true);
         NettyConfig.setupConfig(superSeederBandwidthArgs.getSmallestBandwidth(),
                                 fileDataInfoGeneratorArgs.chunkSize);
 

@@ -13,6 +13,7 @@ import de.probst.ba.cli.args.PeerCountArgs;
 import de.probst.ba.cli.args.StatisticArgs;
 import de.probst.ba.cli.args.SuperSeederBandwidthArgs;
 import de.probst.ba.core.distribution.algorithms.Algorithms;
+import de.probst.ba.core.distribution.algorithms.SuperSeederDistributionAlgorithm;
 import de.probst.ba.core.media.database.DataBase;
 import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.media.database.databases.DataBases;
@@ -25,20 +26,24 @@ import de.probst.ba.core.net.peer.handler.handlers.DataInfoCompletionHandler;
 import de.probst.ba.core.net.peer.peers.Peers;
 import de.probst.ba.core.net.peer.peers.netty.NettyConfig;
 import de.probst.ba.core.net.peer.statistic.StatisticsManager;
+import de.probst.ba.core.util.collections.Tuple2;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.channels.ReadableByteChannel;
 import java.time.Instant;
-import java.util.List;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 /**
  * Created by chrisprobst on 12.08.14.
@@ -178,6 +183,7 @@ public class BenchmarkApp extends ArgsApp {
 
                     peerCountArgs.getPeerQueue().add(seeder);
                     peerCountArgs.getPeerQueue().add(leecher);
+                    peerCountArgs.getSeederQueue().add(seeder);
                     peerCountArgs.getLeecherQueue().add(leecher);
 
                     // Connect to all super seeders
@@ -250,6 +256,18 @@ public class BenchmarkApp extends ArgsApp {
             } else {
                 break;
             }
+
+            // Try to connect all
+            for (Leecher leecher : peerCountArgs.getLeecherQueue()) {
+                for (Seeder seeder : peerCountArgs.getSeederQueue()) {
+                    if (!leecher.getPeerId()
+                                .getSocketAddress()
+                                .get()
+                                .equals(seeder.getPeerId().getSocketAddress().get())) {
+                        leecher.connect(seeder.getPeerId().getSocketAddress().get());
+                    }
+                }
+            }
         }
         logger.info(">>> [ All connections established ]");
     }
@@ -269,6 +287,7 @@ public class BenchmarkApp extends ArgsApp {
                                 statisticArgs.recordsDirectory.toPath());
 
         // Setup the netty implementation
+        NettyConfig.setUseAutoConnect(false);
         NettyConfig.setupConfig(Math.min(bandwidthArgs.getSmallestBandwidth(),
                                          superSeederBandwidthArgs.getSmallestBandwidth()),
                                 dataInfoGeneratorArgs.chunkSize,
@@ -288,10 +307,48 @@ public class BenchmarkApp extends ArgsApp {
         // Start statistics
         statisticsManager.start(AppConfig.getStatisticInterval(), Instant.now());
 
-        // Publish the data set
-        List<DataInfo> dataInfo = dataInfoGeneratorArgs.generateDataInfo();
-        statisticsManager.getCompletionDataInfo().addAll(dataInfo);
-        dataInfoGeneratorArgs.updatePeerDataBases(dataInfo);
+        // Generate data info
+        Queue<Tuple2<DataInfo, Supplier<ReadableByteChannel>>> dataInfo =
+                new LinkedList<>(dataInfoGeneratorArgs.generateDataInfo());
+        statisticsManager.getCompletionDataInfo()
+                         .addAll(dataInfo.stream().map(t -> t.first()).collect(Collectors.toList()));
+
+        // If we are in the one-super-seeder mode, lets improve distribution
+        if (dataInfoGeneratorArgs.getDataBaseUpdatePeers().size() == 1 &&
+            dataInfoGeneratorArgs.getDataBaseUpdatePeers()
+                                 .peek()
+                                 .getDistributionAlgorithm() instanceof SuperSeederDistributionAlgorithm) {
+
+            // Lookup the super seeder and algorithm
+            Seeder superSeeder = (Seeder) dataInfoGeneratorArgs.getDataBaseUpdatePeers().peek();
+            SuperSeederDistributionAlgorithm superSeederDistributionAlgorithm =
+                    (SuperSeederDistributionAlgorithm) superSeeder.getDistributionAlgorithm();
+
+            // If there are remaining data sets
+            while (!dataInfo.isEmpty()) {
+                // Insert head
+                superSeeder.getDataBase().insertFromChannel(dataInfo.peek().first(),
+                                                            dataInfo.peek().second().get(),
+                                                            true);
+
+                // Wait until all are finished
+                while (!superSeederDistributionAlgorithm.removeAlreadyUploaded(dataInfo.peek().first()).isEmpty()) {
+                    Thread.sleep(NettyConfig.getAnnounceDelay());
+                }
+
+                // Remove head
+                dataInfo.remove();
+            }
+
+            logger.info(">>> [ All data sets inserted ]");
+        } else {
+            // Simply insert all data info into the databases
+            for (Peer peer : dataInfoGeneratorArgs.getDataBaseUpdatePeers()) {
+                for (Tuple2<DataInfo, Supplier<ReadableByteChannel>> entry : dataInfo) {
+                    peer.getDataBase().insertFromChannel(entry.first(), entry.second().get(), true);
+                }
+            }
+        }
 
         // Await termination
         completionCountDownLatch.await();

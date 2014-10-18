@@ -1,4 +1,4 @@
-package de.probst.ba.core.net.peer.peers.netty.handlers.traffic;
+package de.probst.ba.core.util.concurrent.trafficshaper;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

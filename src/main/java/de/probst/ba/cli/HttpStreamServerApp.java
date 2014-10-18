@@ -53,5 +53,7 @@ public final class HttpStreamServerApp {
             }
 
         }
+
+        Thread.sleep(100000);
     }
 }

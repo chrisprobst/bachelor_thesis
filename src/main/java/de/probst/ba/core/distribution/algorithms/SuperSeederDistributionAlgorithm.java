@@ -9,6 +9,7 @@ import de.probst.ba.core.net.peer.Transfer;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -16,10 +17,20 @@ import java.util.Set;
  */
 public final class SuperSeederDistributionAlgorithm implements SeederDistributionAlgorithm {
 
-    @Override
-    public synchronized Map<String, DataInfo> transformUploadDataInfo(Seeder seeder,
-                                                                      Map<String, DataInfo> dataInfo,
-                                                                      PeerId remotePeerId) {
+    private final Set<DataInfo> alreadyUploaded = new HashSet<>();
+
+    public synchronized DataInfo removeAlreadyUploaded(DataInfo dataInfo) {
+        Objects.requireNonNull(dataInfo);
+        return alreadyUploaded.stream()
+                              .filter(x -> dataInfo.getHash().equals(x.getHash()))
+                              .reduce(DataInfo::union)
+                              .map(dataInfo::subtract)
+                              .orElse(dataInfo);
+    }
+
+    public synchronized Map<String, DataInfo> removeAlreadyUploaded(Map<String, DataInfo> dataInfo) {
+        Objects.requireNonNull(dataInfo);
+
         if (dataInfo.isEmpty()) {
             return dataInfo;
         }
@@ -36,7 +47,12 @@ public final class SuperSeederDistributionAlgorithm implements SeederDistributio
         return copy;
     }
 
-    private final Set<DataInfo> alreadyUploaded = new HashSet<>();
+    @Override
+    public synchronized Map<String, DataInfo> transformUploadDataInfo(Seeder seeder,
+                                                                      Map<String, DataInfo> dataInfo,
+                                                                      PeerId remotePeerId) {
+        return removeAlreadyUploaded(dataInfo);
+    }
 
     @Override
     public synchronized boolean isUploadAllowed(Seeder seeder, Transfer transfer) {

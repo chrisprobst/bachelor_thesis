@@ -29,19 +29,23 @@ def main():
     number, script, parallel = args.n, args.s, args.p
     assert number > 0
 
-    mod = importlib.import_module(script)
-    command = local['java'][
-        '-Dorg.slf4j.simpleLogger.defaultLogLevel=warn',
-        '-XX:+AggressiveHeap',
-        '-XX:+UseParallelGC',
-        '-XX:+AggressiveOpts',
-        '-jar', '../../../out/artifacts/benchmark_jar/benchmark.jar'
-    ]
+    if not args.simulate:
+        mod = importlib.import_module(script)
+        command = local['java'][
+            '-Dorg.slf4j.simpleLogger.defaultLogLevel=warn',
+            '-XX:+AggressiveHeap',
+            '-XX:+UseParallelGC',
+            '-XX:+AggressiveOpts',
+            '-jar', '../../../out/artifacts/benchmark_jar/benchmark.jar'
+        ]
+        make_app = lambda idx: mod.setup(command, path_maker(idx))
+    else:
+        make_app = lambda idx: None
 
     def path_maker(k):
         return path.join('.', 'results', script, str(k))
 
-    apps = [(path_maker(i), mod.setup(command, path_maker(i))) for i in range(number)]
+    apps = [(path_maker(i), make_app(i)) for i in range(number)]
 
     if not args.simulate:
         try:

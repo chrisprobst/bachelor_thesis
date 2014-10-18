@@ -6,17 +6,17 @@ import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.net.peer.AbstractLeecher;
 import de.probst.ba.core.net.peer.Leecher;
 import de.probst.ba.core.net.peer.PeerId;
+import de.probst.ba.core.net.peer.Transfer;
 import de.probst.ba.core.net.peer.handler.LeecherPeerHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.datainfo.CollectDataInfoHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.discovery.AnnounceSocketAddressHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.group.ChannelGroupHandler;
-import de.probst.ba.core.net.peer.peers.netty.handlers.statistic.BandwidthStatisticHandler;
-import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.MessageQueueHandler;
-import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.TrafficShapers;
+import de.probst.ba.core.net.peer.peers.netty.handlers.traffic.TrafficHandler;
 import de.probst.ba.core.net.peer.peers.netty.handlers.transfer.DownloadHandler;
 import de.probst.ba.core.net.peer.state.BandwidthStatisticState;
-import de.probst.ba.core.net.peer.Transfer;
-import de.probst.ba.core.util.concurrent.CancelableRunnable;
+import de.probst.ba.core.util.concurrent.trafficshaper.MessageSink;
+import de.probst.ba.core.util.concurrent.trafficshaper.TrafficShaper;
+import de.probst.ba.core.util.concurrent.trafficshaper.trafficshapers.TrafficShapers;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
@@ -48,10 +48,11 @@ public final class NettyLeecher extends AbstractLeecher {
     private final EventLoopGroup leecherEventLoopGroup;
     private final ChannelGroupHandler leecherChannelGroupHandler;
     private final Optional<SocketAddress> announceSocketAddress;
-    private final BandwidthStatisticHandler leecherBandwidthStatisticHandler;
-    private final Optional<CancelableRunnable> leastWrittenFirstTrafficShaper;
-    private final Optional<CancelableRunnable> leastReadFirstTrafficShaper;
+    private final TrafficShaper<Object> uploadTrafficShaper;
+    private final TrafficShaper<Object> downloadTrafficShaper;
     private final LoggingHandler leecherLogHandler = new LoggingHandler(LogLevel.TRACE);
+    private final long maxUploadRate;
+    private final long maxDownloadRate;
     private final Bootstrap leecherBootstrap;
     private final Class<? extends Channel> leecherChannelClass;
     private final ConcurrentMap<SocketAddress, Boolean> connections = new ConcurrentHashMap<>();
@@ -60,19 +61,25 @@ public final class NettyLeecher extends AbstractLeecher {
 
         @Override
         public void initChannel(Channel ch) {
+            // Create message sinks for channel
+            MessageSink<Object> uploadMessageSink =
+                    uploadTrafficShaper.createMessageSink(Optional.empty(), Optional.empty());
+            MessageSink<Object> downloadMessageSink =
+                    downloadTrafficShaper.createMessageSink(Optional.of(() -> ch.config().setAutoRead(false)),
+                                                            Optional.of(() -> ch.config().setAutoRead(true)));
 
-            // Statistic & Traffic
-            ch.pipeline().addLast(leecherBandwidthStatisticHandler,
-                                  new MessageQueueHandler(leastWrittenFirstTrafficShaper, leastReadFirstTrafficShaper));
+            // Traffic
+            ch.pipeline().addLast(new TrafficHandler(uploadMessageSink, downloadMessageSink));
 
             // Codec pipeline
             NettyConfig.getCodecPipeline().forEach(ch.pipeline()::addLast);
 
             // Log & Logic
-            ch.pipeline().addLast(leecherLogHandler,
-                                  leecherChannelGroupHandler,
-                                  new AnnounceSocketAddressHandler(NettyLeecher.this, announceSocketAddress),
-                                  new DownloadHandler(NettyLeecher.this, getLeechRunnable()),
+            ch.pipeline().addLast(leecherLogHandler, leecherChannelGroupHandler);
+            if (NettyConfig.isUseAutoConnect()) {
+                ch.pipeline().addLast(new AnnounceSocketAddressHandler(NettyLeecher.this, announceSocketAddress));
+            }
+            ch.pipeline().addLast(new DownloadHandler(NettyLeecher.this, getLeechRunnable()),
                                   new CollectDataInfoHandler(NettyLeecher.this, getLeechRunnable()));
         }
     };
@@ -110,7 +117,15 @@ public final class NettyLeecher extends AbstractLeecher {
 
     @Override
     protected BandwidthStatisticState createBandwidthStatisticState() {
-        return leecherBandwidthStatisticHandler.getBandwidthStatisticState();
+        return new BandwidthStatisticState(this,
+                                           maxUploadRate,
+                                           uploadTrafficShaper.getTotalTrafficRate(),
+                                           uploadTrafficShaper.getCurrentTrafficRate(),
+                                           uploadTrafficShaper.getTotalTraffic(),
+                                           maxDownloadRate,
+                                           downloadTrafficShaper.getTotalTrafficRate(),
+                                           downloadTrafficShaper.getCurrentTrafficRate(),
+                                           downloadTrafficShaper.getTotalTraffic());
     }
 
     private Bootstrap initLeecherBootstrap() {
@@ -145,6 +160,8 @@ public final class NettyLeecher extends AbstractLeecher {
         Objects.requireNonNull(announceSocketAddress);
 
         // Save args
+        this.maxUploadRate = maxUploadRate;
+        this.maxDownloadRate = maxDownloadRate;
         this.leecherEventLoopGroup = leecherEventLoopGroup;
         this.leecherChannelClass = leecherChannelClass;
         this.announceSocketAddress = announceSocketAddress;
@@ -159,18 +176,15 @@ public final class NettyLeecher extends AbstractLeecher {
         });
 
         // Create internal vars
-        leecherBandwidthStatisticHandler = new BandwidthStatisticHandler(this, maxUploadRate, maxDownloadRate);
         leecherChannelGroupHandler = new ChannelGroupHandler(leecherEventLoopGroup.next());
 
         // Traffic shaping
-        leastWrittenFirstTrafficShaper = getLeakyUploadBucket().map(leakyBucket -> TrafficShapers.leastWrittenFirst(
-                leecherEventLoopGroup.next()::submit,
-                leakyBucket,
-                () -> MessageQueueHandler.collect(getLeecherChannelGroup())));
-        leastReadFirstTrafficShaper = getLeakyDownloadBucket().map(leakyBucket -> TrafficShapers.leastReadFirst(
-                leecherEventLoopGroup.next()::submit,
-                leakyBucket,
-                () -> MessageQueueHandler.collect(getLeecherChannelGroup())));
+        uploadTrafficShaper = TrafficShapers.leastFirst(getLeakyUploadBucket(),
+                                                        leecherEventLoopGroup.next()::submit,
+                                                        NettyConfig.getResetTrafficInterval());
+        downloadTrafficShaper = TrafficShapers.leastFirst(getLeakyDownloadBucket(),
+                                                          leecherEventLoopGroup.next()::submit,
+                                                          NettyConfig.getResetTrafficInterval());
 
         // Init bootstrap
         leecherBootstrap = initLeecherBootstrap();
@@ -228,8 +242,8 @@ public final class NettyLeecher extends AbstractLeecher {
     public void close() throws IOException {
         try {
             leecherEventLoopGroup.shutdownGracefully();
-            leastWrittenFirstTrafficShaper.ifPresent(CancelableRunnable::cancel);
-            leastReadFirstTrafficShaper.ifPresent(CancelableRunnable::cancel);
+            uploadTrafficShaper.cancel();
+            downloadTrafficShaper.cancel();
         } finally {
             super.close();
         }

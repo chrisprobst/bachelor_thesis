@@ -4,16 +4,20 @@ import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.net.peer.Peer;
+import de.probst.ba.core.util.collections.Tuple;
+import de.probst.ba.core.util.collections.Tuple2;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
 import java.util.List;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -55,28 +59,23 @@ public final class DataInfoGeneratorArgs implements Args {
                                  String::valueOf).full();
     }
 
-    public List<DataInfo> generateDataInfo() {
+    public List<Tuple2<DataInfo, Supplier<ReadableByteChannel>>> generateDataInfo() {
         long lastPartitionSize = size - partitionSize * (partitions - 1);
+
+        Function<DataInfo, Supplier<ReadableByteChannel>> channelGenerator =
+                dataInfo -> () -> Channels.newChannel(new ByteArrayInputStream(new byte[(int) dataInfo.getSize()]));
+
         return IntStream.range(0, partitions)
                         .mapToObj(partition -> generateSingleDataInfo(partition,
                                                                       partition < partitions - 1 ?
                                                                       partitionSize :
                                                                       lastPartitionSize))
+                        .map(dataInfo -> Tuple.of(dataInfo, channelGenerator.apply(dataInfo)))
                         .collect(Collectors.toList());
     }
 
     public Queue<Peer> getDataBaseUpdatePeers() {
         return dataBaseUpdatePeers;
-    }
-
-    public void updatePeerDataBases(List<DataInfo> updateDataInfo) throws IOException {
-        for (Peer peer : dataBaseUpdatePeers) {
-            for (DataInfo dataInfo : updateDataInfo) {
-                byte[] buf = new byte[(int) dataInfo.getSize()];
-                peer.getDataBase()
-                    .insertFromChannel(dataInfo, Channels.newChannel(new ByteArrayInputStream(buf)), true);
-            }
-        }
     }
 
     public boolean check(JCommander jCommander) {

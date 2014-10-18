@@ -89,6 +89,7 @@ public final class SeederLeecherCoupleApp extends ArgsApp {
     @Override
     protected void start() throws Exception {
         // Setup the netty implementation
+        NettyConfig.setUseAutoConnect(true);
         NettyConfig.setupConfig(bandwidthArgs.getSmallestBandwidth(),
                                 connectionArgs.maxLeecherConnections);
 

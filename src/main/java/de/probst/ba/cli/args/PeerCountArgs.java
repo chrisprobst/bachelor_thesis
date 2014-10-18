@@ -4,6 +4,7 @@ import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import de.probst.ba.core.net.peer.Leecher;
 import de.probst.ba.core.net.peer.Peer;
+import de.probst.ba.core.net.peer.Seeder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,7 +20,7 @@ public final class PeerCountArgs implements Args {
 
     // Queues for storing instances
     private final Queue<Peer> peerQueue = new ConcurrentLinkedQueue<>();
-    private final Queue<Leecher> seederQueue = new ConcurrentLinkedQueue<>();
+    private final Queue<Seeder> seederQueue = new ConcurrentLinkedQueue<>();
     private final Queue<Leecher> leecherQueue = new ConcurrentLinkedQueue<>();
     private final Queue<Peer> superSeederQueue = new ConcurrentLinkedQueue<>();
 
@@ -39,7 +40,7 @@ public final class PeerCountArgs implements Args {
         return peerQueue;
     }
 
-    public Queue<Leecher> getSeederQueue() {
+    public Queue<Seeder> getSeederQueue() {
         return seederQueue;
     }
 

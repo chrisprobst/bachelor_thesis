@@ -32,9 +32,7 @@ public final class Task implements CancelableRunnable {
             consumer.accept(this);
         } finally {
             synchronized (this) {
-                if (cancelled) {
-                    return;
-                } else {
+                if (!cancelled) {
                     running = false;
                     if (scheduled) {
                         future = scheduleFunction.apply(this::doRun);
@@ -62,15 +60,13 @@ public final class Task implements CancelableRunnable {
 
     @Override
     public synchronized void run() {
-        if (cancelled) {
-            return;
-        } else if (running) {
-            scheduled = true;
-        } else if (scheduled) {
-            return;
-        } else {
-            scheduled = true;
-            future = scheduleFunction.apply(this::doRun);
+        if (!cancelled) {
+            if (running) {
+                scheduled = true;
+            } else if (!scheduled) {
+                scheduled = true;
+                future = scheduleFunction.apply(this::doRun);
+            }
         }
     }
 }

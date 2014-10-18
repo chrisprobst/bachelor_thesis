@@ -52,6 +52,7 @@ public final class DiscoverSocketAddressHandler extends SimpleChannelInboundHand
     }
 
     private void writeSocketAddresses(ChannelHandlerContext ctx, boolean scheduled) {
+
         if (scheduled) {
             // Set schedule future to null if this was invoked by
             // the scheduler

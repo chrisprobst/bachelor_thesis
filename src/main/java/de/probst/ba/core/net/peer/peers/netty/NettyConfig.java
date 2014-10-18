@@ -2,6 +2,7 @@ package de.probst.ba.core.net.peer.peers.netty;
 
 import de.probst.ba.core.net.peer.PeerConfig;
 import de.probst.ba.core.net.peer.peers.netty.handlers.codec.SimpleCodec;
+import de.probst.ba.core.util.concurrent.trafficshaper.MessageSizeEstimator;
 import io.netty.channel.ChannelHandler;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
@@ -40,35 +41,51 @@ public final class NettyConfig {
         int calculatedBufferSize =
                 (int) Math.round(smallestBandwidth * refillRateInSeconds * getLeakyBucketBufferFactor());
         int bufferSize = (int) Math.min(Math.min(chunkSize, calculatedBufferSize), getUploadBufferSize());
+        long announceDelay = Math.max(Math.round(chunkSize / (double) smallestBandwidth * 500.0), getAnnounceDelay());
 
         // Set netty config
         setUploadBufferSize(bufferSize);
-        setDefaultEstimatedMessageSize((long) Math.ceil(chunkSize * metaDataSizePercentage / 100));
+        MessageSizeEstimator.setDefaultEstimatedMessageSize((long) Math.ceil(chunkSize * metaDataSizePercentage / 100));
         setUseCodec(binaryCodec);
         setMaxConnectionsPerLeecher(maxConnections);
+        setAnnounceDelay(announceDelay);
+
 
         // Log netty values
         logger.info(">>> [ Netty Config ]");
-        logger.info(">>> Meta data size:            " + getDefaultEstimatedMessageSize() + " bytes");
+        logger.info(
+                ">>> Meta data size:            " + MessageSizeEstimator.getDefaultEstimatedMessageSize() + " bytes");
         logger.info(">>> Upload buffer size:        " + getUploadBufferSize() + " bytes");
         logger.info(">>> Using codec:               " + isUseCodec());
         logger.info(">>> Leecher connection limit:  " + getMaxConnectionsPerLeecher());
+        logger.info(">>> Announce delay:            " + getAnnounceDelay());
     }
 
     private NettyConfig() {
     }
 
-
+    private static final long resetTrafficInterval = 2500;
     private static final int httpBufferSize = 8192;
     private static final long httpRetryDelay = 1000;
     private static final double leakyBucketBufferFactor = 0.25;
-    private static volatile long defaultEstimatedMessageSize;
     private static volatile int maxConnectionsPerLeecher;
     private static volatile int uploadBufferSize = 8192;
     private static volatile boolean useCodec;
-    private static final long messageQueueResetDelay = 2500;
-    private static final long discoveryExchangeDelay = 1000;
-    private static final long announceDelay = 200;
+    private static final long discoveryExchangeDelay = 3000;
+    private static volatile long announceDelay = PeerConfig.getLeakyBucketRefillInterval();
+    private static volatile boolean useAutoConnect = false;
+
+    public static long getResetTrafficInterval() {
+        return resetTrafficInterval;
+    }
+
+    public static boolean isUseAutoConnect() {
+        return useAutoConnect;
+    }
+
+    public static void setUseAutoConnect(boolean useAutoConnect) {
+        NettyConfig.useAutoConnect = useAutoConnect;
+    }
 
     public static int getHttpBufferSize() {
         return httpBufferSize;
@@ -80,14 +97,6 @@ public final class NettyConfig {
 
     public static double getLeakyBucketBufferFactor() {
         return leakyBucketBufferFactor;
-    }
-
-    public static long getDefaultEstimatedMessageSize() {
-        return defaultEstimatedMessageSize;
-    }
-
-    public static void setDefaultEstimatedMessageSize(long defaultEstimatedMessageSize) {
-        NettyConfig.defaultEstimatedMessageSize = defaultEstimatedMessageSize;
     }
 
     public static void setMaxConnectionsPerLeecher(int maxConnectionsPerLeecher) {
@@ -112,16 +121,19 @@ public final class NettyConfig {
         NettyConfig.uploadBufferSize = uploadBufferSize;
     }
 
-    public static long getMessageQueueResetDelay() {
-        return messageQueueResetDelay;
-    }
-
     public static long getDiscoveryExchangeDelay() {
         return discoveryExchangeDelay;
     }
 
     public static long getAnnounceDelay() {
         return announceDelay;
+    }
+
+    public static void setAnnounceDelay(long announceDelay) {
+        if (announceDelay <= 0) {
+            throw new IllegalArgumentException("announceDelay <= 0");
+        }
+        NettyConfig.announceDelay = announceDelay;
     }
 
     public static boolean isUseCodec() {
