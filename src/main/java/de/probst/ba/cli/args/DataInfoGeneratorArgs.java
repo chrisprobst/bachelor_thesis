@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.util.List;
@@ -72,6 +73,14 @@ public final class DataInfoGeneratorArgs implements Args {
                                                                       lastPartitionSize))
                         .map(dataInfo -> Tuple.of(dataInfo, channelGenerator.apply(dataInfo)))
                         .collect(Collectors.toList());
+    }
+
+    public void updateDataBasePeers(List<Tuple2<DataInfo, Supplier<ReadableByteChannel>>> dataInfo) throws IOException {
+        for (Peer peer : getDataBaseUpdatePeers()) {
+            for (Tuple2<DataInfo, Supplier<ReadableByteChannel>> entry : dataInfo) {
+                peer.getDataBase().insertFromChannel(entry.first(), entry.second().get(), true);
+            }
+        }
     }
 
     public Queue<Peer> getDataBaseUpdatePeers() {

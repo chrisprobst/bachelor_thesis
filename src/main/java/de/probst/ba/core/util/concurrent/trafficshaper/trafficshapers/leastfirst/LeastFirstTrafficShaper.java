@@ -6,6 +6,9 @@ import de.probst.ba.core.util.concurrent.trafficshaper.Message;
 import de.probst.ba.core.util.concurrent.trafficshaper.MessageQueueSink;
 import de.probst.ba.core.util.concurrent.trafficshaper.MessageSink;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.PriorityQueue;
@@ -26,15 +29,22 @@ public final class LeastFirstTrafficShaper<T> extends AbstractTrafficShaper<T> {
 
     @Override
     protected void shapeTraffic() {
+        List<MessageQueueSink<? extends T>> messageQueueSinkList = new ArrayList<>(messageQueueSinks);
+
         // Reset traffic if necessary
         long now = System.currentTimeMillis();
         if (now - lastResetTrafficTimeStamp > resetTrafficInterval) {
-            messageQueueSinks.forEach(MessageQueueSink::resetTraffic);
+            // Reset traffic
+            messageQueueSinkList.forEach(MessageQueueSink::resetTraffic);
+
+            // Shuffle message queue sinks
+            Collections.shuffle(messageQueueSinkList);
+
             lastResetTrafficTimeStamp = now;
         }
 
         // Pack into a priority queue
-        Queue<MessageQueueSink<? extends T>> priorityQueue = new PriorityQueue<>(messageQueueSinks);
+        Queue<MessageQueueSink<? extends T>> priorityQueue = new PriorityQueue<>(messageQueueSinkList);
 
         // Resume all
         priorityQueue.forEach(MessageQueueSink::resume);

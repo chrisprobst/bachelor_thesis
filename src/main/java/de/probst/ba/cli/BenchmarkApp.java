@@ -13,7 +13,6 @@ import de.probst.ba.cli.args.PeerCountArgs;
 import de.probst.ba.cli.args.StatisticArgs;
 import de.probst.ba.cli.args.SuperSeederBandwidthArgs;
 import de.probst.ba.core.distribution.algorithms.Algorithms;
-import de.probst.ba.core.distribution.algorithms.SuperSeederDistributionAlgorithm;
 import de.probst.ba.core.media.database.DataBase;
 import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.media.database.databases.DataBases;
@@ -34,10 +33,9 @@ import org.slf4j.LoggerFactory;
 
 import java.nio.channels.ReadableByteChannel;
 import java.time.Instant;
-import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
@@ -308,47 +306,11 @@ public class BenchmarkApp extends ArgsApp {
         statisticsManager.start(AppConfig.getStatisticInterval(), Instant.now());
 
         // Generate data info
-        Queue<Tuple2<DataInfo, Supplier<ReadableByteChannel>>> dataInfo =
-                new LinkedList<>(dataInfoGeneratorArgs.generateDataInfo());
-        statisticsManager.getCompletionDataInfo()
-                         .addAll(dataInfo.stream().map(t -> t.first()).collect(Collectors.toList()));
-
-        // If we are in the one-super-seeder mode, lets improve distribution
-        if (dataInfoGeneratorArgs.getDataBaseUpdatePeers().size() == 1 &&
-            dataInfoGeneratorArgs.getDataBaseUpdatePeers()
-                                 .peek()
-                                 .getDistributionAlgorithm() instanceof SuperSeederDistributionAlgorithm) {
-
-            // Lookup the super seeder and algorithm
-            Seeder superSeeder = (Seeder) dataInfoGeneratorArgs.getDataBaseUpdatePeers().peek();
-            SuperSeederDistributionAlgorithm superSeederDistributionAlgorithm =
-                    (SuperSeederDistributionAlgorithm) superSeeder.getDistributionAlgorithm();
-
-            // If there are remaining data sets
-            while (!dataInfo.isEmpty()) {
-                // Insert head
-                superSeeder.getDataBase().insertFromChannel(dataInfo.peek().first(),
-                                                            dataInfo.peek().second().get(),
-                                                            true);
-
-                // Wait until all are finished
-                while (!superSeederDistributionAlgorithm.removeAlreadyUploaded(dataInfo.peek().first()).isEmpty()) {
-                    Thread.sleep(NettyConfig.getAnnounceDelay());
-                }
-
-                // Remove head
-                dataInfo.remove();
-            }
-
-            logger.info(">>> [ All data sets inserted ]");
-        } else {
-            // Simply insert all data info into the databases
-            for (Peer peer : dataInfoGeneratorArgs.getDataBaseUpdatePeers()) {
-                for (Tuple2<DataInfo, Supplier<ReadableByteChannel>> entry : dataInfo) {
-                    peer.getDataBase().insertFromChannel(entry.first(), entry.second().get(), true);
-                }
-            }
-        }
+        List<Tuple2<DataInfo, Supplier<ReadableByteChannel>>> dataInfo = dataInfoGeneratorArgs.generateDataInfo();
+        statisticsManager.getCompletionDataInfo().addAll(dataInfo.stream()
+                                                                 .map(t -> t.first())
+                                                                 .collect(Collectors.toList()));
+        dataInfoGeneratorArgs.updateDataBasePeers(dataInfo);
 
         // Await termination
         completionCountDownLatch.await();
