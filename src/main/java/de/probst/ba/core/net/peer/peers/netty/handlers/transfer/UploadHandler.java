@@ -102,6 +102,7 @@ public final class UploadHandler extends SimpleChannelInboundHandler<UploadReque
             } else if (!(dataBaseReadChannel = seeder.getDataBase().lookup(transfer.getDataInfo())).isPresent()) {
                 reject("Failed to open database channel", transfer, logger::warn);
             } else {
+
                 // Upload chunked input
                 ctx.writeAndFlush(new ChunkedNioStream(dataBaseReadChannel.get(), NettyConfig.getUploadBufferSize()),
                                   ctx.newProgressivePromise()).addListener(this);

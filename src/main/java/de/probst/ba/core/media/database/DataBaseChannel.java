@@ -21,5 +21,13 @@ public interface DataBaseChannel extends Channel {
 
     long position() throws IOException;
 
+    default long remaining() throws IOException {
+        return size() - position();
+    }
+
+    default boolean isCompleted() throws IOException {
+        return remaining() == 0;
+    }
+
     DataBaseChannel position(long position) throws IOException;
 }

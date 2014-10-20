@@ -14,10 +14,6 @@ import java.nio.ByteBuffer;
 public final class FakeDataBase extends AbstractDataBase {
 
     @Override
-    protected void doClose() throws IOException {
-    }
-
-    @Override
     protected AbstractDataBaseWriteChannel openWriteChannel(DataInfo writeDataInfo) throws IOException {
         return new AbstractDataBaseWriteChannel(this, writeDataInfo) {
             @Override
@@ -29,11 +25,6 @@ public final class FakeDataBase extends AbstractDataBase {
                 int amount = src.remaining();
                 src.position(src.position() + amount);
                 return amount;
-            }
-
-            @Override
-            protected void doClose() throws IOException {
-
             }
         };
     }
@@ -50,11 +41,6 @@ public final class FakeDataBase extends AbstractDataBase {
                 int amount = dst.remaining();
                 dst.position(dst.position() + amount);
                 return amount;
-            }
-
-            @Override
-            protected void doClose() throws IOException {
-
             }
         };
     }

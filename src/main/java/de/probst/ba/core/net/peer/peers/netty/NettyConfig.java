@@ -33,7 +33,7 @@ public final class NettyConfig {
     public static void setupConfig(int smallestBandwidth,
                                    long chunkSize,
                                    int maxConnections,
-                                   double metaDataSizePercentage,
+                                   long metaDataSize,
                                    boolean binaryCodec) {
 
         // Calculate a few values
@@ -45,16 +45,16 @@ public final class NettyConfig {
 
         // Set netty config
         setUploadBufferSize(bufferSize);
-        MessageSizeEstimator.setDefaultEstimatedMessageSize((long) Math.ceil(chunkSize * metaDataSizePercentage / 100));
+        MessageSizeEstimator.setDefaultEstimatedMessageSize(metaDataSize);
         setUseCodec(binaryCodec);
         setMaxConnectionsPerLeecher(maxConnections);
         setAnnounceDelay(announceDelay);
 
 
         // Log netty values
+        metaDataSize = MessageSizeEstimator.getDefaultEstimatedMessageSize();
         logger.info(">>> [ Netty Config ]");
-        logger.info(
-                ">>> Meta data size:            " + MessageSizeEstimator.getDefaultEstimatedMessageSize() + " bytes");
+        logger.info(">>> Meta data size:            " + metaDataSize + " bytes");
         logger.info(">>> Upload buffer size:        " + getUploadBufferSize() + " bytes");
         logger.info(">>> Using codec:               " + isUseCodec());
         logger.info(">>> Leecher connection limit:  " + getMaxConnectionsPerLeecher());

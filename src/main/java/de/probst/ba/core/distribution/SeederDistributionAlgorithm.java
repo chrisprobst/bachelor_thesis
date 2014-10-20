@@ -12,6 +12,10 @@ import java.util.Map;
  */
 public interface SeederDistributionAlgorithm extends DistributionAlgorithm {
 
+    default boolean isSuperSeederDistributionAlgorithm() {
+        return false;
+    }
+
     /**
      * This method is called by the framework internally at
      * undefined intervals and can be triggered by network metrics,

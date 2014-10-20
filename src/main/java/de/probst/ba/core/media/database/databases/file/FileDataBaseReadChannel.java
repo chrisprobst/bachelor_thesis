@@ -27,12 +27,7 @@ public final class FileDataBaseReadChannel extends AbstractDataBaseReadChannel {
                          long totalChunkOffset,
                          long relativeChunkOffset,
                          long chunkSize) throws IOException {
-        
+
         return fileChannel.read(dst, totalChunkOffset + relativeChunkOffset);
-    }
-
-    @Override
-    protected void doClose() throws IOException {
-
     }
 }

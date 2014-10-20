@@ -32,8 +32,4 @@ public final class MemoryDataBaseReadChannel extends AbstractDataBaseReadChannel
         byteBuf.getBytes((int) (totalChunkOffset + relativeChunkOffset), dst);
         return dst.position() - position;
     }
-
-    @Override
-    protected void doClose() throws IOException {
-    }
 }

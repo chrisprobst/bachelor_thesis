@@ -163,12 +163,12 @@ public final class StatisticsManager {
                                                              statisticInterval,
                                                              TimeUnit.MILLISECONDS))).run();
 
-            logger.info(">>> [ Recording statistics now ]");
+            logger.info(">>> [ Recording statistics now ]");
         }
 
         if (recordPeerHandler != null) {
             recordPeerHandler.start();
-            logger.info(">>> [ Recording events now ]");
+            logger.info(">>> [ Recording events now ]");
         }
 
         logger.info(">>> [ Statistics started ]");
@@ -193,7 +193,7 @@ public final class StatisticsManager {
 
         if (!statistics.isEmpty()) {
             // CSV
-            logger.info(">>> [ Writing stats now ]");
+            logger.info(">>> [ Writing stats now ]");
             Instant timeStamp = Instant.now();
 
             // Stop task

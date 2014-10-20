@@ -28,13 +28,11 @@ public final class NetworkArgs implements Args {
                              "(This option is implicitly activated if a non-local peer type is used)")
     public Boolean binaryCodec = false;
 
-    @Parameter(names = {"-mp", "--meta-data-size-percentage"},
-               description =
-                       "The meta data size percentage relative to the chunk size (" +
-                       Validators.PercentageValidator.MSG + ") (Ignored if binary codec is activated)",
-               validateValueWith = Validators.PercentageValidator.class)
-    public Double metaDataSizePercentage = 0.0;
-
+    @Parameter(names = {"-mds", "--meta-data-size"},
+               description = "The meta data size in bytes (" + Validators.MetaDataSizeValidator.MSG +
+                             ") (Ignored if binary codec is activated)",
+               validateValueWith = Validators.MetaDataSizeValidator.class)
+    public Long metaDataSize = 0L;
 
     public SocketAddress getSuperSeederSocketAddress(int port) {
         if (peerType == Peers.PeerType.TCP) {
@@ -59,15 +57,15 @@ public final class NetworkArgs implements Args {
             binaryCodec = true;
         }
 
-        if (binaryCodec && metaDataSizePercentage > 0.0) {
+        if (binaryCodec && metaDataSize > 0) {
             System.out.println("Ignoring meta data size percentage (Binary codec is activated)");
-            metaDataSizePercentage = 0.0;
+            metaDataSize = 0L;
         }
 
         logger.info(">>> [ Network Config ]");
-        logger.info(">>> Peer type:                 " + peerType);
-        logger.info(">>> Meta data size percentage: " + metaDataSizePercentage + " %");
-        logger.info(">>> Using codec:               " + binaryCodec);
+        logger.info(">>> Peer type:         " + peerType);
+        logger.info(">>> Meta data size:    " + metaDataSize + " bytes");
+        logger.info(">>> Using codec:       " + binaryCodec);
 
         return true;
     }

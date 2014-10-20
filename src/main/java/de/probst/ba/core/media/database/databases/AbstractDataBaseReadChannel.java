@@ -18,6 +18,10 @@ public abstract class AbstractDataBaseReadChannel extends AbstractDataBaseChanne
                                   long relativeChunkOffset,
                                   long chunkSize) throws IOException;
 
+    @Override
+    protected void doClose() throws IOException {
+    }
+
     public AbstractDataBaseReadChannel(AbstractDataBase dataBase, DataInfo dataInfo) {
         super(dataBase, dataInfo);
     }
@@ -28,7 +32,7 @@ public abstract class AbstractDataBaseReadChannel extends AbstractDataBaseChanne
     }
 
     @Override
-    public final synchronized long read(ByteBuffer[] dsts, int offset, int length) throws IOException {
+    public synchronized final long read(ByteBuffer[] dsts, int offset, int length) throws IOException {
         checkClosed();
         long totalRead = 0;
         for (int i = 0; i < length; i++) {
@@ -57,27 +61,25 @@ public abstract class AbstractDataBaseReadChannel extends AbstractDataBaseChanne
     }
 
     @Override
-    public final synchronized int read(ByteBuffer dst) throws IOException {
+    public synchronized final int read(ByteBuffer dst) throws IOException {
         checkClosed();
-        long completed = position();
-        long size = size();
-
-        if (completed >= size) {
+        if (isCompleted()) {
             return -1;
         }
 
         // Setup byte buffer limit
-        int newLimit = (int) Math.min(dst.remaining(), size - completed);
+        int newLimit = (int) Math.min(dst.remaining(), remaining());
         if (newLimit <= 0) {
             return 0;
         }
 
         ByteBuffer copy = (ByteBuffer) dst.duplicate().limit(dst.position() + newLimit);
+        long position = position();
 
         // Calculate state
-        int chunkIndex = getDataInfo().getTotalChunkIndex(completed, false);
+        int chunkIndex = getDataInfo().getTotalChunkIndex(position, false);
         long totalChunkOffset = getDataInfo().getTotalOffset(chunkIndex);
-        long relativeChunkOffset = completed - getDataInfo().getRelativeOffset(chunkIndex);
+        long relativeChunkOffset = position - getDataInfo().getRelativeOffset(chunkIndex);
         long chunkSize = getDataInfo().getChunkSize(chunkIndex);
 
         // Do read and increase counter
@@ -86,8 +88,7 @@ public abstract class AbstractDataBaseReadChannel extends AbstractDataBaseChanne
             throw new EOFException("Unexpected EOF detected");
         }
         dst.position(dst.position() + read);
-        position(completed + read);
-
+        position(position + read);
         return read;
     }
 }

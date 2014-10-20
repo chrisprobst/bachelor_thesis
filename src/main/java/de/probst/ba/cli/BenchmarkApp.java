@@ -133,7 +133,7 @@ public class BenchmarkApp extends ArgsApp {
                                          superSeederBandwidthArgs.maxSuperSeederDownloadRate,
                                          networkArgs.getSuperSeederSocketAddress(SUPER_SEEDER_LOW_PORT + i),
                                          dataBaseSupplier.get(),
-                                         distributionArgs.getSuperSeederDistributionAlgorithm(),
+                                         distributionArgs.getSuperSeederOnlyDistributionAlgorithm(),
                                          Optional.ofNullable(statisticsManager.getRecordPeerHandler()),
                                          Optional.of(eventLoopGroup)).getInitFuture().get();
 
@@ -290,7 +290,7 @@ public class BenchmarkApp extends ArgsApp {
                                          superSeederBandwidthArgs.getSmallestBandwidth()),
                                 dataInfoGeneratorArgs.chunkSize,
                                 connectionArgs.maxLeecherConnections,
-                                networkArgs.metaDataSizePercentage,
+                                networkArgs.metaDataSize,
                                 networkArgs.binaryCodec);
 
         // Setup the peers

@@ -19,10 +19,6 @@ public final class MemoryDataBase extends AbstractDataBase {
     private final Map<DataInfo, ByteBuf> data = new HashMap<>();
 
     @Override
-    protected void doClose() throws IOException {
-    }
-
-    @Override
     protected AbstractDataBaseWriteChannel openWriteChannel(DataInfo writeDataInfo) throws IOException {
         DataInfo full = writeDataInfo.full();
         ByteBuf byteBuf = data.get(full);

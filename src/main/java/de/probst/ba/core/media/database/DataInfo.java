@@ -676,10 +676,11 @@ public final class DataInfo implements Serializable {
         return "DataInfo{" +
                "id=" + id +
                ", size=" + size +
-               ", name=" + getName() +
+               ", name='" + getName() + '\'' +
                ", description=" + getDescription() +
                ", hash='" + hash + '\'' +
                ", chunkHashes=" + chunkHashes +
+               ", chunkSize=" + chunkSize +
                ", chunks=" + chunks +
                '}';
     }

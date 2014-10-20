@@ -60,7 +60,7 @@ public final class SuperSeederApp extends ArgsApp {
                                    superSeederBandwidthArgs.maxSuperSeederDownloadRate,
                                    new InetSocketAddress(seederPortArgs.seederPort),
                                    fileDataBaseArgs.getDataBase(),
-                                   distributionArgs.getSuperSeederDistributionAlgorithm(),
+                                   distributionArgs.getSuperSeederOnlyDistributionAlgorithm(),
                                    Optional.empty(),
                                    Optional.of(eventLoopGroup)).getInitFuture().get();
 

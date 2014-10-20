@@ -6,7 +6,7 @@
 .mtj.tmp/
 
 # Package Files #
-*.jar
+# *.jar -> Schon arg sinnvoll ...
 *.war
 *.ear
 out/*
@@ -25,7 +25,8 @@ target/
 .gradle/
 
 # Build idea
-build/
+build/*
+!build/libs
 
 # Do not upload the workspace layout
 # It changes quite often

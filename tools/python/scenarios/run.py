@@ -36,7 +36,7 @@ def main():
             '-XX:+AggressiveHeap',
             '-XX:+UseParallelGC',
             '-XX:+AggressiveOpts',
-            '-jar', '../../../out/artifacts/benchmark_jar/benchmark.jar'
+            '-jar', '../../../build/libs/benchmark-1.0.jar'
         ]
         make_app = lambda idx: mod.setup(command, path_maker(idx))
     else:

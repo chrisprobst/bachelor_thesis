@@ -33,6 +33,7 @@ public final class FileDataBaseWriteChannel extends AbstractDataBaseWriteChannel
 
     @Override
     protected void doClose() throws IOException {
+        super.doClose();
         fileChannel.force(true);
     }
 }

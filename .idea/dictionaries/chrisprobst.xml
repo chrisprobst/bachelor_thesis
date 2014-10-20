@@ -2,6 +2,7 @@
   <dictionary name="chrisprobst">
     <words>
       <w>chrisprobst</w>
+      <w>chunked</w>
       <w>chunkedswarm</w>
       <w>connectable</w>
       <w>csvfile</w>
@@ -16,9 +17,11 @@
       <w>refiller</w>
       <w>runnables</w>
       <w>schedulation</w>
+      <w>shaper</w>
       <w>shapers</w>
       <w>stdout</w>
       <w>subresults</w>
+      <w>taggable</w>
       <w>unmanaged</w>
     </words>
   </dictionary>

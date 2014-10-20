@@ -109,14 +109,14 @@ public final class Validators {
         }
     }
 
-    public static class PercentageValidator implements IValueValidator<Double> {
+    public static class MetaDataSizeValidator implements IValueValidator<Long> {
 
-        public static final double MIN = 0;
-        public static final double MAX = 100;
+        public static final long MIN = 0;
+        public static final long MAX = Long.MAX_VALUE;
         public static final String MSG = "Must be between " + MIN + " and " + MAX;
 
         @Override
-        public void validate(String name, Double value) throws ParameterException {
+        public void validate(String name, Long value) throws ParameterException {
             if (value < MIN || value > MAX) {
                 throw new ParameterException("Parameter " + name + ": " + MSG + " (found: " + value + ")");
             }

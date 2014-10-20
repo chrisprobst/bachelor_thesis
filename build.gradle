@@ -1,12 +1,50 @@
 apply plugin: 'java'
 apply plugin: 'idea'
 
-sourceCompatibility = 1.8
 version = '1.0'
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
 
 task wrapper(type: Wrapper) {
-    gradleVersion = '1.9'
-    distributionUrl = 'http://services.gradle.org/distributions/gradle-1.9-all.zip'
+    gradleVersion = '2.0'
+    distributionUrl = 'http://services.gradle.org/distributions/gradle-2.0-all.zip'
+}
+
+task benchmarkJar(type: Jar) {
+    manifest {
+        attributes 'Implementation-Title': 'Benchmark',
+                'Implementation-Version': version,
+                'Main-Class': 'de.probst.ba.cli.BenchmarkApp'
+    }
+    baseName = 'benchmark'
+    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+    with jar
+}
+
+task seederJar(type: Jar) {
+    manifest {
+        attributes 'Implementation-Title': 'SuperSeederApp',
+                'Implementation-Version': version,
+                'Main-Class': 'de.probst.ba.cli.SuperSeederApp'
+    }
+    baseName = 'seeder'
+    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+    with jar
+}
+
+task leecherJar(type: Jar) {
+    manifest {
+        attributes 'Implementation-Title': 'SeederLeecherCoupleApp',
+                'Implementation-Version': version,
+                'Main-Class': 'de.probst.ba.cli.SeederLeecherCoupleApp'
+    }
+    baseName = 'leecher'
+    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+    with jar
+}
+
+task fatJar(dependsOn: [benchmarkJar, seederJar, leecherJar]) << {
+    println 'Build all jars'
 }
 
 repositories {

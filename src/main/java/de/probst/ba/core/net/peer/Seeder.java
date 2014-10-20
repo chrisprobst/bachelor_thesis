@@ -15,6 +15,12 @@ import java.util.concurrent.CompletableFuture;
  */
 public interface Seeder extends Peer {
 
+    String SUPER_SEEDER_TAG = "super-seeder";
+
+    default boolean isSuperSeeder() {
+        return getDistributionAlgorithm().isSuperSeederDistributionAlgorithm();
+    }
+
     @Override
     CompletableFuture<Seeder> getCloseFuture();
 

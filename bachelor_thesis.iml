@@ -2,7 +2,7 @@
 <module external.linked.project.path="$MODULE_DIR$" external.root.project.path="$MODULE_DIR$" external.system.id="GRADLE" external.system.module.group="" external.system.module.version="1.0" type="JAVA_MODULE" version="4">
   <component name="FacetManager">
     <facet type="Python" name="Python">
-      <configuration sdkName="Python 3.4.0 virtualenv at ~/Programming/bachelor_thesis/tools/python/venv" />
+      <configuration sdkName="Python 3.4.2 (/usr/local/bin/python3)" />
     </facet>
   </component>
   <component name="NewModuleRootManager" inherit-compiler-output="false">
@@ -25,12 +25,12 @@
     <orderEntry type="library" exported="" name="Gradle: slf4j-simple-1.7.7" level="project" />
     <orderEntry type="library" exported="" name="Gradle: slf4j-api-1.7.7" level="project" />
     <orderEntry type="library" exported="" name="Gradle: jcommander-1.30" level="project" />
-    <orderEntry type="library" exported="" name="Gradle: netty-all-5.0.0.Alpha2-SNAPSHOT" level="project" />
     <orderEntry type="library" exported="" name="Gradle: handlebars-1.3.2" level="project" />
     <orderEntry type="library" exported="" name="Gradle: commons-lang3-3.1" level="project" />
     <orderEntry type="library" exported="" name="Gradle: antlr4-annotations-4.2.2" level="project" />
     <orderEntry type="library" exported="" name="Gradle: antlr4-runtime-4.2.2" level="project" />
     <orderEntry type="library" exported="" name="Gradle: rhino-1.7R4" level="project" />
+    <orderEntry type="library" exported="" name="Gradle: netty-all-5.0.0.Alpha2-SNAPSHOT" level="project" />
   </component>
 </module>
 

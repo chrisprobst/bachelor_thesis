@@ -187,9 +187,6 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
             leecher.getPeerHandler().downloadProgressed(leecher, transfer);
 
             if (completed) {
-                // Reset and prepare for next transfer
-                reset();
-
                 logger.debug("Leecher " + leecher.getPeerId() + " succeeded download " + transfer);
 
                 // HANDLER
@@ -198,13 +195,21 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
                 // Query data base
                 DataInfo dataInfo = leecher.getDataBase().get(transfer.getDataInfo().getHash());
 
-                if (dataInfo != null && dataInfo.isCompleted()) {
+                // Only if the data info is not completed yet, but
+                // is completed after merging
+                if ((dataInfo != null && !dataInfo.isCompleted() &&
+                     dataInfo.union(transfer.getDataInfo()).isCompleted()) ||
+                    (dataInfo == null && transfer.getDataInfo().isCompleted())) {
+
                     logger.info("Leecher " + leecher.getPeerId() + " completed the data " + dataInfo + " with " +
                                 transfer);
 
                     // HANDLER
                     leecher.getPeerHandler().dataCompleted(leecher, dataInfo, transfer);
                 }
+
+                // Reset and prepare for next transfer
+                reset();
             }
 
             // Nobody is gonna use this

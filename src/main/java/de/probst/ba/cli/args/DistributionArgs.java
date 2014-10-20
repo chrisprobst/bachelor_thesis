@@ -22,7 +22,7 @@ public final class DistributionArgs implements Args {
                required = true)
     public Algorithms.AlgorithmType algorithmType;
 
-    public SeederDistributionAlgorithm getSuperSeederDistributionAlgorithm() {
+    public SeederDistributionAlgorithm getSuperSeederOnlyDistributionAlgorithm() {
         return Algorithms.getSuperSeederOnlyDistributionAlgorithm(algorithmType);
     }
 

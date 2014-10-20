@@ -11,6 +11,13 @@ import java.nio.ByteBuffer;
  */
 public abstract class AbstractDataBaseWriteChannel extends AbstractDataBaseChannel implements DataBaseWriteChannel {
 
+    @Override
+    protected void doClose() throws IOException {
+        if (isCompleted()) {
+            getDataBase().merge(getDataInfo());
+        }
+    }
+
     protected abstract int doWrite(ByteBuffer src,
                                    int chunkIndex,
                                    long totalChunkOffset,
@@ -27,7 +34,7 @@ public abstract class AbstractDataBaseWriteChannel extends AbstractDataBaseChann
     }
 
     @Override
-    public final synchronized long write(ByteBuffer[] srcs, int offset, int length) throws IOException {
+    public synchronized final long write(ByteBuffer[] srcs, int offset, int length) throws IOException {
         checkClosed();
         long totalWritten = 0;
         for (int i = 0; i < length; i++) {
@@ -47,44 +54,31 @@ public abstract class AbstractDataBaseWriteChannel extends AbstractDataBaseChann
     }
 
     @Override
-    public final int write(ByteBuffer src) throws IOException {
-        int written;
-        boolean isCompleted;
-        synchronized (this) {
-            checkClosed();
-            long completed = position();
-            long size = size();
-
-            if (completed >= size) {
-                throw new IOException("Database write channel full");
-            }
-
-            // Setup byte buffer limit
-            int newLimit = (int) Math.min(src.remaining(), size - completed);
-            if (newLimit <= 0) {
-                return 0;
-            }
-
-            ByteBuffer copy = (ByteBuffer) src.duplicate().limit(src.position() + newLimit);
-
-            // Calculate state
-            int chunkIndex = getDataInfo().getTotalChunkIndex(completed, false);
-            long totalChunkOffset = getDataInfo().getTotalOffset(chunkIndex);
-            long relativeChunkOffset = completed - getDataInfo().getRelativeOffset(chunkIndex);
-            long chunkSize = getDataInfo().getChunkSize(chunkIndex);
-
-            // Do write and increase counter
-            written = doWrite(copy, chunkIndex, totalChunkOffset, relativeChunkOffset, chunkSize);
-            src.position(src.position() + written);
-            position(completed += written);
-            isCompleted = completed >= size;
+    public synchronized final int write(ByteBuffer src) throws IOException {
+        checkClosed();
+        if (isCompleted()) {
+            throw new IOException("isCompleted()");
         }
 
-        // If we are completed, notify the database
-        if (isCompleted) {
-            getDataBase().merge(getDataInfo());
+        // Setup byte buffer limit
+        int newLimit = (int) Math.min(src.remaining(), remaining());
+        if (newLimit <= 0) {
+            return 0;
         }
 
+        ByteBuffer copy = (ByteBuffer) src.duplicate().limit(src.position() + newLimit);
+        long position = position();
+
+        // Calculate state
+        int chunkIndex = getDataInfo().getTotalChunkIndex(position, false);
+        long totalChunkOffset = getDataInfo().getTotalOffset(chunkIndex);
+        long relativeChunkOffset = position - getDataInfo().getRelativeOffset(chunkIndex);
+        long chunkSize = getDataInfo().getChunkSize(chunkIndex);
+
+        // Do write and increase counter
+        int written = doWrite(copy, chunkIndex, totalChunkOffset, relativeChunkOffset, chunkSize);
+        src.position(src.position() + written);
+        position(position + written);
         return written;
     }
 }

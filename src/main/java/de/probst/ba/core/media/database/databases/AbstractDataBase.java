@@ -7,6 +7,7 @@ import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.media.database.DataInfoRegionRWLock;
 import de.probst.ba.core.media.database.DataInsertException;
 import de.probst.ba.core.media.database.DataLookupException;
+import de.probst.ba.core.net.peer.Seeder;
 import de.probst.ba.core.util.collections.Tuple;
 import de.probst.ba.core.util.io.IOUtil;
 
@@ -31,7 +32,8 @@ public abstract class AbstractDataBase implements DataBase {
     private final Map<DataInfo, AbstractDataBaseWriteChannel> writeChannels = new HashMap<>();
     private final Map<DataInfo, AbstractDataBaseReadChannel> readChannels = new HashMap<>();
     private final boolean allowOverwrite;
-    private boolean closed = false;
+    private boolean closed;
+    private boolean closing;
 
     synchronized final void merge(DataInfo mergeDataInfo) {
         dataInfo.merge(mergeDataInfo.getHash(), mergeDataInfo, DataInfo::union);
@@ -57,18 +59,19 @@ public abstract class AbstractDataBase implements DataBase {
         return new HashMap<>(readChannels);
     }
 
-    protected abstract void doClose() throws IOException;
-
     protected abstract AbstractDataBaseWriteChannel openWriteChannel(DataInfo writeDataInfo) throws IOException;
 
     protected abstract AbstractDataBaseReadChannel openReadChannel(DataInfo readDataInfo) throws IOException;
+
+    protected void doClose() throws IOException {
+    }
 
     public AbstractDataBase(boolean allowOverwrite) {
         this.allowOverwrite = allowOverwrite;
     }
 
     @Override
-    public final synchronized Map<String, DataInfo> getDataInfo() {
+    public synchronized final Map<String, DataInfo> getDataInfo() {
         return Collections.unmodifiableMap(dataInfo.entrySet()
                                                    .stream()
                                                    .filter(p -> !p.getValue().isEmpty())
@@ -112,6 +115,7 @@ public abstract class AbstractDataBase implements DataBase {
         Objects.requireNonNull(readDataInfo);
 
         DataInfo existingDataInfo = dataInfo.get(readDataInfo.getHash());
+
         if (existingDataInfo == null) {
             throw new DataLookupException("existingDataInfo == null");
         } else if (!existingDataInfo.contains(readDataInfo)) {
@@ -162,22 +166,26 @@ public abstract class AbstractDataBase implements DataBase {
 
     @Override
     public final void close() throws IOException {
-        List<Channel> channels;
-        synchronized (this) {
-            if (!closed) {
-                closed = true;
-                channels = new ArrayList<>();
-                channels.addAll(getReadChannels().values());
-                channels.addAll(getWriteChannels().values());
-            } else {
-                return;
-            }
-        }
         try {
+            List<Channel> channels;
+            synchronized (this) {
+                if (!closing && !closed) {
+                    closing = true;
+                    channels = new ArrayList<>();
+                    channels.addAll(getReadChannels().values());
+                    channels.addAll(getWriteChannels().values());
+                } else {
+                    return;
+                }
+            }
             IOUtil.closeAllAndThrow(channels);
         } finally {
             synchronized (this) {
-                doClose();
+                try {
+                    doClose();
+                } finally {
+                    closed = true;
+                }
             }
         }
     }

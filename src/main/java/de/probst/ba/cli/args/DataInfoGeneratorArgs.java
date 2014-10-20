@@ -53,7 +53,7 @@ public final class DataInfoGeneratorArgs implements Args {
     private DataInfo generateSingleDataInfo(int partition, long partitionSize) {
         return DataInfo.generate(partition,
                                  partitionSize,
-                                 Optional.empty(),
+                                 Optional.of("Generated data info"),
                                  Optional.empty(),
                                  "Generated hash for partition " + partition,
                                  chunkCount,

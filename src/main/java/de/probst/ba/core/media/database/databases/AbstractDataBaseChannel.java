@@ -57,13 +57,13 @@ public abstract class AbstractDataBaseChannel implements DataBaseChannel {
     }
 
     @Override
-    public final long size() throws IOException {
+    public synchronized final long size() throws IOException {
         checkClosed();
         return total;
     }
 
     @Override
-    public final synchronized long position() throws IOException {
+    public synchronized final long position() throws IOException {
         checkClosed();
         return position;
     }
@@ -81,7 +81,7 @@ public abstract class AbstractDataBaseChannel implements DataBaseChannel {
     }
 
     @Override
-    public final synchronized boolean isOpen() {
+    public synchronized final boolean isOpen() {
         return !closed;
     }
 
@@ -89,8 +89,11 @@ public abstract class AbstractDataBaseChannel implements DataBaseChannel {
     public final void close() throws IOException {
         synchronized (this) {
             if (!closed) {
-                closed = true;
-                doClose();
+                try {
+                    doClose();
+                } finally {
+                    closed = true;
+                }
             } else {
                 return;
             }

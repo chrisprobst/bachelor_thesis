@@ -32,8 +32,4 @@ public final class MemoryDataBaseWriteChannel extends AbstractDataBaseWriteChann
         byteBuf.setBytes((int) (totalChunkOffset + relativeChunkOffset), src);
         return src.position() - position;
     }
-
-    @Override
-    protected void doClose() throws IOException {
-    }
 }
