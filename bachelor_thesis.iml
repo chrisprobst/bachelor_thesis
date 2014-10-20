@@ -31,6 +31,7 @@
     <orderEntry type="library" exported="" name="Gradle: antlr4-runtime-4.2.2" level="project" />
     <orderEntry type="library" exported="" name="Gradle: rhino-1.7R4" level="project" />
     <orderEntry type="library" exported="" name="Gradle: netty-all-5.0.0.Alpha2-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Python 3.4.2 (/usr/local/bin/python3) interpreter library" level="application" />
   </component>
 </module>
 
