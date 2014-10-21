@@ -43,11 +43,11 @@ public final class LeastFirstTrafficShaper<T> extends AbstractTrafficShaper<T> {
             lastResetTrafficTimeStamp = now;
         }
 
+        // Resume all
+        messageQueueSinkList.forEach(MessageQueueSink::resume);
+
         // Pack into a priority queue
         Queue<MessageQueueSink<? extends T>> priorityQueue = new PriorityQueue<>(messageQueueSinkList);
-
-        // Resume all
-        priorityQueue.forEach(MessageQueueSink::resume);
 
         // Walk until empty
         while (!priorityQueue.isEmpty()) {

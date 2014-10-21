@@ -64,7 +64,7 @@ public final class NettyConfig {
     private NettyConfig() {
     }
 
-    private static final long resetTrafficInterval = 2000;
+    private static final long resetTrafficInterval = 30000;
     private static final int httpBufferSize = 8192;
     private static final long httpRetryDelay = 1000;
     private static final double leakyBucketBufferFactor = 0.25;

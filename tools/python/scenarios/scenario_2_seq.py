@@ -1,6 +1,6 @@
 def setup(command, results_dir):
     # Size and duration
-    upload_rate = 1024 * 1024
+    upload_rate = 1024 * 16
     time_per_transfer = 60 * 10
 
     # Peers
@@ -12,7 +12,7 @@ def setup(command, results_dir):
     parts = 1
 
     # Network and distribution
-    meta_size = 64
+    meta_size = 1
     algorithm = "Sequential"
 
     return command[

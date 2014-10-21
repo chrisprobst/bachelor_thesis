@@ -43,6 +43,7 @@ build/*
 .svn
 
 # Ignore python stuff
+*pyc
 __pycache__/
 tools/python/venv/
 tools/python/scenarios/results/*.csv

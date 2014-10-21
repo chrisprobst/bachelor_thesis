@@ -1,6 +1,6 @@
 def setup(command, results_dir):
     # Size and duration
-    upload_rate = 1024 * 1024
+    upload_rate = 1024 * 16
     time_per_transfer = 60 * 10
 
     # Peers
