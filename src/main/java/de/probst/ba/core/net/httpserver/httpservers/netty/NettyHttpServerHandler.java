@@ -85,8 +85,10 @@ public final class NettyHttpServerHandler extends SimpleChannelInboundHandler<Fu
 
     private Optional<Tuple2<Long, Long>> getRangeBoundaries(FullHttpRequest request, long maxLength) {
         long lower, upper;
-        String contentRange = request.headers().get(RANGE).toString();
-        if (contentRange != null) {
+        CharSequence contentRangeChars = request.headers().get(RANGE);
+        if (contentRangeChars != null) {
+            String contentRange = contentRangeChars.toString();
+
             // Remove the unit
             contentRange = contentRange.replace("bytes=", "");
 

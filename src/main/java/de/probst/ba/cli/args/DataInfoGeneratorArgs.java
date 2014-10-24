@@ -75,11 +75,15 @@ public final class DataInfoGeneratorArgs implements Args {
                         .collect(Collectors.toList());
     }
 
-    public void updateDataBasePeers(List<Tuple2<DataInfo, Supplier<ReadableByteChannel>>> dataInfo) throws IOException {
+    public void updateDataBasePeers(Tuple2<DataInfo, Supplier<ReadableByteChannel>> dataInfo) throws IOException {
         for (Peer peer : getDataBaseUpdatePeers()) {
-            for (Tuple2<DataInfo, Supplier<ReadableByteChannel>> entry : dataInfo) {
-                peer.getDataBase().insertFromChannel(entry.first(), entry.second().get(), true);
-            }
+            peer.getDataBase().insertFromChannel(dataInfo.first(), dataInfo.second().get(), true);
+        }
+    }
+
+    public void updateDataBasePeers(List<Tuple2<DataInfo, Supplier<ReadableByteChannel>>> dataInfo) throws IOException {
+        for (Tuple2<DataInfo, Supplier<ReadableByteChannel>> entry : dataInfo) {
+            updateDataBasePeers(entry);
         }
     }
 

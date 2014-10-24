@@ -2,9 +2,9 @@ package de.probst.ba.core.distribution.algorithms;
 
 import de.probst.ba.core.distribution.LeecherDistributionAlgorithm;
 import de.probst.ba.core.media.database.DataInfo;
-import de.probst.ba.core.net.peer.Transfer;
 import de.probst.ba.core.net.peer.Leecher;
 import de.probst.ba.core.net.peer.PeerId;
+import de.probst.ba.core.net.peer.Transfer;
 import de.probst.ba.core.net.peer.state.LeecherDataInfoState;
 import de.probst.ba.core.util.collections.Tuple2;
 import org.slf4j.Logger;

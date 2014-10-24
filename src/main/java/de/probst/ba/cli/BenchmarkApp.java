@@ -20,6 +20,7 @@ import de.probst.ba.core.net.peer.Leecher;
 import de.probst.ba.core.net.peer.Peer;
 import de.probst.ba.core.net.peer.PeerId;
 import de.probst.ba.core.net.peer.Seeder;
+import de.probst.ba.core.net.peer.Transfer;
 import de.probst.ba.core.net.peer.handler.LeecherHandlerList;
 import de.probst.ba.core.net.peer.handler.handlers.DataInfoCompletionHandler;
 import de.probst.ba.core.net.peer.peers.Peers;
@@ -310,7 +311,52 @@ public class BenchmarkApp extends ArgsApp {
         statisticsManager.getCompletionDataInfo().addAll(dataInfo.stream()
                                                                  .map(t -> t.first())
                                                                  .collect(Collectors.toList()));
-        dataInfoGeneratorArgs.updateDataBasePeers(dataInfo);
+
+        if (peerCountArgs.superSeeders == 1) {
+            // Get the only super seeder
+            Seeder superSeder = (Seeder) peerCountArgs.getSuperSeederQueue().poll();
+
+            // Make sure, we do not add everything at once
+            while (!dataInfo.isEmpty()) {
+                // Get head and shrink list
+                Tuple2<DataInfo, Supplier<ReadableByteChannel>> head = dataInfo.get(0);
+                dataInfo = dataInfo.subList(1, dataInfo.size());
+
+                // Insert the head
+                logger.info(
+                        ">>> [ Inserted part " + head.first().getId() + " of data info: \"" + head.first().getHash() +
+                        "\" ]");
+                dataInfoGeneratorArgs.updateDataBasePeers(head);
+
+                // Calculate the time for upload from the super seeder
+                long timePerTransfer =
+                        (long) ((head.first().getSize() / (double) superSeederBandwidthArgs.maxSuperSeederUploadRate *
+                                 1000) * (head.first().getId() == 0 ? 1.8 : 1.3));
+
+                if (!dataInfo.isEmpty()) {
+                    logger.info(">>> [ Waiting " + timePerTransfer + " ms before inserting part " +
+                                dataInfo.get(0).first().getId() + " ]");
+                }
+
+                Thread.sleep(timePerTransfer);
+
+                timePerTransfer /= 10;
+                while (superSeder.getDataInfoState()
+                                 .getUploads()
+                                 .values()
+                                 .stream()
+                                 .map(Transfer::getDataInfo)
+                                 .anyMatch(x -> x.getHash().equals(head.first().getHash()))) {
+
+                    logger.info(">>> [ Part still not completely uploaded ]");
+                    logger.info(">>> [ Waiting another " + timePerTransfer + " ms before inserting part " +
+                                dataInfo.get(0).first().getId() + " ]");
+                    Thread.sleep(timePerTransfer);
+                }
+            }
+        } else {
+            dataInfoGeneratorArgs.updateDataBasePeers(dataInfo);
+        }
 
         // Await termination
         completionCountDownLatch.await();
