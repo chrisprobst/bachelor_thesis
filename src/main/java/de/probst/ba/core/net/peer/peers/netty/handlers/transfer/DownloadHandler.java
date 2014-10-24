@@ -103,11 +103,13 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
         return transfer.updateAndGet(t -> t.update(t.getCompletedSize() + total));
     }
 
-    private void reset() throws IOException {
+    private Optional<DataInfo> reset() throws IOException {
         dataBaseWriteChannel.close();
+        Optional<DataInfo> merged = dataBaseWriteChannel.getMergedDataInfo();
         dataBaseWriteChannel = null;
         transfer.set(null);
         leech.run();
+        return merged;
     }
 
     private Optional<Transfer> getTransfer() {
@@ -187,29 +189,22 @@ public final class DownloadHandler extends ChannelHandlerAdapter {
             leecher.getPeerHandler().downloadProgressed(leecher, transfer);
 
             if (completed) {
+                // Reset and prepare for next transfer
+                DataInfo mergedDataInfo = reset().get();
+
                 logger.debug("Leecher " + leecher.getPeerId() + " succeeded download " + transfer);
 
                 // HANDLER
                 leecher.getPeerHandler().downloadSucceeded(leecher, transfer);
 
-                // Query data base
-                DataInfo dataInfo = leecher.getDataBase().get(transfer.getDataInfo().getHash());
-
-                // Only if the data info is not completed yet, but
-                // is completed after merging
-                if ((dataInfo != null && !dataInfo.isCompleted() &&
-                     dataInfo.union(transfer.getDataInfo()).isCompleted()) ||
-                    (dataInfo == null && transfer.getDataInfo().isCompleted())) {
-
-                    logger.info("Leecher " + leecher.getPeerId() + " completed the data " + dataInfo + " with " +
+                // Only if the data info is completed
+                if (mergedDataInfo.isCompleted()) {
+                    logger.info("Leecher " + leecher.getPeerId() + " completed the data " + mergedDataInfo + " with " +
                                 transfer);
 
                     // HANDLER
-                    leecher.getPeerHandler().dataCompleted(leecher, dataInfo, transfer);
+                    leecher.getPeerHandler().dataCompleted(leecher, mergedDataInfo, transfer);
                 }
-
-                // Reset and prepare for next transfer
-                reset();
             }
 
             // Nobody is gonna use this

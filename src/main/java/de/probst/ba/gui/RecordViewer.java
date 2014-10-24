@@ -324,7 +324,7 @@ public class RecordViewer extends Application {
             // Render node name
             gc.setStroke(Color.BLACK);
             gc.setLineWidth(1.2);
-            gc.strokeText(peer.getKey().toString(), x - 30, y + 3);
+            gc.strokeText(peer.getKey().toString().substring(6), x - 30, y + 3);
 
             // Render the data info
             if (peerDataInfo.get(index) != null) {

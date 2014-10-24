@@ -85,7 +85,7 @@ public final class NettyHttpServerHandler extends SimpleChannelInboundHandler<Fu
 
     private Optional<Tuple2<Long, Long>> getRangeBoundaries(FullHttpRequest request, long maxLength) {
         long lower, upper;
-        String contentRange = request.headers().get(RANGE);
+        String contentRange = request.headers().get(RANGE).toString();
         if (contentRange != null) {
             // Remove the unit
             contentRange = contentRange.replace("bytes=", "");
@@ -155,7 +155,7 @@ public final class NettyHttpServerHandler extends SimpleChannelInboundHandler<Fu
             // Prepare response
             HttpResponseStatus httpResponseStatus = hasRange ? PARTIAL_CONTENT : OK;
             HttpResponse response = new DefaultHttpResponse(HTTP_1_1, httpResponseStatus);
-            response.headers().set(CONTENT_LENGTH, length);
+            response.headers().setLong(CONTENT_LENGTH, length);
             response.headers().set(CONTENT_TYPE, mimetypesFileTypeMap.getContentType(name));
             response.headers().set(ACCEPT_RANGES, "bytes");
             if (hasRange) {

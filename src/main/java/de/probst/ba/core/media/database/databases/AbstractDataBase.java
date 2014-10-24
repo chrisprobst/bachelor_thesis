@@ -35,8 +35,8 @@ public abstract class AbstractDataBase implements DataBase {
     private boolean closed;
     private boolean closing;
 
-    synchronized final void merge(DataInfo mergeDataInfo) {
-        dataInfo.merge(mergeDataInfo.getHash(), mergeDataInfo, DataInfo::union);
+    synchronized final DataInfo merge(DataInfo mergeDataInfo) {
+        return dataInfo.merge(mergeDataInfo.getHash(), mergeDataInfo, DataInfo::union);
     }
 
     synchronized final void unregisterChannel(Channel channel, DataInfo channelDataInfo) {

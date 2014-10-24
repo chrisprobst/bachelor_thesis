@@ -5,16 +5,19 @@ import de.probst.ba.core.media.database.DataInfo;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Optional;
 
 /**
  * Created by chrisprobst on 06.10.14.
  */
 public abstract class AbstractDataBaseWriteChannel extends AbstractDataBaseChannel implements DataBaseWriteChannel {
 
+    private DataInfo mergedDataInfo;
+
     @Override
     protected void doClose() throws IOException {
         if (isCompleted()) {
-            getDataBase().merge(getDataInfo());
+            mergedDataInfo = getDataBase().merge(getDataInfo());
         }
     }
 
@@ -26,6 +29,11 @@ public abstract class AbstractDataBaseWriteChannel extends AbstractDataBaseChann
 
     public AbstractDataBaseWriteChannel(AbstractDataBase dataBase, DataInfo dataInfo) {
         super(dataBase, dataInfo);
+    }
+
+    @Override
+    public synchronized Optional<DataInfo> getMergedDataInfo() {
+        return Optional.ofNullable(mergedDataInfo);
     }
 
     @Override
