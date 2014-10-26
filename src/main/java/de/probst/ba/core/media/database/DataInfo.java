@@ -197,12 +197,26 @@ public final class DataInfo implements Serializable {
     // a chunk is completed
     private final BitSet chunks;
 
+    // Tells whether or not this data info
+    // came from a producer
+    private final boolean fromProducer;
+
     public DataInfo(long id,
                     long size,
                     Optional<String> name,
                     Optional<Object> description,
                     String hash,
                     List<String> chunkHashes) {
+        this(id, size, name, description, hash, chunkHashes, false);
+    }
+
+    public DataInfo(long id,
+                    long size,
+                    Optional<String> name,
+                    Optional<Object> description,
+                    String hash,
+                    List<String> chunkHashes,
+                    boolean fromProducer) {
         Objects.requireNonNull(name);
         Objects.requireNonNull(description);
         Objects.requireNonNull(hash);
@@ -227,6 +241,7 @@ public final class DataInfo implements Serializable {
         this.description = description.orElse(null);
         this.hash = hash;
         this.chunkHashes = Collections.unmodifiableList(new ArrayList<>(chunkHashes));
+        this.fromProducer = fromProducer;
         chunks = new BitSet(chunkHashes.size());
 
         // Calculate the chunk sizes
@@ -234,6 +249,29 @@ public final class DataInfo implements Serializable {
         Tuple2<Long, Long> chunkSizes = calculatePartitionSizes(size, chunkHashes.size());
         chunkSize = chunkSizes.first();
         lastChunkSize = chunkSizes.second();
+    }
+
+    /**
+     * @return True if it is from a producer, otherwise false.
+     */
+    public boolean isFromProducer() {
+        return fromProducer;
+    }
+
+    /**
+     * @param fromProducer
+     * @return
+     */
+    public DataInfo fromProducer(boolean fromProducer) {
+        DataInfo copy = new DataInfo(getId(),
+                                     getSize(),
+                                     getName(),
+                                     getDescription(),
+                                     getHash(),
+                                     getChunkHashes(),
+                                     fromProducer);
+        copy.chunks.or(chunks);
+        return copy;
     }
 
     /**
