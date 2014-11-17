@@ -16,7 +16,10 @@ public final class DataBaseHttpServerArgs implements Args {
                description = "Run a database http server")
     public Boolean runDataBaseHttpServer = false;
 
-    public final int httpServerPort = 8080;
+    @Parameter(names = {"-htp", "--http-port"},
+               description = "The http port (" + Validators.PortValidator.MSG + ")",
+               validateValueWith = Validators.PortValidator.class)
+    public Integer httpServerPort = 8080;
 
     @Override
     public boolean check(JCommander jCommander) {
