@@ -11,9 +11,13 @@ import de.probst.ba.cli.args.FileDataBaseArgs;
 import de.probst.ba.cli.args.HelpArgs;
 import de.probst.ba.cli.args.HostArgs;
 import de.probst.ba.cli.args.SeederPortArgs;
+import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.net.httpserver.httpservers.HttpServers;
 import de.probst.ba.core.net.peer.Leecher;
 import de.probst.ba.core.net.peer.Seeder;
+import de.probst.ba.core.net.peer.Transfer;
+import de.probst.ba.core.net.peer.handler.LeecherPeerHandler;
+import de.probst.ba.core.net.peer.handler.LeecherPeerHandlerAdapter;
 import de.probst.ba.core.net.peer.peers.Peers;
 import de.probst.ba.core.net.peer.peers.netty.NettyConfig;
 import de.probst.ba.core.util.collections.Tuple2;
@@ -22,8 +26,11 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.awt.*;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Optional;
 import java.util.Scanner;
 import java.util.concurrent.ExecutionException;
@@ -61,7 +68,27 @@ public final class SeederLeecherCoupleApp extends ArgsApp {
     @ParametersDelegate
     private final DataBaseHttpServerArgs dataBaseHttpServerArgs = new DataBaseHttpServerArgs();
 
-    private void setupSeederLeecherCouple() throws IOException, ExecutionException, InterruptedException {
+    private void setupSeederLeecherCouple(boolean openUrlFirstTime)
+            throws IOException, ExecutionException, InterruptedException {
+
+        LeecherPeerHandler handler = new LeecherPeerHandlerAdapter() {
+            boolean once = false;
+
+            @Override
+            public synchronized void dataCompleted(Leecher leecher, DataInfo dataInfo, Transfer transfer) {
+                if (!once) {
+                    once = true;
+
+                    try {
+                        Desktop.getDesktop()
+                               .browse(new URI("http://localhost:" + dataBaseHttpServerArgs.httpServerPort +
+                                               "/stream?name=otis.mp4"));
+                    } catch (IOException | URISyntaxException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        };
 
         // Instantiate new seeder-leecher couple
         Tuple2<Seeder, Leecher> tuple = Peers.initSeederAndLeecher(
@@ -73,7 +100,7 @@ public final class SeederLeecherCoupleApp extends ArgsApp {
                 distributionArgs.getSeederDistributionAlgorithm(),
                 distributionArgs.getLeecherDistributionAlgorithm(),
                 Optional.empty(),
-                Optional.empty(),
+                openUrlFirstTime ? Optional.of(handler) : Optional.empty(),
                 true,
                 Optional.of(eventLoopGroup)).get();
 
@@ -94,7 +121,7 @@ public final class SeederLeecherCoupleApp extends ArgsApp {
                                 connectionArgs.maxLeecherConnections);
 
         // Setup seeder-leecher-couple
-        setupSeederLeecherCouple();
+        setupSeederLeecherCouple(dataBaseHttpServerArgs.runDataBaseHttpServer);
 
         // Launch a http server for the database
         if (dataBaseHttpServerArgs.runDataBaseHttpServer) {
