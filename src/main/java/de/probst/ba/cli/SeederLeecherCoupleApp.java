@@ -10,7 +10,7 @@ import de.probst.ba.cli.args.DistributionArgs;
 import de.probst.ba.cli.args.FileDataBaseArgs;
 import de.probst.ba.cli.args.HelpArgs;
 import de.probst.ba.cli.args.HostArgs;
-import de.probst.ba.cli.args.SeederPortArgs;
+import de.probst.ba.cli.args.SeederHostArgs;
 import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.net.httpserver.httpservers.HttpServers;
 import de.probst.ba.core.net.peer.Leecher;
@@ -54,7 +54,7 @@ public final class SeederLeecherCoupleApp extends ArgsApp {
     @ParametersDelegate
     private final HelpArgs helpArgs = new HelpArgs();
     @ParametersDelegate
-    private final SeederPortArgs seederPortArgs = new SeederPortArgs();
+    private final SeederHostArgs seederHostArgs = new SeederHostArgs();
     @ParametersDelegate
     private final DistributionArgs distributionArgs = new DistributionArgs();
     @ParametersDelegate
@@ -95,7 +95,7 @@ public final class SeederLeecherCoupleApp extends ArgsApp {
                 Peers.PeerType.TCP,
                 bandwidthArgs.maxUploadRate,
                 bandwidthArgs.maxDownloadRate,
-                new InetSocketAddress(seederPortArgs.seederPort),
+                new InetSocketAddress(seederHostArgs.seederHostName, seederHostArgs.seederHostPort),
                 fileDataBaseArgs.getDataBase(),
                 distributionArgs.getSeederDistributionAlgorithm(),
                 distributionArgs.getLeecherDistributionAlgorithm(),
@@ -146,7 +146,7 @@ public final class SeederLeecherCoupleApp extends ArgsApp {
     @Override
     public boolean check(JCommander jCommander) {
         return helpArgs.check(jCommander) &&
-               seederPortArgs.check(jCommander) &&
+               seederHostArgs.check(jCommander) &&
                distributionArgs.check(jCommander) &&
                bandwidthArgs.check(jCommander) &&
                fileDataBaseArgs.check(jCommander) &&

@@ -7,7 +7,7 @@ import de.probst.ba.cli.args.DistributionArgs;
 import de.probst.ba.cli.args.FileDataBaseArgs;
 import de.probst.ba.cli.args.FileDataInfoGeneratorArgs;
 import de.probst.ba.cli.args.HelpArgs;
-import de.probst.ba.cli.args.SeederPortArgs;
+import de.probst.ba.cli.args.SeederHostArgs;
 import de.probst.ba.cli.args.SuperSeederBandwidthArgs;
 import de.probst.ba.core.media.database.DataInfo;
 import de.probst.ba.core.net.peer.Seeder;
@@ -43,7 +43,7 @@ public final class SuperSeederApp extends ArgsApp {
     @ParametersDelegate
     private final HelpArgs helpArgs = new HelpArgs();
     @ParametersDelegate
-    private final SeederPortArgs seederPortArgs = new SeederPortArgs();
+    private final SeederHostArgs seederHostArgs = new SeederHostArgs();
     @ParametersDelegate
     private final DistributionArgs distributionArgs = new DistributionArgs();
     @ParametersDelegate
@@ -58,7 +58,7 @@ public final class SuperSeederApp extends ArgsApp {
         superSeeder = Peers.seeder(Peers.PeerType.TCP,
                                    superSeederBandwidthArgs.maxSuperSeederUploadRate,
                                    superSeederBandwidthArgs.maxSuperSeederDownloadRate,
-                                   new InetSocketAddress(seederPortArgs.seederPort),
+                                   new InetSocketAddress(seederHostArgs.seederHostName, seederHostArgs.seederHostPort),
                                    fileDataBaseArgs.getDataBase(),
                                    distributionArgs.getSuperSeederOnlyDistributionAlgorithm(),
                                    Optional.empty(),
@@ -111,7 +111,7 @@ public final class SuperSeederApp extends ArgsApp {
     public boolean check(JCommander jCommander) {
 
         return helpArgs.check(jCommander) &&
-               seederPortArgs.check(jCommander) &&
+               seederHostArgs.check(jCommander) &&
                distributionArgs.check(jCommander) &&
                superSeederBandwidthArgs.check(jCommander) &&
                fileDataBaseArgs.check(jCommander) &&
