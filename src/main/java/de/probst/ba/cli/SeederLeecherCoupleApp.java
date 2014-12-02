@@ -108,6 +108,7 @@ public final class SeederLeecherCoupleApp extends ArgsApp {
         leecher = tuple.second();
 
         // Connect to host
+        logger.info(">>> [ Leecher connecting to address: " + hostArgs.getSocketAddress() + " ]");
         leecher.connect(hostArgs.getSocketAddress()).join();
 
         logger.info(">>> [ Seeder listening on address: " + seeder.getPeerId().getSocketAddress() + " ]");
