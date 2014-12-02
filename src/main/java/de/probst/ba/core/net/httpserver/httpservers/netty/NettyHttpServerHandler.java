@@ -75,6 +75,7 @@ public final class NettyHttpServerHandler extends SimpleChannelInboundHandler<Fu
 
         // Add known MIME types that are not usual
         mimetypesFileTypeMap.addMimeTypes("video/mp4 mp4");
+        mimetypesFileTypeMap.addMimeTypes("video/ogg ogg");
 
         // Init handlebars
         Handlebars handlebars = new Handlebars();

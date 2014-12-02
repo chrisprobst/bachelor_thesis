@@ -82,7 +82,7 @@ public final class SeederLeecherCoupleApp extends ArgsApp {
                     try {
                         Desktop.getDesktop()
                                .browse(new URI("http://localhost:" + dataBaseHttpServerArgs.httpServerPort +
-                                               "/stream?name=otis.mp4"));
+                                               "/stream?name="+dataInfo.getName().get()));
                     } catch (IOException | URISyntaxException e) {
                         e.printStackTrace();
                     }
