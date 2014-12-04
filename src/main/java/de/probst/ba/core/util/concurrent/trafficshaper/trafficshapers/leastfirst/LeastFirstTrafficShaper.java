@@ -36,6 +36,7 @@ public final class LeastFirstTrafficShaper<T> extends AbstractTrafficShaper<T> {
         if (now - lastResetTrafficTimeStamp > resetTrafficInterval) {
             // Reset traffic
             messageQueueSinkList.forEach(MessageQueueSink::resetTraffic);
+            messageQueueSinkList.forEach(MessageQueueSink::resetMetaTraffic);
 
             // Shuffle message queue sinks
             Collections.shuffle(messageQueueSinkList);
@@ -68,11 +69,14 @@ public final class LeastFirstTrafficShaper<T> extends AbstractTrafficShaper<T> {
             // Decrease remaining size of the message
             message.decreaseRemainingSize(removedTokens);
 
-            // Increase the traffic
-            messageQueueSink.increaseTraffic(removedTokens);
-
-            // Increase the traffic of this traffic shaper
-            increaseTraffic(removedTokens);
+            // Increase the (meta) traffic
+            if (message.isMetaData()) {
+                messageQueueSink.increaseMetaTraffic(removedTokens);
+                increaseMetaTraffic(removedTokens);
+            } else {
+                messageQueueSink.increaseTraffic(removedTokens);
+                increaseTraffic(removedTokens);
+            }
 
             // Dispatch or pause all
             if (removedTokens >= remainingSize) {

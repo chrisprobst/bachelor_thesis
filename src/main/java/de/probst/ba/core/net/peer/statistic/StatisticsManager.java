@@ -63,6 +63,16 @@ public final class StatisticsManager {
             peer -> peer.getBandwidthStatisticState().getCurrentUploadRate();
     private final Function<Peer, Number> downloadRateMapper =
             peer -> peer.getBandwidthStatisticState().getCurrentDownloadRate();
+
+    private final Function<Peer, Number> totalMetaUploadedMapper =
+            peer -> peer.getBandwidthStatisticState().getTotalMetaUploaded();
+    private final Function<Peer, Number> totalMetaDownloadedMapper =
+            peer -> peer.getBandwidthStatisticState().getTotalMetaDownloaded();
+    private final Function<Peer, Number> uploadMetaRateMapper =
+            peer -> peer.getBandwidthStatisticState().getCurrentMetaUploadRate();
+    private final Function<Peer, Number> downloadMetaRateMapper =
+            peer -> peer.getBandwidthStatisticState().getCurrentMetaDownloadRate();
+
     private final Function<Peer, Number> dataInfoCompletionMapper =
             peer -> completionDataInfo.stream().map(DataInfo::getHash).map(
                     peer.getDataBase()::get).mapToDouble(x -> x != null ? x.getPercentage() : 0.0).sum();
@@ -100,6 +110,14 @@ public final class StatisticsManager {
                                            superSeederUploadBandwidthStatisticPeers,
                                            socketAddressMapper,
                                            totalUploadedMapper));
+            statistics.add(new Statistic<>("CurrentMetaSuperSeederUploadBandwidth",
+                                           superSeederUploadBandwidthStatisticPeers,
+                                           socketAddressMapper,
+                                           uploadMetaRateMapper));
+            statistics.add(new Statistic<>("TotalMetaSuperSeederUploadedBandwidth",
+                                           superSeederUploadBandwidthStatisticPeers,
+                                           socketAddressMapper,
+                                           totalMetaUploadedMapper));
 
             // Add seeder statistics
             statistics.add(new Statistic<>("CurrentUploadBandwidth",
@@ -110,6 +128,15 @@ public final class StatisticsManager {
                                            uploadBandwidthStatisticPeers,
                                            socketAddressMapper,
                                            totalUploadedMapper));
+            statistics.add(new Statistic<>("CurrentMetaUploadBandwidth",
+                                           uploadBandwidthStatisticPeers,
+                                           socketAddressMapper,
+                                           uploadMetaRateMapper));
+            statistics.add(new Statistic<>("TotalMetaUploadedBandwidth",
+                                           uploadBandwidthStatisticPeers,
+                                           socketAddressMapper,
+                                           totalMetaUploadedMapper));
+
 
             // Add leecher statistics
             statistics.add(new Statistic<>("CurrentDownloadBandwidth",
@@ -120,6 +147,14 @@ public final class StatisticsManager {
                                            downloadBandwidthStatisticPeers,
                                            socketAddressMapper,
                                            totalDownloadedMapper));
+            statistics.add(new Statistic<>("CurrentMetaDownloadBandwidth",
+                                           downloadBandwidthStatisticPeers,
+                                           socketAddressMapper,
+                                           downloadMetaRateMapper));
+            statistics.add(new Statistic<>("TotalMetaDownloadedBandwidth",
+                                           downloadBandwidthStatisticPeers,
+                                           socketAddressMapper,
+                                           totalMetaDownloadedMapper));
         }
 
         if (recordEvents) {

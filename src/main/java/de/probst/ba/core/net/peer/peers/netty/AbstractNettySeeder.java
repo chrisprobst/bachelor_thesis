@@ -97,15 +97,38 @@ public abstract class AbstractNettySeeder extends AbstractSeeder {
 
     @Override
     protected BandwidthStatisticState createBandwidthStatisticState() {
+        long uploadTotalTrafficRate = uploadTrafficShaper.getTotalTrafficRate();
+        long uploadCurrentTrafficRate = uploadTrafficShaper.getCurrentTrafficRate();
+        long uploadTotalTraffic = uploadTrafficShaper.getTotalTraffic();
+
+        long uploadTotalMetaTrafficRate = uploadTrafficShaper.getTotalMetaTrafficRate();
+        long uploadCurrentMetaTrafficRate = uploadTrafficShaper.getCurrentMetaTrafficRate();
+        long uploadTotalMetaTraffic = uploadTrafficShaper.getTotalMetaTraffic();
+
+        long downloadTotalTrafficRate = downloadTrafficShaper.getTotalTrafficRate();
+        long downloadCurrentTrafficRate = downloadTrafficShaper.getCurrentTrafficRate();
+        long downloadTotalTraffic = downloadTrafficShaper.getTotalTraffic();
+
+        long downloadTotalMetaTrafficRate = downloadTrafficShaper.getTotalMetaTrafficRate();
+        long downloadCurrentMetaTrafficRate = downloadTrafficShaper.getCurrentMetaTrafficRate();
+        long downloadTotalMetaTraffic = downloadTrafficShaper.getTotalMetaTraffic();
+
         return new BandwidthStatisticState(this,
                                            maxUploadRate,
-                                           uploadTrafficShaper.getTotalTrafficRate(),
-                                           uploadTrafficShaper.getCurrentTrafficRate(),
-                                           uploadTrafficShaper.getTotalTraffic(),
+                                           uploadTotalTrafficRate + uploadTotalMetaTrafficRate,
+                                           uploadCurrentTrafficRate + uploadCurrentMetaTrafficRate,
+                                           uploadTotalTraffic + uploadTotalMetaTraffic,
+                                           uploadTotalMetaTrafficRate,
+                                           uploadCurrentMetaTrafficRate,
+                                           uploadTotalMetaTraffic,
+
                                            maxDownloadRate,
-                                           downloadTrafficShaper.getTotalTrafficRate(),
-                                           downloadTrafficShaper.getCurrentTrafficRate(),
-                                           downloadTrafficShaper.getTotalTraffic());
+                                           downloadTotalTrafficRate + downloadTotalMetaTrafficRate,
+                                           downloadCurrentTrafficRate + downloadCurrentMetaTrafficRate,
+                                           downloadTotalTraffic + downloadTotalMetaTraffic,
+                                           downloadTotalMetaTrafficRate,
+                                           downloadCurrentMetaTrafficRate,
+                                           downloadTotalMetaTraffic);
     }
 
     protected abstract ChannelFuture initSeederBootstrap(SocketAddress socketAddress);

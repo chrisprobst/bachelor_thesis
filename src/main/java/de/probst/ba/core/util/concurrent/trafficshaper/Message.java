@@ -10,14 +10,20 @@ public final class Message<T> {
 
     private final Consumer<? super T> dispatcher;
     private final T message;
+    private final boolean metaData;
     private volatile long remainingSize;
 
-    Message(Consumer<? super T> dispatcher, T message) {
+    Message(Consumer<? super T> dispatcher, T message, boolean metaData) {
         Objects.requireNonNull(dispatcher);
         Objects.requireNonNull(message);
         this.dispatcher = dispatcher;
         this.message = message;
+        this.metaData = metaData;
         remainingSize = MessageSizeEstimator.estimateMessageSize(message);
+    }
+
+    public boolean isMetaData() {
+        return metaData;
     }
 
     public void dispatch() {

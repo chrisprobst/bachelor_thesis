@@ -18,6 +18,7 @@ public final class MessageQueueSink<T> implements MessageSink<T> {
     private final Optional<Runnable> resumeCallback;
     private final Queue<Message<? extends T>> messageQueue = new ConcurrentLinkedQueue<>();
     private final AtomicLong traffic = new AtomicLong();
+    private final AtomicLong metaTraffic = new AtomicLong();
 
     public MessageQueueSink(TrafficShaper<T> trafficShaper,
                             Consumer<MessageQueueSink<? extends T>> closeCallback,
@@ -64,14 +65,33 @@ public final class MessageQueueSink<T> implements MessageSink<T> {
         return traffic.get();
     }
 
+    public void resetMetaTraffic() {
+        metaTraffic.set(0);
+    }
+
+    public void increaseMetaTraffic(long amount) {
+        if (amount < 0) {
+            throw new IllegalArgumentException("amount < 0");
+        }
+        metaTraffic.getAndAdd(amount);
+    }
+
+    public long getMetaTraffic() {
+        return metaTraffic.get();
+    }
+
+    public long getTotalTraffic() {
+        return getTraffic() + getMetaTraffic();
+    }
+
     @Override
     public TrafficShaper<T> getTrafficShaper() {
         return trafficShaper;
     }
 
     @Override
-    public MessageSink<T> sinkMessage(Consumer<? super T> dispatcher, T message) {
-        messageQueue.offer(new Message<>(dispatcher, message));
+    public MessageSink<T> sinkMessage(Consumer<? super T> dispatcher, T message, boolean metaData) {
+        messageQueue.offer(new Message<>(dispatcher, message, metaData));
         return this;
     }
 
@@ -85,7 +105,7 @@ public final class MessageQueueSink<T> implements MessageSink<T> {
         if (!(o instanceof MessageQueueSink)) {
             throw new IllegalArgumentException("!(o instanceof MessageQueueSink)");
         } else {
-            return Long.compare(getTraffic(), ((MessageQueueSink) o).getTraffic());
+            return Long.compare(getTotalTraffic(), ((MessageQueueSink) o).getTotalTraffic());
         }
     }
 }

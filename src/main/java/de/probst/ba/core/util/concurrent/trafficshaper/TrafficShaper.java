@@ -9,11 +9,30 @@ import java.util.Optional;
  */
 public interface TrafficShaper<T> extends CancelableRunnable {
 
+    // Normal
+
     long getTotalTrafficRate();
 
     long getCurrentTrafficRate();
 
     long getTotalTraffic();
+
+    // Meta
+
+    long getTotalMetaTrafficRate();
+
+    long getCurrentMetaTrafficRate();
+
+    long getTotalMetaTraffic();
+
+    // Meta + normal
+
+    long getAccumTotalTrafficRate();
+
+    long getAccumCurrentTrafficRate();
+
+    long getAccumTotalTraffic();
+
 
     MessageSink<T> createMessageSink(Optional<Runnable> pause, Optional<Runnable> resume);
 }

@@ -9,7 +9,7 @@ public interface MessageSink<T> extends Comparable<MessageSink<?>>, AutoCloseabl
 
     TrafficShaper<T> getTrafficShaper();
 
-    MessageSink<T> sinkMessage(Consumer<? super T> dispatcher, T message);
+    MessageSink<T> sinkMessage(Consumer<? super T> dispatcher, T message, boolean metaData);
 
     @Override
     void close();

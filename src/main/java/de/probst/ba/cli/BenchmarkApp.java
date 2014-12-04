@@ -312,7 +312,7 @@ public class BenchmarkApp extends ArgsApp {
                                                                  .map(t -> t.first())
                                                                  .collect(Collectors.toList()));
 
-        if (peerCountArgs.superSeeders == 1) {
+        if (peerCountArgs.superSeeders == 1 && dataInfo.size() > 1) {
             // Get the only super seeder
             Seeder superSeder = (Seeder) peerCountArgs.getSuperSeederQueue().poll();
 
@@ -359,6 +359,7 @@ public class BenchmarkApp extends ArgsApp {
         }
 
         // Await termination
+        logger.info(">>> [ Waiting for completion ]");
         completionCountDownLatch.await();
 
         // Stop and write statistics

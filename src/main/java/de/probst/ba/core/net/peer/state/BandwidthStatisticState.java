@@ -12,30 +12,57 @@ public final class BandwidthStatisticState extends PeerState {
     private final long currentUploadRate;
     private final long totalUploaded;
 
+    private final long averageMetaUploadRate;
+    private final long currentMetaUploadRate;
+    private final long totalMetaUploaded;
+
     private final long maxDownloadRate;
     private final long averageDownloadRate;
     private final long currentDownloadRate;
     private final long totalDownloaded;
+
+    private final long averageMetaDownloadRate;
+    private final long currentMetaDownloadRate;
+    private final long totalMetaDownloaded;
 
     public BandwidthStatisticState(Peer peer,
                                    long maxUploadRate,
                                    long averageUploadRate,
                                    long currentUploadRate,
                                    long totalUploaded,
+                                   //
+                                   long averageMetaUploadRate,
+                                   long currentMetaUploadRate,
+                                   long totalMetaUploaded,
+                                   //
                                    long maxDownloadRate,
                                    long averageDownloadRate,
                                    long currentDownloadRate,
-                                   long totalDownloaded) {
+                                   long totalDownloaded,
+                                   //
+                                   long averageMetaDownloadRate,
+                                   long currentMetaDownloadRate,
+                                   long totalMetaDownloaded) {
         super(peer);
         this.maxUploadRate = maxUploadRate;
         this.averageUploadRate = averageUploadRate;
         this.currentUploadRate = currentUploadRate;
         this.totalUploaded = totalUploaded;
+        //
+        this.averageMetaUploadRate = averageMetaUploadRate;
+        this.currentMetaUploadRate = currentMetaUploadRate;
+        this.totalMetaUploaded = totalMetaUploaded;
+        //
         this.maxDownloadRate = maxDownloadRate;
         this.averageDownloadRate = averageDownloadRate;
         this.currentDownloadRate = currentDownloadRate;
         this.totalDownloaded = totalDownloaded;
+        //
+        this.averageMetaDownloadRate = averageMetaDownloadRate;
+        this.currentMetaDownloadRate = currentMetaDownloadRate;
+        this.totalMetaDownloaded = totalMetaDownloaded;
     }
+
 
     /**
      * @return The maximal upload rate.
@@ -65,20 +92,21 @@ public final class BandwidthStatisticState extends PeerState {
         return totalUploaded;
     }
 
-    /**
-     * @return The current upload ratio.
-     */
-    public double getCurrentUploadRatio() {
-        return currentUploadRate / (double) maxUploadRate;
+    //
+
+    public long getAverageMetaUploadRate() {
+        return averageMetaUploadRate;
     }
 
-    /**
-     * @return The average upload ratio.
-     */
-    public double getAverageUploadRatio() {
-        return averageUploadRate / (double) maxUploadRate;
+    public long getCurrentMetaUploadRate() {
+        return currentMetaUploadRate;
     }
 
+    public long getTotalMetaUploaded() {
+        return totalMetaUploaded;
+    }
+
+    //
 
     /**
      * @return The maximal download rate.
@@ -108,17 +136,17 @@ public final class BandwidthStatisticState extends PeerState {
         return totalDownloaded;
     }
 
-    /**
-     * @return The current download ratio.
-     */
-    public double getCurrentDownloadRatio() {
-        return currentDownloadRate / (double) maxDownloadRate;
+    //
+
+    public long getAverageMetaDownloadRate() {
+        return averageMetaDownloadRate;
     }
 
-    /**
-     * @return The average download ratio.
-     */
-    public double getAverageDownloadRatio() {
-        return averageDownloadRate / (double) maxDownloadRate;
+    public long getCurrentMetaDownloadRate() {
+        return currentMetaDownloadRate;
+    }
+
+    public long getTotalMetaDownloaded() {
+        return totalMetaDownloaded;
     }
 }
