@@ -43,6 +43,7 @@ public final class Task implements CancelableRunnable {
     }
 
     public Task(Consumer<CancelableRunnable> consumer, Function<Runnable, Future<?>> scheduleFunction) {
+
         Objects.requireNonNull(consumer);
         Objects.requireNonNull(scheduleFunction);
         this.consumer = consumer;
