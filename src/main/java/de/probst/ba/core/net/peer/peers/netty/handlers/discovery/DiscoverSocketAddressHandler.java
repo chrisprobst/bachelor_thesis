@@ -24,7 +24,8 @@ import java.util.stream.Collectors;
  */
 public final class DiscoverSocketAddressHandler extends SimpleChannelInboundHandler<SocketAddressMessage> {
 
-    public static Set<SocketAddress> collectSocketAddresses(ChannelGroup channelGroup) {
+    public static Set<SocketAddress>
+            (ChannelGroup channelGroup) {
         return Collections.unmodifiableSet(channelGroup.stream()
                                                        .map(DiscoverSocketAddressHandler::get)
                                                        .map(DiscoverSocketAddressHandler::getSocketAddress)
